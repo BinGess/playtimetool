@@ -202,11 +202,11 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
           // ─── 只有 1 根手指时的提示 ────────────────────────────────
           if (state.fingers.length == 1 &&
               state.phase == PickerPhase.waiting)
-            IgnorePointer(
-              child: Positioned(
-                bottom: 90,
-                left: 0,
-                right: 0,
+            Positioned(
+              bottom: 90,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
                 child: Center(
                   child: Text(
                     '等待更多人加入...',
@@ -222,11 +222,11 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
 
           // ─── 锁定提示文字 ─────────────────────────────────────────
           if (state.phase == PickerPhase.locked)
-            IgnorePointer(
-              child: Positioned(
-                bottom: 100,
-                left: 0,
-                right: 0,
+            Positioned(
+              bottom: 100,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
                 child: Center(
                   child: AnimatedBuilder(
                     animation: _glowAnim,
@@ -320,11 +320,11 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
 
           // ─── 消除阶段进度文字 ─────────────────────────────────────
           if (state.phase == PickerPhase.eliminating)
-            IgnorePointer(
-              child: Positioned(
-                bottom: 72,
-                left: 0,
-                right: 0,
+            Positioned(
+              bottom: 72,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
                 child: Center(
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 200),
@@ -349,8 +349,13 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
 
           // ─── 结果覆盖层（胜者标注卡片）────────────────────────────
           if (state.phase == PickerPhase.result)
-            IgnorePointer(
-              child: _ResultOverlay(state: state),
+            Positioned(
+              top: 56,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
+                child: _ResultOverlayContent(state: state),
+              ),
             ),
 
           // ─── 结果：再来一次 ───────────────────────────────────────
@@ -556,8 +561,8 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
 
 // ─── 胜利者结果覆盖层 ────────────────────────────────────────────
 
-class _ResultOverlay extends StatelessWidget {
-  const _ResultOverlay({required this.state});
+class _ResultOverlayContent extends StatelessWidget {
+  const _ResultOverlayContent({required this.state});
 
   final FingerPickerState state;
 
@@ -568,70 +573,64 @@ class _ResultOverlay extends StatelessWidget {
 
     final accentColor = winners.first.neonColor;
 
-    return Positioned(
-      top: 56,
-      left: 0,
-      right: 0,
-      child: Center(
-        child: TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0.0, end: 1.0),
-          duration: const Duration(milliseconds: 700),
-          curve: Curves.elasticOut,
-          builder: (_, v, child) => Transform.scale(scale: v, child: child),
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 48),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 28, vertical: 18),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              color: Colors.black.withAlpha(200),
-              border: Border.all(
-                color: accentColor.withAlpha(130),
-                width: 1.5,
+    return Center(
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.0, end: 1.0),
+        duration: const Duration(milliseconds: 700),
+        curve: Curves.elasticOut,
+        builder: (_, v, child) => Transform.scale(scale: v, child: child),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 48),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 28, vertical: 18),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: Colors.black.withAlpha(200),
+            border: Border.all(
+              color: accentColor.withAlpha(130),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: accentColor.withAlpha(60),
+                blurRadius: 24,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: accentColor.withAlpha(60),
-                  blurRadius: 24,
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                winners.length == 1
+                    ? '🎉  胜利者'
+                    : '🎉  胜利者 × ${winners.length}',
+                style: TextStyle(
+                  color: accentColor.withAlpha(220),
+                  fontSize: 11,
+                  letterSpacing: 4,
                 ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  winners.length == 1
-                      ? '🎉  胜利者'
-                      : '🎉  胜利者 × ${winners.length}',
-                  style: TextStyle(
-                    color: accentColor.withAlpha(220),
-                    fontSize: 11,
-                    letterSpacing: 4,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // 胜利者的颜色圆点
-                Wrap(
-                  spacing: 10,
-                  children: winners
-                      .map((f) => Container(
-                            width: 22,
-                            height: 22,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: f.neonColor,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: f.neonColor.withAlpha(180),
-                                  blurRadius: 14,
-                                ),
-                              ],
-                            ),
-                          ))
-                      .toList(),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 10,
+                children: winners
+                    .map((f) => Container(
+                          width: 22,
+                          height: 22,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: f.neonColor,
+                            boxShadow: [
+                              BoxShadow(
+                                color: f.neonColor.withAlpha(180),
+                                blurRadius: 14,
+                              ),
+                            ],
+                          ),
+                        ))
+                    .toList(),
+              ),
+            ],
           ),
         ),
       ),
