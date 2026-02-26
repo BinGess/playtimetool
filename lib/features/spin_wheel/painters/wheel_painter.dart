@@ -111,19 +111,25 @@ class WheelPainter extends CustomPainter {
 
     final opacity = speed > 8 ? 0.3 : (speed > 3 ? 0.7 : 1.0);
 
+    // UX: min 16px for mobile readability; letterSpacing for legibility
     final painter = TextPainter(
       text: TextSpan(
         text: text,
         style: TextStyle(
           color: Colors.white.withAlpha((255 * opacity).round()),
-          fontSize: 13,
+          fontSize: 15,
           fontWeight: FontWeight.w600,
-          shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
+          letterSpacing: 0.8,
+          height: 1.35,
+          shadows: const [
+            Shadow(color: Colors.black54, blurRadius: 4),
+            Shadow(color: Colors.black, blurRadius: 2),
+          ],
         ),
       ),
       textDirection: TextDirection.ltr,
       textAlign: TextAlign.center,
-    )..layout(maxWidth: 72);
+    )..layout(maxWidth: 84);
 
     canvas.save();
     canvas.translate(x, y);

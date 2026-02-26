@@ -5,6 +5,7 @@ import '../../features/finger_picker/finger_picker_screen.dart';
 import '../../features/spin_wheel/spin_wheel_screen.dart';
 import '../../features/number_bomb/number_bomb_screen.dart';
 import '../../features/settings/settings_screen.dart';
+import '../../features/settings/about_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -42,6 +43,14 @@ final appRouter = GoRouter(
       pageBuilder: (_, state) => CustomTransitionPage(
         key: state.pageKey,
         child: const SettingsScreen(),
+        transitionsBuilder: _fadeSlideTransition,
+      ),
+    ),
+    GoRoute(
+      path: '/settings/about',
+      pageBuilder: (_, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const AboutScreen(),
         transitionsBuilder: _fadeSlideTransition,
       ),
     ),

@@ -44,6 +44,12 @@ class FingerPickerNotifier extends StateNotifier<FingerPickerState> {
         return;
     }
 
+    // 超过人数限制：重置并提示
+    if (state.fingers.length >= kMaxFingerPlayers) {
+      _overflowAndReset();
+      return;
+    }
+
     final colorIndex = state.fingers.length % AppColors.fingerNeons.length;
     final finger = FingerData(
       pointerId: pointerId,
@@ -201,7 +207,8 @@ class FingerPickerNotifier extends StateNotifier<FingerPickerState> {
     _eliminationTimer =
         Timer.periodic(const Duration(milliseconds: 500), (t) {
       revealed++;
-      HapticService.errorVibrate(); // 每淘汰一人：短促震动
+      HapticService.lightImpact(); // 轻微震动
+      AudioService.play(AppSounds.wheelTick, volume: 0.5); // 轻微提示音
       state = state.copyWith(visibleEliminationCount: revealed);
 
       if (revealed >= loserIds.length) {
@@ -227,8 +234,22 @@ class FingerPickerNotifier extends StateNotifier<FingerPickerState> {
     HapticService.errorVibrate();
   }
 
+  void _overflowAndReset() {
+    _cancelAllTimers();
+    _stablePos.clear();
+    state = FingerPickerState(
+      showOverflowAlert: true,
+      maxWinners: state.maxWinners,
+    );
+    HapticService.notificationWarning();
+  }
+
   void dismissEscapeAlert() {
     state = state.copyWith(showEscapeAlert: false);
+  }
+
+  void dismissOverflowAlert() {
+    state = state.copyWith(showOverflowAlert: false);
   }
 
   void reset() {
@@ -238,7 +259,7 @@ class FingerPickerNotifier extends StateNotifier<FingerPickerState> {
   }
 
   void setMaxWinners(int count) {
-    state = state.copyWith(maxWinners: count.clamp(1, 5));
+    state = state.copyWith(maxWinners: count.clamp(1, kMaxFingerPlayers));
   }
 
   void _cancelAllTimers() {

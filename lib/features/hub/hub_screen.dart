@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/sensors/gyroscope_service.dart';
+import '../../l10n/app_localizations.dart';
 import 'widgets/game_card.dart';
 
 class HubScreen extends ConsumerStatefulWidget {
@@ -24,6 +25,7 @@ class _HubScreenState extends ConsumerState<HubScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final gyroAsync = ref.watch(gyroscopeProvider);
     final gyroX = gyroAsync.value?.x ?? 0.0;
     final gyroY = gyroAsync.value?.y ?? 0.0;
@@ -40,9 +42,9 @@ class _HubScreenState extends ConsumerState<HubScreen> {
               children: [
                 const SizedBox(height: 32),
                 // Title
-                const Text(
-                  '聚会游戏精选',
-                  style: TextStyle(
+                Text(
+                  l10n.appTitle,
+                  style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 13,
                     letterSpacing: 4,
@@ -56,27 +58,27 @@ class _HubScreenState extends ConsumerState<HubScreen> {
                   child: PageView(
                     controller: _pageController,
                     onPageChanged: (i) => setState(() => _currentPage = i),
-                    children: const [
+                    children: [
                       GameCard(
-                        title: '指尖轮盘',
-                        subtitle: 'FINGER PICKER',
-                        description: '命运的触碰',
+                        title: l10n.fingerPicker,
+                        subtitle: l10n.fingerPickerSub,
+                        description: l10n.fingerPickerDesc,
                         accentColor: AppColors.fingerCyan,
                         route: '/finger',
                         icon: Icons.fingerprint,
                       ),
                       GameCard(
-                        title: '自定义转盘',
-                        subtitle: 'SPIN WHEEL',
-                        description: '丝滑的物理感',
+                        title: l10n.spinWheel,
+                        subtitle: l10n.spinWheelSub,
+                        description: l10n.spinWheelDesc,
                         accentColor: AppColors.wheelOrange,
                         route: '/wheel',
                         icon: Icons.rotate_right,
                       ),
                       GameCard(
-                        title: '数字炸弹',
-                        subtitle: 'NUMBER BOMB',
-                        description: '心理压迫感',
+                        title: l10n.numberBomb,
+                        subtitle: l10n.numberBombSub,
+                        description: l10n.numberBombDesc,
                         accentColor: AppColors.bombRed,
                         route: '/bomb',
                         icon: Icons.bolt,
@@ -123,11 +125,11 @@ class _HubScreenState extends ConsumerState<HubScreen> {
                 // Settings link
                 GestureDetector(
                   onTap: () => context.push('/settings'),
-                  child: const Padding(
-                    padding: EdgeInsets.all(16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
                     child: Text(
-                      '⚙  SETTINGS',
-                      style: TextStyle(
+                      '⚙  ${l10n.settingsTitle}',
+                      style: const TextStyle(
                         color: AppColors.textDim,
                         fontSize: 11,
                         letterSpacing: 2,

@@ -37,6 +37,9 @@ class FingerData {
   }
 }
 
+/// 最多支持参与人数
+const int kMaxFingerPlayers = 6;
+
 class FingerPickerState {
   const FingerPickerState({
     this.fingers = const {},
@@ -44,6 +47,7 @@ class FingerPickerState {
     this.countdownValue = 3,
     this.maxWinners = 1,
     this.showEscapeAlert = false,
+    this.showOverflowAlert = false,
     this.eliminationOrder = const [],
     this.visibleEliminationCount = 0,
   });
@@ -53,6 +57,7 @@ class FingerPickerState {
   final int countdownValue;
   final int maxWinners;
   final bool showEscapeAlert;
+  final bool showOverflowAlert;
 
   /// 落败者指针 ID 的有序列表（逐步揭晓用）
   final List<int> eliminationOrder;
@@ -66,6 +71,7 @@ class FingerPickerState {
     int? countdownValue,
     int? maxWinners,
     bool? showEscapeAlert,
+    bool? showOverflowAlert,
     List<int>? eliminationOrder,
     int? visibleEliminationCount,
   }) {
@@ -75,6 +81,7 @@ class FingerPickerState {
       countdownValue: countdownValue ?? this.countdownValue,
       maxWinners: maxWinners ?? this.maxWinners,
       showEscapeAlert: showEscapeAlert ?? this.showEscapeAlert,
+      showOverflowAlert: showOverflowAlert ?? this.showOverflowAlert,
       eliminationOrder: eliminationOrder ?? this.eliminationOrder,
       visibleEliminationCount:
           visibleEliminationCount ?? this.visibleEliminationCount,

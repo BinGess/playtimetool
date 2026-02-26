@@ -44,6 +44,7 @@ class SpinWheelNotifier extends StateNotifier<SpinWheelState> {
   SpinWheelNotifier()
       : super(SpinWheelState(config: WheelPresets.dinner));
 
+  final _random = Random();
   Ticker? _ticker;
   Duration _lastTick = Duration.zero;
   int _lastSegmentIndex = -1;
@@ -134,18 +135,34 @@ class SpinWheelNotifier extends StateNotifier<SpinWheelState> {
     return segments.length - 1;
   }
 
-  /// In prank mode, slightly reweight segments away from heavy-weight items
+  /// 恶搞模式：偏向「倒霉」选项，或随机打乱结果
   int _applyPrankBias(int naturalIdx) {
     if (!state.config.isPrankMode) return naturalIdx;
-    // In prank mode, find segment with lowest weight and steer toward it
-    final segments = state.config.segments;
-    final minWeight =
-        segments.map((s) => s.weight).reduce(min);
-    final lowWeightIdx =
-        segments.indexWhere((s) => s.weight == minWeight);
 
-    // 30% chance to redirect to lowest-weight segment
-    if (Random().nextDouble() < 0.3) return lowWeightIdx;
+    final segments = state.config.segments;
+    if (segments.isEmpty) return naturalIdx;
+
+    final weights = segments.map((s) => s.weight).toList();
+    final minW = weights.reduce(min);
+    final maxW = weights.reduce(max);
+
+    // 有权重差异：偏向权重最低的选项（如「谁买单」的老板）
+    if (maxW - minW > 0.01) {
+      final lowIndices =
+          segments.asMap().entries
+              .where((e) => (e.value.weight - minW).abs() < 0.01)
+              .map((e) => e.key)
+              .toList();
+      if (_random.nextDouble() < 0.55) {
+        return lowIndices[_random.nextInt(lowIndices.length)];
+      }
+      return naturalIdx;
+    }
+
+    // 权重相同：随机替换为任意选项，制造不可预测感
+    if (_random.nextDouble() < 0.5) {
+      return _random.nextInt(segments.length);
+    }
     return naturalIdx;
   }
 

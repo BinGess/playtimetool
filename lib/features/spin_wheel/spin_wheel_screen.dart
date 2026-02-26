@@ -3,11 +3,11 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../l10n/app_localizations.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/haptics/haptic_service.dart';
 import '../../core/audio/audio_service.dart';
 import '../../core/constants/app_sounds.dart';
-import '../../shared/widgets/glass_container.dart';
 import 'models/wheel_segment.dart';
 import 'providers/spin_wheel_provider.dart';
 import 'painters/wheel_painter.dart';
@@ -101,6 +101,7 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final state = ref.watch(spinWheelProvider);
     final notifier = ref.read(spinWheelProvider.notifier);
     final screenH = MediaQuery.sizeOf(context).height;
@@ -144,8 +145,8 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(color: AppColors.textDim),
                           ),
-                          child: const Text(
-                            '✏  编辑',
+                          child: Text(
+                            '✏  ${l10n.edit}',
                             style: TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 12,
@@ -155,6 +156,7 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
                       ),
                       const SizedBox(width: 10),
                       _ModeToggle(
+                        l10n: l10n,
                         isPrank: state.config.isPrankMode,
                         onToggle: notifier.togglePrankMode,
                       ),
@@ -218,29 +220,36 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
                           notifier.loadConfig(preset);
                           HapticService.lightImpact();
                         },
-                        child: Container(
-                          margin: const EdgeInsets.only(right: 10),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: active
-                                  ? AppColors.wheelOrange
-                                  : AppColors.textDim,
-                              width: active ? 1.5 : 1,
-                            ),
-                            color: active
-                                ? AppColors.wheelOrange.withAlpha(20)
-                                : Colors.transparent,
-                          ),
-                          child: Text(
-                            preset.name,
-                            style: TextStyle(
-                              color: active
-                                  ? AppColors.wheelOrange
-                                  : AppColors.textSecondary,
-                              fontSize: 13,
+                        child: SizedBox(
+                          height: 52,
+                          child: Center(
+                            child: Container(
+                              margin: const EdgeInsets.only(right: 10),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: active
+                                      ? AppColors.wheelOrange
+                                      : AppColors.textDim,
+                                  width: active ? 1.5 : 1,
+                                ),
+                                color: active
+                                    ? AppColors.wheelOrange.withAlpha(20)
+                                    : Colors.transparent,
+                              ),
+                              child: Text(
+                                l10n.presetDisplayName(preset.name),
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: active
+                                      ? AppColors.wheelOrange
+                                      : AppColors.textSecondary,
+                                  fontSize: 14,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -253,9 +262,13 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
                 Padding(
                   padding: const EdgeInsets.only(top: 8, bottom: 4),
                   child: Text(
-                    '滑动旋转  •  ${state.config.name}',
-                    style: const TextStyle(
-                      color: AppColors.textDim,
+                    state.config.isPrankMode
+                        ? '${l10n.slideToSpin}  •  ${l10n.presetDisplayName(state.config.name)}  •  ${l10n.prankActive}'
+                        : '${l10n.slideToSpin}  •  ${l10n.presetDisplayName(state.config.name)}',
+                    style: TextStyle(
+                      color: state.config.isPrankMode
+                          ? AppColors.bombRed.withAlpha(180)
+                          : AppColors.textDim,
                       fontSize: 11,
                       letterSpacing: 1,
                     ),
@@ -268,6 +281,7 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
           // Result overlay
           if (state.phase == SpinPhase.result && state.resultSegment != null)
             _ResultOverlay(
+              l10n: l10n,
               segment: state.resultSegment!,
               animation: _resultAnim,
               onDismiss: notifier.dismissResult,
@@ -292,11 +306,13 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
 
   void _showEditorSheet(BuildContext ctx, SpinWheelState state,
       SpinWheelNotifier notifier) {
+    final l10n = AppLocalizations.of(ctx);
     showModalBottomSheet<void>(
       context: ctx,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _WheelEditorSheet(
+        l10n: l10n,
         config: state.config,
         notifier: notifier,
       ),
@@ -308,10 +324,12 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
 
 class _WheelEditorSheet extends ConsumerStatefulWidget {
   const _WheelEditorSheet({
+    required this.l10n,
     required this.config,
     required this.notifier,
   });
 
+  final AppLocalizations l10n;
   final WheelConfig config;
   final SpinWheelNotifier notifier;
 
@@ -320,15 +338,25 @@ class _WheelEditorSheet extends ConsumerStatefulWidget {
 }
 
 class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
+  // Gaming palette: vibrant, distinct, good contrast for white text
+  // Based on ui-ux-pro-max design system (Retro-Futurism, neon glow)
   static const _paletteColors = [
-    Color(0xFFFF4444), Color(0xFFFF8C00), Color(0xFFFFE000),
-    Color(0xFF44FF88), Color(0xFF00FFFF), Color(0xFF44AAFF),
-    Color(0xFF9B00FF), Color(0xFFFF00FF), Color(0xFFFF6B35),
-    Color(0xFFFFFFFF),
+    Color(0xFFF43F5E), // Rose (gaming CTA)
+    Color(0xFF7C3AED), // Purple (gaming primary)
+    Color(0xFF00D4FF), // Cyan
+    Color(0xFF00FF88), // Lime
+    Color(0xFFFFE135), // Bright yellow
+    Color(0xFFFF8C00), // Amber
+    Color(0xFFFF6B35), // Orange
+    Color(0xFF9B00FF),  // Violet
+    Color(0xFFFF44B8), // Pink
+    Color(0xFF00A8FF), // Azure
+    Color(0xFFFFFFFF), // White
   ];
 
   @override
   Widget build(BuildContext context) {
+    final l10n = widget.l10n;
     // Watch live state for real-time segment list updates
     final liveSegments =
         ref.watch(spinWheelProvider).config.segments;
@@ -363,12 +391,13 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
                   const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
               child: Row(
                 children: [
-                  const Text(
-                    '编辑转盘',
+                  Text(
+                    l10n.editWheel,
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 17,
+                      fontSize: 18,
                       fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
                     ),
                   ),
                   const Spacer(),
@@ -386,8 +415,8 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
                           color: AppColors.wheelOrange.withAlpha(150),
                         ),
                       ),
-                      child: const Text(
-                        '＋ 添加',
+                      child: Text(
+                        l10n.add,
                         style: TextStyle(
                           color: AppColors.wheelOrange,
                           fontSize: 13,
@@ -426,9 +455,14 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
   }
 
   void _addSegmentDialog(BuildContext ctx) {
+    final l10n = widget.l10n;
     _showSegmentDialog(
       ctx,
-      title: '添加选项',
+      title: l10n.addOption,
+      optionNameHint: l10n.optionName,
+      colorLabel: l10n.color,
+      cancelLabel: l10n.cancel,
+      confirmLabel: l10n.confirm,
       initialLabel: '',
       initialColor: _paletteColors[0],
       onConfirm: (label, color) {
@@ -442,9 +476,14 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
   }
 
   void _editSegmentDialog(BuildContext ctx, int index, WheelSegment seg) {
+    final l10n = widget.l10n;
     _showSegmentDialog(
       ctx,
-      title: '编辑选项',
+      title: l10n.editOption,
+      optionNameHint: l10n.optionName,
+      colorLabel: l10n.color,
+      cancelLabel: l10n.cancel,
+      confirmLabel: l10n.confirm,
       initialLabel: seg.label,
       initialColor: seg.color,
       onConfirm: (label, color) {
@@ -460,6 +499,10 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
   void _showSegmentDialog(
     BuildContext ctx, {
     required String title,
+    required String optionNameHint,
+    required String colorLabel,
+    required String cancelLabel,
+    required String confirmLabel,
     required String initialLabel,
     required Color initialColor,
     required void Function(String, Color) onConfirm,
@@ -479,18 +522,26 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
             ),
           ),
           title: Text(title,
-              style: const TextStyle(color: Colors.white, fontSize: 17)),
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  letterSpacing: 0.5,
+                  fontWeight: FontWeight.w600)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TextField(
                 controller: textCtrl,
-                style: const TextStyle(color: Colors.white, fontSize: 16),
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    letterSpacing: 0.5,
+                    height: 1.5),
                 autofocus: true,
                 maxLength: 8,
                 decoration: InputDecoration(
-                  hintText: '选项名称',
+                  hintText: optionNameHint,
                   hintStyle:
                       const TextStyle(color: AppColors.textDim),
                   counterStyle:
@@ -506,21 +557,24 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              const Text('颜色',
-                  style: TextStyle(
-                      color: AppColors.textDim, fontSize: 12)),
-              const SizedBox(height: 8),
+              const SizedBox(height: 20),
+              Text(colorLabel,
+                  style: const TextStyle(
+                      color: AppColors.textDim,
+                      fontSize: 13,
+                      letterSpacing: 0.5)),
+              const SizedBox(height: 12),
               Wrap(
-                spacing: 8,
-                runSpacing: 8,
+                spacing: 12,
+                runSpacing: 12,
                 children: _paletteColors.map((c) {
                   final selected = picked == c;
                   return GestureDetector(
+                    behavior: HitTestBehavior.opaque,
                     onTap: () => setS(() => picked = c),
                     child: Container(
-                      width: 32,
-                      height: 32,
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: c,
@@ -528,8 +582,15 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
                           color: selected
                               ? Colors.white
                               : Colors.transparent,
-                          width: 2,
+                          width: 2.5,
                         ),
+                        boxShadow: [
+                          if (selected)
+                            BoxShadow(
+                              color: c.withAlpha(100),
+                              blurRadius: 8,
+                            ),
+                        ],
                       ),
                     ),
                   );
@@ -540,16 +601,16 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dCtx),
-              child: const Text('取消',
-                  style: TextStyle(color: AppColors.textSecondary)),
+              child: Text(cancelLabel,
+                  style: const TextStyle(color: AppColors.textSecondary)),
             ),
             TextButton(
               onPressed: () {
                 Navigator.pop(dCtx);
                 onConfirm(textCtrl.text.trim(), picked);
               },
-              child: const Text('确定',
-                  style: TextStyle(color: AppColors.wheelOrange)),
+              child: Text(confirmLabel,
+                  style: const TextStyle(color: AppColors.wheelOrange)),
             ),
           ],
         ),
@@ -604,7 +665,9 @@ class _SegmentTile extends StatelessWidget {
           segment.label,
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 15,
+            fontSize: 16,
+            letterSpacing: 0.6,
+            height: 1.4,
           ),
         ),
         trailing: Row(
@@ -635,8 +698,13 @@ class _SegmentTile extends StatelessWidget {
 // ─────────────────────────── Mode toggle ───────────────────────────
 
 class _ModeToggle extends StatelessWidget {
-  const _ModeToggle({required this.isPrank, required this.onToggle});
+  const _ModeToggle({
+    required this.l10n,
+    required this.isPrank,
+    required this.onToggle,
+  });
 
+  final AppLocalizations l10n;
   final bool isPrank;
   final VoidCallback onToggle;
 
@@ -659,7 +727,7 @@ class _ModeToggle extends StatelessWidget {
               : Colors.transparent,
         ),
         child: Text(
-          isPrank ? '😈 恶搞' : '⚖️ 公平',
+                      isPrank ? '😈 ${l10n.prank}' : '⚖️ ${l10n.fair}',
           style: TextStyle(
             color: isPrank ? AppColors.bombRed : AppColors.textSecondary,
             fontSize: 12,
@@ -674,11 +742,13 @@ class _ModeToggle extends StatelessWidget {
 
 class _ResultOverlay extends StatelessWidget {
   const _ResultOverlay({
+    required this.l10n,
     required this.segment,
     required this.animation,
     required this.onDismiss,
   });
 
+  final AppLocalizations l10n;
   final WheelSegment segment;
   final Animation<double> animation;
   final VoidCallback onDismiss;
@@ -694,44 +764,67 @@ class _ResultOverlay extends StatelessWidget {
           child: Center(
             child: ScaleTransition(
               scale: animation,
-              child: GlassContainer(
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 32),
                 padding: const EdgeInsets.symmetric(
                     horizontal: 40, vertical: 32),
-                borderRadius: BorderRadius.circular(28),
-                borderColor: segment.color.withAlpha(120),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0D0D0D),
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(
+                    color: segment.color.withAlpha(150),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: segment.color.withAlpha(60),
+                      blurRadius: 24,
+                      spreadRadius: 0,
+                    ),
+                  ],
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '结果',
-                      style: TextStyle(
-                        color: segment.color.withAlpha(180),
-                        fontSize: 11,
-                        letterSpacing: 4,
+                      l10n.result,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        letterSpacing: 5,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 18),
                     Text(
                       segment.label,
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 48,
+                        fontSize: 44,
                         fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2,
+                        height: 1.2,
                         shadows: [
                           Shadow(
-                            color: segment.color.withAlpha(200),
-                            blurRadius: 30,
+                            color: Colors.black.withAlpha(180),
+                            blurRadius: 12,
+                            offset: const Offset(0, 2),
+                          ),
+                          Shadow(
+                            color: segment.color.withAlpha(100),
+                            blurRadius: 20,
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      '轻触任意位置继续',
-                      style: TextStyle(
-                        color: AppColors.textDim,
-                        fontSize: 12,
-                        letterSpacing: 1,
+                    const SizedBox(height: 22),
+                    Text(
+                      l10n.touchToContinue,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                        letterSpacing: 1.5,
+                        height: 1.4,
                       ),
                     ),
                   ],

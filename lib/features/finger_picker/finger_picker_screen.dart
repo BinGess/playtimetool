@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
+import '../../l10n/app_localizations.dart';
 import 'models/finger_state.dart';
 import 'providers/finger_picker_provider.dart';
 import 'painters/finger_ring_painter.dart';
@@ -97,6 +98,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final state = ref.watch(fingerPickerProvider);
     final notifier = ref.read(fingerPickerProvider.notifier);
 
@@ -105,9 +107,13 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
         _handlePhaseChange(next.phase);
       }
       if (next.showEscapeAlert && !(prev?.showEscapeAlert ?? false)) {
-        // 下一帧弹出，避免在 build 期间触发 Navigator
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) _showEscapeDialog();
+        });
+      }
+      if (next.showOverflowAlert && !(prev?.showOverflowAlert ?? false)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _showOverflowDialog();
         });
       }
     });
@@ -175,7 +181,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
                     AnimatedBuilder(
                       animation: _glowAnim,
                       builder: (_, __) => Text(
-                        '请放上手指',
+                        l10n.placeFingers,
                         style: TextStyle(
                           color: AppColors.fingerCyan.withAlpha(
                               (100 + 80 * _glowAnim.value).round()),
@@ -186,8 +192,8 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
                       ),
                     ),
                     const SizedBox(height: 10),
-                    const Text(
-                      'PLACE FINGERS TO BEGIN',
+                    Text(
+                      l10n.placeFingersEn,
                       style: TextStyle(
                         color: AppColors.textDim,
                         fontSize: 10,
@@ -209,7 +215,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
               child: IgnorePointer(
                 child: Center(
                   child: Text(
-                    '等待更多人加入...',
+                    l10n.waitingMore,
                     style: TextStyle(
                       color: AppColors.fingerCyan.withAlpha(100),
                       fontSize: 14,
@@ -231,7 +237,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
                   child: AnimatedBuilder(
                     animation: _glowAnim,
                     builder: (_, __) => Text(
-                      '锁定！保持不动...',
+                      l10n.locked,
                       style: TextStyle(
                         color: AppColors.fingerCyan.withAlpha(
                             (100 + 80 * _glowAnim.value).round()),
@@ -273,8 +279,8 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
                         ),
                       ],
                     ),
-                    child: const Text(
-                      '开  始',
+                    child: Text(
+                      l10n.start,
                       style: TextStyle(
                         color: AppColors.fingerCyan,
                         letterSpacing: 10,
@@ -331,11 +337,13 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
                     child: Text(
                       key: ValueKey(state.visibleEliminationCount),
                       state.visibleEliminationCount == 0
-                          ? '命运转动中...'
+                          ? l10n.fateSpinning
                           : state.visibleEliminationCount <
                                   state.eliminationOrder.length
-                              ? '淘汰 ${state.visibleEliminationCount} / ${state.eliminationOrder.length}'
-                              : '揭晓胜者...',
+                              ? l10n.eliminatedCount(
+                                  state.visibleEliminationCount,
+                                  state.eliminationOrder.length)
+                              : l10n.reveal,
                       style: TextStyle(
                         color: AppColors.bombRed.withAlpha(200),
                         fontSize: 14,
@@ -354,7 +362,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
               left: 0,
               right: 0,
               child: IgnorePointer(
-                child: _ResultOverlayContent(state: state),
+                child: _ResultOverlayContent(state: state, l10n: l10n),
               ),
             ),
 
@@ -366,9 +374,9 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
               right: 0,
               child: GestureDetector(
                 onTap: notifier.reset,
-                child: const Center(
+                child: Center(
                   child: Text(
-                    '再来一次',
+                    l10n.again,
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 14,
@@ -389,9 +397,10 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
                   // 返回按钮（仅在可安全返回的阶段显示）
                   if (isActive)
                     GestureDetector(
+                      behavior: HitTestBehavior.opaque,
                       onTap: () => context.pop(),
                       child: const Padding(
-                        padding: EdgeInsets.all(12),
+                        padding: EdgeInsets.all(16),
                         child: Icon(Icons.arrow_back_ios,
                             color: AppColors.textDim, size: 20),
                       ),
@@ -400,9 +409,10 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
                   // 选中人数配置
                   if (isActive)
                     GestureDetector(
+                      behavior: HitTestBehavior.opaque,
                       onTap: _showWinnersDialog,
                       child: Padding(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(16),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -410,7 +420,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
                                 color: AppColors.textDim, size: 18),
                             const SizedBox(width: 5),
                             Text(
-                              '选 ${state.maxWinners} 人',
+                              l10n.selectWinnersCount(state.maxWinners),
                               style: const TextStyle(
                                 color: AppColors.textDim,
                                 fontSize: 12,
@@ -448,6 +458,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
 
   void _showEscapeDialog() {
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
     showDialog<void>(
       context: context,
       barrierDismissible: true,
@@ -457,8 +468,8 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
           borderRadius: BorderRadius.circular(20),
           side: BorderSide(color: AppColors.bombRed.withAlpha(100)),
         ),
-        title: const Text(
-          '有人逃跑了！',
+          title: Text(
+          l10n.someoneEscaped,
           style: TextStyle(
             color: Colors.white,
             fontSize: 22,
@@ -466,8 +477,8 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
           ),
           textAlign: TextAlign.center,
         ),
-        content: const Text(
-          '请重新放上所有手指\n重新开始游戏',
+        content: Text(
+          l10n.escapeHint,
           style: TextStyle(
             color: AppColors.textSecondary,
             height: 1.6,
@@ -480,8 +491,56 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
               Navigator.pop(context);
               ref.read(fingerPickerProvider.notifier).dismissEscapeAlert();
             },
-            child: const Text(
-              '好的，重来',
+            child: Text(
+              l10n.okRetry,
+              style: TextStyle(
+                color: AppColors.fingerCyan,
+                fontSize: 15,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showOverflowDialog() {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF080F1A),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: AppColors.fingerCyan.withAlpha(100)),
+        ),
+        title: Text(
+          l10n.overflowTitle,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.w500,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        content: Text(
+          l10n.overflowHint,
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            height: 1.6,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ref.read(fingerPickerProvider.notifier).dismissOverflowAlert();
+            },
+            child: Text(
+              l10n.ok,
               style: TextStyle(
                 color: AppColors.fingerCyan,
                 fontSize: 15,
@@ -494,7 +553,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
   }
 
   void _showWinnersDialog() {
-    // 读取当前选中人数
+    final l10n = AppLocalizations.of(context);
     final current = ref.read(fingerPickerProvider).maxWinners;
 
     showDialog<void>(
@@ -506,14 +565,14 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
             borderRadius: BorderRadius.circular(20),
             side: BorderSide(color: AppColors.fingerCyan.withAlpha(80)),
           ),
-          title: const Text(
-            '选中人数',
+          title: Text(
+            l10n.selectWinners,
             style: TextStyle(color: Colors.white),
             textAlign: TextAlign.center,
           ),
           content: Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(5, (i) {
+            children: List.generate(6, (i) {
               final n = i + 1;
               final selected = current == n;
               return GestureDetector(
@@ -562,9 +621,10 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
 // ─── 胜利者结果覆盖层 ────────────────────────────────────────────
 
 class _ResultOverlayContent extends StatelessWidget {
-  const _ResultOverlayContent({required this.state});
+  const _ResultOverlayContent({required this.state, required this.l10n});
 
   final FingerPickerState state;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -600,10 +660,10 @@ class _ResultOverlayContent extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                winners.length == 1
-                    ? '🎉  胜利者'
-                    : '🎉  胜利者 × ${winners.length}',
+                    Text(
+                      winners.length == 1
+                      ? '🎉  ${l10n.victor}'
+                      : '🎉  ${l10n.victorsCount(winners.length)}',
                 style: TextStyle(
                   color: accentColor.withAlpha(220),
                   fontSize: 11,

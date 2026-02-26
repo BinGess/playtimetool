@@ -27,9 +27,10 @@ class FingerRingPainter extends CustomPainter {
   final int elimVisible;
 
   // ── 尺寸常量 ────────────────────────────────────────────────────
-  static const double _baseR = 42.0;   // 普通圆环半径
-  static const double _winR  = 68.0;   // 胜利者圆环半径
-  static const double _elimR = 28.0;   // 消除后缩小的圆环半径
+  // 增大半径，避免被手指遮挡
+  static const double _baseR = 54.0;   // 普通圆环半径
+  static const double _winR  = 85.0;   // 胜利者圆环半径
+  static const double _elimR = 34.0;   // 消除后缩小的圆环半径
 
   bool _isVisiblyEliminated(int id) {
     final idx = elimOrder.indexOf(id);
@@ -55,23 +56,40 @@ class FingerRingPainter extends CustomPainter {
     }
   }
 
-  // ── 普通激活状态 ─────────────────────────────────────────────────
+  // ── 普通激活状态（呼吸光圈效果）──────────────────────────────────
   void _drawActive(Canvas canvas, FingerData f) {
     final c = f.position;
     final color = f.neonColor;
-    final bloom = 0.25 + 0.18 * glowPulse;
 
-    // 外层光晕（呼吸）
+    // 呼吸参数：0→1→0 循环，用于半径扩张与透明度变化
+    final breath = glowPulse;
+    final breathInv = 1.0 - glowPulse;
+
+    // 1. 最外层弥散光晕（大范围柔和扩散，呼吸扩张）
+    final outerR = _baseR + 14 + 22 * breath;
     canvas.drawCircle(
       c,
-      _baseR + 10,
+      outerR,
       Paint()
-        ..color = color.withAlpha((bloom * 200).round())
+        ..color = color.withAlpha((30 + 50 * breathInv).round())
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 32)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 12,
+    );
+
+    // 2. 中层光晕（呼吸脉动）
+    final midR = _baseR + 8 + 12 * breath;
+    canvas.drawCircle(
+      c,
+      midR,
+      Paint()
+        ..color = color.withAlpha((60 + 100 * breath).round())
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 6,
+        ..strokeWidth = 8,
     );
-    // 主圆环
+
+    // 3. 主圆环（固定）
     canvas.drawCircle(
       c,
       _baseR,
@@ -80,8 +98,20 @@ class FingerRingPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.5,
     );
-    // 中心点
-    canvas.drawCircle(c, 5, Paint()..color = color);
+
+    // 4. 内圈微光（呼吸增强）
+    canvas.drawCircle(
+      c,
+      _baseR - 4,
+      Paint()
+        ..color = color.withAlpha((40 + 60 * breath).round())
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4,
+    );
+
+    // 5. 中心点
+    canvas.drawCircle(c, 6, Paint()..color = color);
   }
 
   // ── 锁定状态（粗一点的圆环，无旋转）────────────────────────────
@@ -106,7 +136,7 @@ class FingerRingPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3,
     );
-    canvas.drawCircle(c, 5, Paint()..color = color);
+    canvas.drawCircle(c, 6, Paint()..color = color);
   }
 
   // ── 倒计时旋转状态 ───────────────────────────────────────────────
@@ -150,7 +180,7 @@ class FingerRingPainter extends CustomPainter {
         ..strokeCap = StrokeCap.round,
     );
     // 中心点
-    canvas.drawCircle(c, 5, Paint()..color = color);
+    canvas.drawCircle(c, 6, Paint()..color = color);
   }
 
   // ── 消除动画（缩小 + 暗淡 + X）──────────────────────────────────
@@ -168,7 +198,7 @@ class FingerRingPainter extends CustomPainter {
     );
 
     // 红色 X
-    const d = 13.0;
+    const d = 16.0;
     final xPaint = Paint()
       ..color = Colors.red.withAlpha(200)
       ..strokeWidth = 2.5

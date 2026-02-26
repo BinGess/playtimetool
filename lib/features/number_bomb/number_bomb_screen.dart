@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/haptics/haptic_service.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/glass_container.dart';
 import 'models/bomb_state.dart';
 import 'providers/number_bomb_provider.dart';
@@ -18,10 +19,8 @@ class NumberBombScreen extends ConsumerStatefulWidget {
 class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
     with TickerProviderStateMixin {
   late AnimationController _bombPulseController;
-  late AnimationController _flashController;
   late AnimationController _explosionController;
   late Animation<double> _bombPulse;
-  late Animation<double> _flashAnim;
   late Animation<double> _explosionAnim;
 
   @override
@@ -36,12 +35,6 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
       CurvedAnimation(parent: _bombPulseController, curve: Curves.easeInOut),
     );
 
-    _flashController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 120),
-    );
-    _flashAnim = Tween<double>(begin: 0.0, end: 1.0).animate(_flashController);
-
     _explosionController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -53,7 +46,6 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
   @override
   void dispose() {
     _bombPulseController.dispose();
-    _flashController.dispose();
     _explosionController.dispose();
     super.dispose();
   }
@@ -65,8 +57,18 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
 
     ref.listen(numberBombProvider, (prev, next) {
       if (next.lastGuessInvalid && !(prev?.lastGuessInvalid ?? false)) {
-        _flashController.reset();
-        _flashController.forward();
+        final l10n = AppLocalizations.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              l10n.invalidRangeHint(next.minRange, next.maxRange),
+              style: const TextStyle(color: Colors.white),
+            ),
+            backgroundColor: AppColors.bombRed.withAlpha(220),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+          ),
+        );
       }
       if (next.phase == BombPhase.explosion &&
           prev?.phase != BombPhase.explosion) {
@@ -83,16 +85,11 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
 
     return Scaffold(
       body: AnimatedBuilder(
-        animation: Listenable.merge([_flashAnim, _explosionAnim]),
+        animation: _explosionAnim,
         builder: (_, child) {
-          Color bg = bgColor;
-          if (_flashAnim.value > 0) {
-            bg = Color.lerp(bgColor, AppColors.bombRed.withAlpha(180),
-                _flashAnim.value)!;
-          }
           return AnimatedContainer(
             duration: const Duration(milliseconds: 600),
-            color: bg,
+            color: bgColor,
             child: child,
           );
         },
@@ -111,12 +108,16 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
 
             SafeArea(
               child: state.phase == BombPhase.setup
-                  ? _SetupView(onStart: notifier.startGame)
+                  ? _SetupView(
+                      onStart: notifier.startGame,
+                      l10n: AppLocalizations.of(context),
+                    )
                   : state.phase == BombPhase.playing
                       ? _PlayingView(
                           state: state,
                           notifier: notifier,
                           bombPulse: _bombPulse,
+                          l10n: AppLocalizations.of(context),
                         )
                       : const SizedBox.shrink(),
             ),
@@ -127,6 +128,7 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
                 anim: _explosionAnim,
                 punishmentText: state.punishmentText,
                 onReset: notifier.reset,
+                l10n: AppLocalizations.of(context),
               ),
 
             // Back edge swipe
@@ -149,21 +151,25 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
 }
 
 class _SetupView extends StatefulWidget {
-  const _SetupView({required this.onStart});
+  const _SetupView({
+    required this.onStart,
+    required this.l10n,
+  });
 
   final void Function({int min, int max}) onStart;
+  final AppLocalizations l10n;
 
   @override
   State<_SetupView> createState() => _SetupViewState();
 }
 
 class _SetupViewState extends State<_SetupView> {
-  // Preset options: (label, min, max)
+  // Preset options: (index for label, min, max)
   static const _presets = [
-    ('1 – 50', 1, 50),
-    ('1 – 100', 1, 100),
-    ('1 – 500', 1, 500),
-    ('自定义', 0, 0),
+    (0, 1, 50),
+    (1, 1, 100),
+    (2, 1, 500),
+    (3, 0, 0),
   ];
 
   int _selectedPreset = 1; // default: 1–100
@@ -194,9 +200,9 @@ class _SetupViewState extends State<_SetupView> {
             ),
           ),
           const Spacer(flex: 2),
-          const Text(
-            '数字炸弹',
-            style: TextStyle(
+          Text(
+            widget.l10n.numberBombTitle,
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 36,
               fontWeight: FontWeight.w300,
@@ -204,9 +210,9 @@ class _SetupViewState extends State<_SetupView> {
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'NUMBER BOMB',
-            style: TextStyle(
+          Text(
+            widget.l10n.numberBombSubtitle,
+            style: const TextStyle(
               color: AppColors.textDim,
               fontSize: 11,
               letterSpacing: 4,
@@ -215,9 +221,9 @@ class _SetupViewState extends State<_SetupView> {
           const Spacer(flex: 2),
 
           // Range picker
-          const Text(
-            '选择范围',
-            style: TextStyle(
+          Text(
+            widget.l10n.selectRange,
+            style: const TextStyle(
               color: AppColors.textDim,
               fontSize: 12,
               letterSpacing: 2,
@@ -250,7 +256,7 @@ class _SetupViewState extends State<_SetupView> {
                           : Colors.transparent,
                     ),
                     child: Text(
-                      _presets[i].$1,
+                      widget.l10n.rangePresetLabel(_presets[i].$1),
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: active
@@ -269,7 +275,7 @@ class _SetupViewState extends State<_SetupView> {
           if (_isCustom) ...[
             const SizedBox(height: 20),
             _RangeRow(
-              label: '最小值',
+              label: widget.l10n.min,
               value: _customMin,
               min: 1,
               max: _customMax - 1,
@@ -277,7 +283,7 @@ class _SetupViewState extends State<_SetupView> {
             ),
             const SizedBox(height: 8),
             _RangeRow(
-              label: '最大值',
+              label: widget.l10n.max,
               value: _customMax,
               min: _customMin + 1,
               max: 9999,
@@ -316,8 +322,8 @@ class _SetupViewState extends State<_SetupView> {
                   ),
                 ],
               ),
-              child: const Text(
-                '开始游戏',
+              child: Text(
+                widget.l10n.startGame,
                 style: TextStyle(
                   color: AppColors.bombRed,
                   fontSize: 18,
@@ -398,11 +404,13 @@ class _PlayingView extends StatelessWidget {
     required this.state,
     required this.notifier,
     required this.bombPulse,
+    required this.l10n,
   });
 
   final BombState state;
   final NumberBombNotifier notifier;
   final Animation<double> bombPulse;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -421,8 +429,8 @@ class _PlayingView extends StatelessWidget {
               const Spacer(),
               GestureDetector(
                 onTap: () => notifier.reset(),
-                child: const Text(
-                  '重置',
+                child: Text(
+                  l10n.reset,
                   style: TextStyle(
                     color: AppColors.textDim,
                     fontSize: 12,
@@ -458,8 +466,8 @@ class _PlayingView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        const Text(
-          '安全区间',
+        Text(
+          l10n.safeRange,
           style: TextStyle(
             color: AppColors.textDim,
             fontSize: 11,
@@ -498,7 +506,7 @@ class _PlayingView extends StatelessWidget {
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 150),
             child: Text(
-              state.currentInput.isEmpty ? '输入数字' : state.currentInput,
+              state.currentInput.isEmpty ? l10n.inputNumber : state.currentInput,
               key: ValueKey(state.currentInput),
               style: TextStyle(
                 color: state.currentInput.isEmpty
@@ -655,11 +663,13 @@ class _ExplosionOverlay extends StatelessWidget {
     required this.anim,
     required this.punishmentText,
     required this.onReset,
+    required this.l10n,
   });
 
   final Animation<double> anim;
   final String punishmentText;
   final VoidCallback onReset;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -696,8 +706,8 @@ class _ExplosionOverlay extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
-                          '💥  惩罚',
+                        Text(
+                          '💥  ${l10n.punishment}',
                           style: TextStyle(
                             color: AppColors.bombRed,
                             fontSize: 13,
@@ -726,8 +736,8 @@ class _ExplosionOverlay extends StatelessWidget {
                               border: Border.all(
                                   color: AppColors.bombRed.withAlpha(120)),
                             ),
-                            child: const Text(
-                              '再来一局',
+                            child: Text(
+                              l10n.againRound,
                               style: TextStyle(
                                 color: AppColors.bombRed,
                                 letterSpacing: 2,
