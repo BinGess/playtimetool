@@ -40,8 +40,7 @@ class SettingsScreen extends ConsumerWidget {
               sublabel: l10n.soundSub,
               value: settings.soundEnabled,
               accentColor: AppColors.fingerCyan,
-              onToggle: () =>
-                  ref.read(settingsProvider.notifier).toggleSound(),
+              onToggle: () => ref.read(settingsProvider.notifier).toggleSound(),
             ),
             const SizedBox(height: 12),
             _SettingsTile(
@@ -62,6 +61,15 @@ class SettingsScreen extends ConsumerWidget {
                   ref.read(settingsProvider.notifier).toggleMinimalMode(),
             ),
             const SizedBox(height: 12),
+            _SettingsTile(
+              label: l10n.alcoholPenalty,
+              sublabel: l10n.alcoholPenaltySub,
+              value: settings.alcoholPenaltyEnabled,
+              accentColor: AppColors.wheelOrange,
+              onToggle: () =>
+                  ref.read(settingsProvider.notifier).toggleAlcoholPenalty(),
+            ),
+            const SizedBox(height: 12),
             _LanguageTile(
               label: l10n.language,
               sublabel: l10n.languageSub,
@@ -72,7 +80,8 @@ class SettingsScreen extends ConsumerWidget {
             GestureDetector(
               onTap: () => context.push('/settings/about'),
               child: GlassContainer(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 borderColor: AppColors.glassBorder,
                 child: Row(
                   children: [
@@ -95,7 +104,8 @@ class SettingsScreen extends ConsumerWidget {
                       ],
                     ),
                     const Spacer(),
-                    const Icon(Icons.chevron_right, color: AppColors.textDim, size: 20),
+                    const Icon(Icons.chevron_right,
+                        color: AppColors.textDim, size: 20),
                   ],
                 ),
               ),
@@ -195,7 +205,9 @@ class _LangOption extends StatelessWidget {
           fontWeight: active ? FontWeight.w600 : FontWeight.normal,
         ),
       ),
-      trailing: active ? const Icon(Icons.check, color: AppColors.fingerCyan, size: 20) : null,
+      trailing: active
+          ? const Icon(Icons.check, color: AppColors.fingerCyan, size: 20)
+          : null,
       onTap: onTap,
     );
   }
@@ -333,8 +345,7 @@ class _SettingsTile extends StatelessWidget {
               ),
               child: AnimatedAlign(
                 duration: const Duration(milliseconds: 200),
-                alignment:
-                    value ? Alignment.centerRight : Alignment.centerLeft,
+                alignment: value ? Alignment.centerRight : Alignment.centerLeft,
                 child: Padding(
                   padding: const EdgeInsets.all(3),
                   child: Container(

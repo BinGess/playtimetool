@@ -6,6 +6,12 @@ import '../../features/spin_wheel/spin_wheel_screen.dart';
 import '../../features/number_bomb/number_bomb_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/settings/about_screen.dart';
+import '../../features/party_plus/bomb_pass_screen.dart';
+import '../../features/party_plus/gesture_duel_screen.dart';
+import '../../features/party_plus/left_right_react_screen.dart';
+import '../../features/party_plus/word_chain_bomb_screen.dart';
+import '../../features/party_plus/challenge_auction_screen.dart';
+import '../../features/party_plus/truth_or_raise_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -35,6 +41,54 @@ final appRouter = GoRouter(
       pageBuilder: (_, state) => CustomTransitionPage(
         key: state.pageKey,
         child: const NumberBombScreen(),
+        transitionsBuilder: _fadeSlideTransition,
+      ),
+    ),
+    GoRoute(
+      path: '/games/pass-bomb',
+      pageBuilder: (_, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const BombPassScreen(),
+        transitionsBuilder: _fadeSlideTransition,
+      ),
+    ),
+    GoRoute(
+      path: '/games/gesture-duel',
+      pageBuilder: (_, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const GestureDuelScreen(),
+        transitionsBuilder: _fadeSlideTransition,
+      ),
+    ),
+    GoRoute(
+      path: '/games/left-right',
+      pageBuilder: (_, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const LeftRightReactScreen(),
+        transitionsBuilder: _fadeSlideTransition,
+      ),
+    ),
+    GoRoute(
+      path: '/games/word-bomb',
+      pageBuilder: (_, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const WordChainBombScreen(),
+        transitionsBuilder: _fadeSlideTransition,
+      ),
+    ),
+    GoRoute(
+      path: '/games/challenge-auction',
+      pageBuilder: (_, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const ChallengeAuctionScreen(),
+        transitionsBuilder: _fadeSlideTransition,
+      ),
+    ),
+    GoRoute(
+      path: '/games/truth-raise',
+      pageBuilder: (_, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const TruthOrRaiseScreen(),
         transitionsBuilder: _fadeSlideTransition,
       ),
     ),

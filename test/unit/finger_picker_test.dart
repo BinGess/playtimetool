@@ -45,13 +45,13 @@ void main() {
       expect(state.fingers[1]?.neonColor != state.fingers[2]?.neonColor, true);
     });
 
-    test('color assignment wraps after 10 fingers', () {
-      for (int i = 1; i <= 11; i++) {
+    test('adding more than max players triggers overflow reset', () {
+      for (int i = 1; i <= kMaxFingerPlayers + 1; i++) {
         notifier.addFinger(i, Offset(i * 20.0, 100));
       }
       final state = container.read(fingerPickerProvider);
-      // 11th finger wraps to index 0
-      expect(state.fingers[11]?.neonColor, AppColors.fingerNeons[0]);
+      expect(state.showOverflowAlert, true);
+      expect(state.fingers, isEmpty);
     });
 
     test('removeFinger in waiting phase removes it cleanly', () {
@@ -79,12 +79,13 @@ void main() {
       expect(state.fingers.length, 2);
     });
 
-    test('setMaxWinners clamps to 1-5', () {
+    test('setMaxWinners clamps to 1-maxPlayers', () {
       notifier.setMaxWinners(0);
       expect(container.read(fingerPickerProvider).maxWinners, 1);
 
       notifier.setMaxWinners(10);
-      expect(container.read(fingerPickerProvider).maxWinners, 5);
+      expect(
+          container.read(fingerPickerProvider).maxWinners, kMaxFingerPlayers);
 
       notifier.setMaxWinners(3);
       expect(container.read(fingerPickerProvider).maxWinners, 3);

@@ -29,6 +29,7 @@ class _HubScreenState extends ConsumerState<HubScreen> {
     final gyroAsync = ref.watch(gyroscopeProvider);
     final gyroX = gyroAsync.value?.x ?? 0.0;
     final gyroY = gyroAsync.value?.y ?? 0.0;
+    final games = _games(l10n);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -58,32 +59,18 @@ class _HubScreenState extends ConsumerState<HubScreen> {
                   child: PageView(
                     controller: _pageController,
                     onPageChanged: (i) => setState(() => _currentPage = i),
-                    children: [
-                      GameCard(
-                        title: l10n.fingerPicker,
-                        subtitle: l10n.fingerPickerSub,
-                        description: l10n.fingerPickerDesc,
-                        accentColor: AppColors.fingerCyan,
-                        route: '/finger',
-                        icon: Icons.fingerprint,
-                      ),
-                      GameCard(
-                        title: l10n.spinWheel,
-                        subtitle: l10n.spinWheelSub,
-                        description: l10n.spinWheelDesc,
-                        accentColor: AppColors.wheelOrange,
-                        route: '/wheel',
-                        icon: Icons.rotate_right,
-                      ),
-                      GameCard(
-                        title: l10n.numberBomb,
-                        subtitle: l10n.numberBombSub,
-                        description: l10n.numberBombDesc,
-                        accentColor: AppColors.bombRed,
-                        route: '/bomb',
-                        icon: Icons.bolt,
-                      ),
-                    ],
+                    children: games
+                        .map(
+                          (g) => GameCard(
+                            title: g.title,
+                            subtitle: g.subtitle,
+                            description: g.description,
+                            accentColor: g.accentColor,
+                            route: g.route,
+                            icon: g.icon,
+                          ),
+                        )
+                        .toList(),
                   ),
                 ),
 
@@ -91,13 +78,8 @@ class _HubScreenState extends ConsumerState<HubScreen> {
                 // Page dots
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(3, (i) {
+                  children: List.generate(games.length, (i) {
                     final active = i == _currentPage;
-                    final colors = [
-                      AppColors.fingerCyan,
-                      AppColors.wheelOrange,
-                      AppColors.bombRed,
-                    ];
                     return AnimatedContainer(
                       duration: const Duration(milliseconds: 300),
                       margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -105,13 +87,12 @@ class _HubScreenState extends ConsumerState<HubScreen> {
                       height: 6,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(3),
-                        color: active
-                            ? colors[i]
-                            : AppColors.textDim,
+                        color:
+                            active ? games[i].accentColor : AppColors.textDim,
                         boxShadow: active
                             ? [
                                 BoxShadow(
-                                  color: colors[i].withAlpha(120),
+                                  color: games[i].accentColor.withAlpha(120),
                                   blurRadius: 8,
                                 ),
                               ]
@@ -145,6 +126,101 @@ class _HubScreenState extends ConsumerState<HubScreen> {
       ),
     );
   }
+
+  List<_HubGameItem> _games(AppLocalizations l10n) {
+    return [
+      _HubGameItem(
+        title: l10n.fingerPicker,
+        subtitle: l10n.fingerPickerSub,
+        description: l10n.fingerPickerDesc,
+        accentColor: AppColors.fingerCyan,
+        route: '/finger',
+        icon: Icons.fingerprint,
+      ),
+      _HubGameItem(
+        title: l10n.spinWheel,
+        subtitle: l10n.spinWheelSub,
+        description: l10n.spinWheelDesc,
+        accentColor: AppColors.wheelOrange,
+        route: '/wheel',
+        icon: Icons.rotate_right,
+      ),
+      _HubGameItem(
+        title: l10n.numberBomb,
+        subtitle: l10n.numberBombSub,
+        description: l10n.numberBombDesc,
+        accentColor: AppColors.bombRed,
+        route: '/bomb',
+        icon: Icons.bolt,
+      ),
+      _HubGameItem(
+        title: l10n.t('passBomb'),
+        subtitle: l10n.t('passBombSub'),
+        description: l10n.t('passBombDesc'),
+        accentColor: const Color(0xFFFF4757),
+        route: '/games/pass-bomb',
+        icon: Icons.local_fire_department,
+      ),
+      _HubGameItem(
+        title: l10n.t('gestureDuel'),
+        subtitle: l10n.t('gestureDuelSub'),
+        description: l10n.t('gestureDuelDesc'),
+        accentColor: const Color(0xFF00E5FF),
+        route: '/games/gesture-duel',
+        icon: Icons.sports_mma,
+      ),
+      _HubGameItem(
+        title: l10n.t('leftRight'),
+        subtitle: l10n.t('leftRightSub'),
+        description: l10n.t('leftRightDesc'),
+        accentColor: const Color(0xFFFFA726),
+        route: '/games/left-right',
+        icon: Icons.compare_arrows,
+      ),
+      _HubGameItem(
+        title: l10n.t('wordBomb'),
+        subtitle: l10n.t('wordBombSub'),
+        description: l10n.t('wordBombDesc'),
+        accentColor: const Color(0xFF00E676),
+        route: '/games/word-bomb',
+        icon: Icons.record_voice_over,
+      ),
+      _HubGameItem(
+        title: l10n.t('challengeAuction'),
+        subtitle: l10n.t('challengeAuctionSub'),
+        description: l10n.t('challengeAuctionDesc'),
+        accentColor: const Color(0xFFFFB300),
+        route: '/games/challenge-auction',
+        icon: Icons.gavel,
+      ),
+      _HubGameItem(
+        title: l10n.t('truthRaise'),
+        subtitle: l10n.t('truthRaiseSub'),
+        description: l10n.t('truthRaiseDesc'),
+        accentColor: const Color(0xFFFF5252),
+        route: '/games/truth-raise',
+        icon: Icons.question_answer,
+      ),
+    ];
+  }
+}
+
+class _HubGameItem {
+  const _HubGameItem({
+    required this.title,
+    required this.subtitle,
+    required this.description,
+    required this.accentColor,
+    required this.route,
+    required this.icon,
+  });
+
+  final String title;
+  final String subtitle;
+  final String description;
+  final Color accentColor;
+  final String route;
+  final IconData icon;
 }
 
 /// Subtle dot-grid that shifts slightly with gyroscope.
