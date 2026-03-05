@@ -3,8 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/sensors/gyroscope_service.dart';
+import '../purchase/iap_purchase_provider.dart';
+import '../purchase/purchase_catalog.dart';
 import '../../l10n/app_localizations.dart';
 import 'widgets/game_card.dart';
+
+enum _PremiumDialogAction { buy, restore }
 
 class HubScreen extends ConsumerStatefulWidget {
   const HubScreen({super.key});
@@ -14,13 +18,40 @@ class HubScreen extends ConsumerStatefulWidget {
 }
 
 class _HubScreenState extends ConsumerState<HubScreen> {
+  String? _pendingUnlockProductId;
+  String? _pendingUnlockRoute;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final gyroAsync = ref.watch(gyroscopeProvider);
+    final purchaseState = ref.watch(iapPurchaseProvider);
     final gyroX = gyroAsync.value?.x ?? 0.0;
     final gyroY = gyroAsync.value?.y ?? 0.0;
     final games = _games(l10n);
+
+    ref.listen(iapPurchaseProvider, (prev, next) {
+      final pendingProduct = _pendingUnlockProductId;
+      final pendingRoute = _pendingUnlockRoute;
+      if (pendingProduct != null &&
+          pendingRoute != null &&
+          next.isUnlocked(pendingProduct)) {
+        _pendingUnlockProductId = null;
+        _pendingUnlockRoute = null;
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              l10n.t('iapUnlockSuccess',
+                  {'game': _titleByRoute(pendingRoute, l10n)}),
+            ),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+        context.push(pendingRoute);
+      }
+    });
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -39,10 +70,10 @@ class _HubScreenState extends ConsumerState<HubScreen> {
                     Text(
                       l10n.appTitle,
                       style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                        letterSpacing: 4,
-                        fontWeight: FontWeight.w300,
+                        color: Colors.white,
+                        fontSize: 28,
+                        letterSpacing: 2,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -51,17 +82,24 @@ class _HubScreenState extends ConsumerState<HubScreen> {
                     Expanded(
                       child: GridView.builder(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 4),
+                            horizontal: 10, vertical: 4),
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
                           mainAxisSpacing: 12,
-                          crossAxisSpacing: 12,
+                          crossAxisSpacing: 10,
                           childAspectRatio: 0.88,
                         ),
                         itemCount: games.length,
                         itemBuilder: (_, i) {
                           final g = games[i];
+                          final productId = g.purchaseProductId;
+                          final locked = productId != null &&
+                              !purchaseState.isUnlocked(productId);
+                          final lockBadgeText = locked
+                              ? (purchaseState.productById(productId)?.price ??
+                                  l10n.t('iapPriceFallback'))
+                              : null;
                           return GameCard(
                             title: g.title,
                             subtitle: g.subtitle,
@@ -69,6 +107,9 @@ class _HubScreenState extends ConsumerState<HubScreen> {
                             accentColor: g.accentColor,
                             route: g.route,
                             icon: g.icon,
+                            locked: locked,
+                            lockBadgeText: lockBadgeText,
+                            onTap: () => _handleGameTap(g, l10n),
                           );
                         },
                       ),
@@ -99,6 +140,142 @@ class _HubScreenState extends ConsumerState<HubScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _handleGameTap(_HubGameItem game, AppLocalizations l10n) async {
+    final productId = game.purchaseProductId;
+    if (productId == null) {
+      context.push(game.route);
+      return;
+    }
+
+    final purchaseState = ref.read(iapPurchaseProvider);
+    if (purchaseState.isUnlocked(productId)) {
+      context.push(game.route);
+      return;
+    }
+
+    final action = await _showPurchaseDialog(
+      game: game,
+      l10n: l10n,
+      priceText: purchaseState.productById(productId)?.price ??
+          l10n.t('iapPriceFallback'),
+    );
+    if (action == null || !mounted) return;
+
+    _pendingUnlockProductId = productId;
+    _pendingUnlockRoute = game.route;
+
+    final notifier = ref.read(iapPurchaseProvider.notifier);
+    final result = action == _PremiumDialogAction.buy
+        ? await notifier.buyProduct(productId)
+        : await notifier.restorePurchases();
+
+    if (!mounted) return;
+    switch (result) {
+      case PurchaseRequestResult.started:
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.t('iapPurchasePending')),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      case PurchaseRequestResult.storeUnavailable:
+        _clearPendingUnlock();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.t('iapStoreUnavailable')),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      case PurchaseRequestResult.productNotFound:
+        _clearPendingUnlock();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.t('iapProductNotFound')),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      case PurchaseRequestResult.failed:
+        _clearPendingUnlock();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.t('iapPurchaseFailed')),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+    }
+  }
+
+  void _clearPendingUnlock() {
+    _pendingUnlockProductId = null;
+    _pendingUnlockRoute = null;
+  }
+
+  Future<_PremiumDialogAction?> _showPurchaseDialog({
+    required _HubGameItem game,
+    required AppLocalizations l10n,
+    required String priceText,
+  }) {
+    return showDialog<_PremiumDialogAction>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF161616),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: AppColors.textDim.withAlpha(100)),
+        ),
+        title: Text(
+          l10n.t('iapPurchaseTitle'),
+          style: const TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          l10n.t('iapPurchaseBody', {
+            'game': game.title,
+            'price': priceText,
+          }),
+          style: const TextStyle(color: AppColors.textSecondary, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, _PremiumDialogAction.restore),
+            child: Text(l10n.t('iapRestore')),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, _PremiumDialogAction.buy),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.wheelOrange,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(l10n.t('iapBuyNow')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _titleByRoute(String route, AppLocalizations l10n) {
+    return _games(l10n)
+        .firstWhere(
+          (g) => g.route == route,
+          orElse: () => _HubGameItem(
+            title: route,
+            subtitle: '',
+            description: '',
+            accentColor: Colors.white,
+            route: route,
+            icon: Icons.lock,
+          ),
+        )
+        .title;
   }
 
   List<_HubGameItem> _games(AppLocalizations l10n) {
@@ -158,6 +335,7 @@ class _HubScreenState extends ConsumerState<HubScreen> {
         accentColor: const Color(0xFF00E676),
         route: '/games/word-bomb',
         icon: Icons.record_voice_over,
+        purchaseProductId: PurchaseCatalog.wordBombUnlock,
       ),
       _HubGameItem(
         title: l10n.t('challengeAuction'),
@@ -166,6 +344,7 @@ class _HubScreenState extends ConsumerState<HubScreen> {
         accentColor: const Color(0xFFFFB300),
         route: '/games/challenge-auction',
         icon: Icons.gavel,
+        purchaseProductId: PurchaseCatalog.challengeAuctionUnlock,
       ),
       _HubGameItem(
         title: l10n.t('truthRaise'),
@@ -174,6 +353,7 @@ class _HubScreenState extends ConsumerState<HubScreen> {
         accentColor: const Color(0xFFFF5252),
         route: '/games/truth-raise',
         icon: Icons.question_answer,
+        purchaseProductId: PurchaseCatalog.truthRaiseUnlock,
       ),
     ];
   }
@@ -187,6 +367,7 @@ class _HubGameItem {
     required this.accentColor,
     required this.route,
     required this.icon,
+    this.purchaseProductId,
   });
 
   final String title;
@@ -195,6 +376,7 @@ class _HubGameItem {
   final Color accentColor;
   final String route;
   final IconData icon;
+  final String? purchaseProductId;
 }
 
 /// Subtle dot-grid that shifts slightly with gyroscope.

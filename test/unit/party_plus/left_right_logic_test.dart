@@ -29,5 +29,27 @@ void main() {
       expect(result.success, false);
       expect(result.penaltyDelta, 1);
     });
+
+    test('oppositeDirection maps all directions correctly', () {
+      expect(oppositeDirection(SwipeDirection.left), SwipeDirection.right);
+      expect(oppositeDirection(SwipeDirection.right), SwipeDirection.left);
+      expect(oppositeDirection(SwipeDirection.up), SwipeDirection.down);
+      expect(oppositeDirection(SwipeDirection.down), SwipeDirection.up);
+    });
+
+    test('directionFromVelocity resolves horizontal swipe', () {
+      final result = directionFromVelocity(dx: -250, dy: 30);
+      expect(result, SwipeDirection.left);
+    });
+
+    test('directionFromVelocity resolves vertical swipe', () {
+      final result = directionFromVelocity(dx: 40, dy: 300);
+      expect(result, SwipeDirection.down);
+    });
+
+    test('directionFromVelocity returns null for tiny movement', () {
+      final result = directionFromVelocity(dx: 60, dy: 80);
+      expect(result, isNull);
+    });
   });
 }

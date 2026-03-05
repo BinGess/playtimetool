@@ -17,6 +17,10 @@ class AppLocalizations {
       'settings': '设置',
       'settingsTitle': 'SETTINGS',
       'appVersion': '指尖聚会 v1.0',
+      'resultSummary': '结果说明',
+      'penaltyGuideDefault': '按当前规则执行惩罚玩法',
+      'penaltyGuideParty': '未命中玩家执行约定惩罚',
+      'penaltyGuideWheel': '按抽中的选项执行任务或惩罚',
 
       // Hub
       'hubSubtitle': 'PARTY GAMES',
@@ -47,6 +51,16 @@ class AppLocalizations {
       'truthRaise': '真话或加码',
       'truthRaiseSub': 'TRUTH OR RAISE',
       'truthRaiseDesc': '跳过会不断加码',
+      'iapPriceFallback': '¥1',
+      'iapPurchaseTitle': '解锁游戏',
+      'iapPurchaseBody': '{game} 需要购买后才能游玩，价格 {price}，购买后可长期使用。',
+      'iapBuyNow': '立即购买',
+      'iapRestore': '恢复购买',
+      'iapStoreUnavailable': '商店当前不可用，请稍后重试',
+      'iapProductNotFound': '商品暂不可购买，请稍后重试',
+      'iapPurchasePending': '正在处理购买结果，请稍候...',
+      'iapPurchaseFailed': '发起购买失败，请稍后重试',
+      'iapUnlockSuccess': '已解锁：{game}',
 
       // Settings
       'sound': '音效',
@@ -307,6 +321,11 @@ class AppLocalizations {
       'settings': 'Settings',
       'settingsTitle': 'SETTINGS',
       'appVersion': 'Finger Party v1.0',
+      'resultSummary': 'Result Summary',
+      'penaltyGuideDefault': 'Apply the penalty based on current rules.',
+      'penaltyGuideParty': 'Non-winning players perform the agreed penalty.',
+      'penaltyGuideWheel':
+          'Execute the task or penalty of the selected option.',
 
       'hubSubtitle': 'PARTY GAMES',
       'fingerPicker': 'Finger Picker',
@@ -336,6 +355,17 @@ class AppLocalizations {
       'truthRaise': 'Truth or Raise',
       'truthRaiseSub': 'TRUTH OR RAISE',
       'truthRaiseDesc': 'Skip keeps raising stakes',
+      'iapPriceFallback': '\$1',
+      'iapPurchaseTitle': 'Unlock game',
+      'iapPurchaseBody':
+          '{game} requires purchase to play. Price: {price}. Once bought, it stays unlocked.',
+      'iapBuyNow': 'Buy now',
+      'iapRestore': 'Restore purchases',
+      'iapStoreUnavailable': 'Store is unavailable. Please try again later.',
+      'iapProductNotFound': 'This product is unavailable right now.',
+      'iapPurchasePending': 'Processing purchase result...',
+      'iapPurchaseFailed': 'Failed to start purchase. Please try again.',
+      'iapUnlockSuccess': 'Unlocked: {game}',
 
       'sound': 'Sound',
       'soundSub': 'SOUND',

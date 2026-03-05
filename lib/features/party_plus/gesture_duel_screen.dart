@@ -7,6 +7,10 @@ import '../../core/help/game_help_service.dart';
 import '../../core/haptics/haptic_service.dart';
 import '../../features/settings/providers/settings_provider.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/widgets/game_result_action_bar.dart';
+import '../../shared/widgets/game_result_template_card.dart';
+import '../../shared/widgets/game_stage_stepper.dart';
+import '../../shared/widgets/web3_game_background.dart';
 import 'logic/gesture_duel_logic.dart';
 import 'party_plus_strings.dart';
 
@@ -35,6 +39,8 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
   List<int> _losers = [];
   String _resultText = '';
   bool _showHelpButton = false;
+  bool _isPickFeedbackActive = false;
+  DuelGesture? _tappedGesture;
 
   @override
   void initState() {
@@ -59,18 +65,37 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
       _picks = List<DuelGesture?>.filled(_playerCount, null);
       _losers = [];
       _resultText = '';
+      _isPickFeedbackActive = false;
+      _tappedGesture = null;
     });
   }
 
-  void _pick(DuelGesture gesture) {
+  Future<void> _pick(DuelGesture gesture) async {
+    if (_isPickFeedbackActive) return;
     HapticService.selectionClick();
+    setState(() {
+      _isPickFeedbackActive = true;
+      _tappedGesture = gesture;
+    });
+
+    await Future<void>.delayed(const Duration(milliseconds: 110));
+    if (!mounted) return;
+
     _picks[_currentPlayer] = gesture;
 
     if (_currentPlayer < _playerCount - 1) {
-      setState(() => _currentPlayer += 1);
+      setState(() {
+        _currentPlayer += 1;
+        _isPickFeedbackActive = false;
+        _tappedGesture = null;
+      });
       return;
     }
 
+    setState(() {
+      _isPickFeedbackActive = false;
+      _tappedGesture = null;
+    });
     _resolveRound();
   }
 
@@ -175,11 +200,20 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final stage = switch (_phase) {
+      _DuelPhase.setup => GameStage.prepare,
+      _DuelPhase.picking || _DuelPhase.roundResult => GameStage.playing,
+      _DuelPhase.finalResult => GameStage.result,
+    };
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
+          const Web3GameBackground(
+            accentColor: AppColors.fingerCyan,
+            secondaryColor: AppColors.wheelOrange,
+          ),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -198,13 +232,21 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
                         l10n.t('gestureDuel'),
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.8,
                         ),
                       ),
                       const Spacer(),
                       const SizedBox(width: 20),
                     ],
+                  ),
+                  const SizedBox(height: 10),
+                  Center(
+                    child: GameStageStepper(
+                      stage: stage,
+                      accentColor: AppColors.fingerCyan,
+                    ),
                   ),
                   const SizedBox(height: 24),
                   if (_phase == _DuelPhase.setup) ...[
@@ -285,29 +327,47 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: DuelGesture.values.map((g) {
-                        return SizedBox(
-                          width: (MediaQuery.sizeOf(context).width - 72) / 2,
+                    ...DuelGesture.values.map((g) {
+                      final isTapped = _tappedGesture == g;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: SizedBox(
+                          width: double.infinity,
                           child: OutlinedButton.icon(
                             onPressed: () => _pick(g),
                             style: OutlinedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(68),
+                              alignment: Alignment.centerLeft,
+                              backgroundColor: isTapped
+                                  ? AppColors.fingerCyan.withAlpha(46)
+                                  : AppColors.surfaceVariant.withAlpha(24),
+                              overlayColor: AppColors.fingerCyan.withAlpha(28),
                               side: BorderSide(
-                                color: AppColors.fingerCyan.withAlpha(170),
+                                color: isTapped
+                                    ? AppColors.fingerCyan
+                                    : AppColors.fingerCyan.withAlpha(170),
                               ),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                                vertical: 18,
+                              ),
                             ),
                             icon: Icon(_icon(g), color: AppColors.fingerCyan),
                             label: Text(
                               _label(g, context),
-                              style: const TextStyle(color: Colors.white),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
-                        );
-                      }).toList(),
-                    ),
+                        ),
+                      );
+                    }),
                     const Spacer(),
                     Text(
                       l10n.doneProgress(_currentPlayer, _playerCount),
@@ -390,18 +450,12 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
                       style: const TextStyle(color: Colors.white, fontSize: 15),
                     ),
                     const Spacer(),
-                    ElevatedButton(
-                      onPressed: _proceedAfterRound,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.fingerCyan,
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      child: Text(
-                        _round >= _totalRounds
-                            ? l10n.t('gestureFinalResult')
-                            : l10n.t('nextRound'),
-                      ),
+                    GameResultActionBar(
+                      accentColor: AppColors.fingerCyan,
+                      primaryLabel: _round >= _totalRounds
+                          ? l10n.t('gestureFinalResult')
+                          : l10n.t('nextRound'),
+                      onPrimaryTap: _proceedAfterRound,
                     ),
                   ] else ...[
                     // finalResult phase
@@ -444,8 +498,9 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
                                 color: hit
                                     ? AppColors.bombRed
                                     : AppColors.fingerCyan,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.8,
                               ),
                             ),
                           ],
@@ -453,20 +508,18 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
                       );
                     }),
                     const SizedBox(height: 10),
-                    Text(
-                      _resultText,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white, fontSize: 15),
+                    GameResultTemplateCard(
+                      accentColor: AppColors.fingerCyan,
+                      resultTitle: l10n.t('resultSummary'),
+                      resultText: l10n.t('gestureFinalResult'),
+                      penaltyTitle: l10n.punishment,
+                      penaltyText: _resultText,
                     ),
                     const Spacer(),
-                    ElevatedButton(
-                      onPressed: _startGame,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.fingerCyan,
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      child: Text(l10n.t('gestureStartDuel')),
+                    GameResultActionBar(
+                      accentColor: AppColors.fingerCyan,
+                      primaryLabel: l10n.t('gestureStartDuel'),
+                      onPrimaryTap: _startGame,
                     ),
                   ],
                   const SizedBox(height: 8),

@@ -5,6 +5,10 @@ import '../../core/constants/app_colors.dart';
 import '../../core/help/game_help_service.dart';
 import '../../core/haptics/haptic_service.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/widgets/game_result_action_bar.dart';
+import '../../shared/widgets/game_result_template_card.dart';
+import '../../shared/widgets/game_stage_stepper.dart';
+import '../../shared/widgets/web3_game_background.dart';
 import 'logic/truth_raise_logic.dart';
 import 'party_plus_strings.dart';
 
@@ -151,15 +155,40 @@ class _TruthOrRaiseScreenState extends State<TruthOrRaiseScreen> {
     );
   }
 
+  String _resultPenaltyText(AppLocalizations l10n) {
+    final maxPenalty =
+        _penalties.isEmpty ? 0 : _penalties.reduce((a, b) => a > b ? a : b);
+    if (maxPenalty <= 0) return l10n.t('penaltyGuideDefault');
+    final losers = <String>[];
+    for (int i = 0; i < _penalties.length; i++) {
+      if (_penalties[i] == maxPenalty) {
+        losers.add(PartyPlusStrings.player(context, i));
+      }
+    }
+    return l10n.t('penaltyResult', {
+      'player': losers.join('、'),
+      'penalty': l10n.pointsCount(maxPenalty),
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final scaleConfig = _scaleConfig;
+    final stage = switch (_phase) {
+      _TruthPhase.setup => GameStage.prepare,
+      _TruthPhase.playing => GameStage.playing,
+      _TruthPhase.result => GameStage.result,
+    };
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
+          const Web3GameBackground(
+            accentColor: AppColors.bombRed,
+            secondaryColor: AppColors.fingerCyan,
+          ),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -178,13 +207,21 @@ class _TruthOrRaiseScreenState extends State<TruthOrRaiseScreen> {
                         l10n.t('truthRaise'),
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.8,
                         ),
                       ),
                       const Spacer(),
                       const SizedBox(width: 20),
                     ],
+                  ),
+                  const SizedBox(height: 10),
+                  Center(
+                    child: GameStageStepper(
+                      stage: stage,
+                      accentColor: AppColors.bombRed,
+                    ),
                   ),
                   const SizedBox(height: 22),
                   if (_phase == _TruthPhase.setup) ...[
@@ -319,35 +356,12 @@ class _TruthOrRaiseScreenState extends State<TruthOrRaiseScreen> {
                       ),
                     ],
                     const Spacer(),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: _skipAndRaise,
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(
-                                  color: AppColors.bombRed.withAlpha(180)),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                            child: Text(
-                              l10n.t('truthRaiseSkipRaise'),
-                              style: const TextStyle(color: Colors.white),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _answer,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.bombRed,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                            child: Text(l10n.t('truthRaiseAnswer')),
-                          ),
-                        ),
-                      ],
+                    GameResultActionBar(
+                      accentColor: AppColors.bombRed,
+                      secondaryLabel: l10n.t('truthRaiseSkipRaise'),
+                      onSecondaryTap: _skipAndRaise,
+                      primaryLabel: l10n.t('truthRaiseAnswer'),
+                      onPrimaryTap: _answer,
                     ),
                   ] else ...[
                     Text(
@@ -385,16 +399,20 @@ class _TruthOrRaiseScreenState extends State<TruthOrRaiseScreen> {
                         ),
                       );
                     }),
+                    const SizedBox(height: 10),
+                    GameResultTemplateCard(
+                      accentColor: AppColors.bombRed,
+                      resultTitle: l10n.t('resultSummary'),
+                      resultText: l10n.t('truthRaiseSettlement'),
+                      penaltyTitle: l10n.punishment,
+                      penaltyText: _resultPenaltyText(l10n),
+                    ),
                     const Spacer(),
-                    ElevatedButton(
-                      onPressed: () =>
+                    GameResultActionBar(
+                      accentColor: AppColors.bombRed,
+                      primaryLabel: l10n.t('truthRaiseBackToSetup'),
+                      onPrimaryTap: () =>
                           setState(() => _phase = _TruthPhase.setup),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.bombRed,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      child: Text(l10n.t('truthRaiseBackToSetup')),
                     ),
                   ],
                   const SizedBox(height: 8),

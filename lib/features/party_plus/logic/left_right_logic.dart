@@ -1,4 +1,4 @@
-enum SwipeDirection { left, right }
+enum SwipeDirection { left, right, up, down }
 
 class ReactionResolution {
   const ReactionResolution({
@@ -22,4 +22,29 @@ ReactionResolution resolveReaction({
 
 ReactionResolution timeoutReaction() {
   return const ReactionResolution(success: false, penaltyDelta: 1);
+}
+
+SwipeDirection oppositeDirection(SwipeDirection direction) {
+  switch (direction) {
+    case SwipeDirection.left:
+      return SwipeDirection.right;
+    case SwipeDirection.right:
+      return SwipeDirection.left;
+    case SwipeDirection.up:
+      return SwipeDirection.down;
+    case SwipeDirection.down:
+      return SwipeDirection.up;
+  }
+}
+
+SwipeDirection? directionFromVelocity({
+  required double dx,
+  required double dy,
+  double minVelocity = 120,
+}) {
+  if (dx.abs() < minVelocity && dy.abs() < minVelocity) return null;
+  if (dx.abs() >= dy.abs()) {
+    return dx >= 0 ? SwipeDirection.right : SwipeDirection.left;
+  }
+  return dy >= 0 ? SwipeDirection.down : SwipeDirection.up;
 }

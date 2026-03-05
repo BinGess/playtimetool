@@ -8,6 +8,10 @@ import '../../core/help/game_help_service.dart';
 import '../../core/haptics/haptic_service.dart';
 import '../../features/settings/providers/settings_provider.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/widgets/game_result_action_bar.dart';
+import '../../shared/widgets/game_result_template_card.dart';
+import '../../shared/widgets/game_stage_stepper.dart';
+import '../../shared/widgets/web3_game_background.dart';
 import 'logic/challenge_auction_logic.dart';
 import 'party_plus_strings.dart';
 
@@ -72,6 +76,7 @@ class _ChallengeAuctionScreenState
   int _winner = 0;
   String _resultText = '';
   bool _showHelpButton = false;
+  DateTime? _lastBidRangeHintAt;
 
   @override
   void initState() {
@@ -171,12 +176,17 @@ class _ChallengeAuctionScreenState
   }
 
   void _submitBid() {
-    final normalizedBid = normalizeBidInput(
-      rawInput: _bidController.text,
-      fallback: _currentBid,
-      minBid: _currentBidRange.minBid,
-      maxBid: _currentBidRange.maxBid,
-    );
+    final l10n = AppLocalizations.of(context);
+    final parsedBid = int.tryParse(_bidController.text.trim());
+    if (parsedBid == null ||
+        parsedBid < _currentBidRange.minBid ||
+        parsedBid > _currentBidRange.maxBid) {
+      _showBidRangeHint(l10n);
+      HapticService.errorVibrate();
+      return;
+    }
+
+    final normalizedBid = parsedBid;
     HapticService.selectionClick();
     _bids[_biddingPlayer] = normalizedBid;
     if (_biddingPlayer < _playerCount - 1) {
@@ -200,6 +210,30 @@ class _ChallengeAuctionScreenState
       _winner = resolution.winnerIndex;
       _phase = _AuctionPhase.verdict;
     });
+  }
+
+  void _showBidRangeHint(AppLocalizations l10n) {
+    final now = DateTime.now();
+    if (_lastBidRangeHintAt != null &&
+        now.difference(_lastBidRangeHintAt!) <
+            const Duration(milliseconds: 700)) {
+      return;
+    }
+    _lastBidRangeHintAt = now;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          l10n.invalidRangeHint(
+            _currentBidRange.minBid,
+            _currentBidRange.maxBid,
+          ),
+          style: const TextStyle(color: Colors.white),
+        ),
+        backgroundColor: AppColors.bombRed.withAlpha(220),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+      ),
+    );
   }
 
   void _onChallengeSuccess() {
@@ -239,21 +273,34 @@ class _ChallengeAuctionScreenState
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final settings = ref.watch(settingsProvider).value ?? const AppSettings();
+    final stage = switch (_phase) {
+      _AuctionPhase.setup => GameStage.prepare,
+      _AuctionPhase.bidding || _AuctionPhase.verdict => GameStage.playing,
+      _AuctionPhase.result => GameStage.result,
+    };
     final challengeText =
         _challenge == null ? '-' : l10n.t(_challenge!.textKey);
+    final winnerSummary = settings.alcoholPenaltyEnabled
+        ? l10n.t('challengeAuctionWinner', {
+            'player': PartyPlusStrings.player(context, _winner),
+            'bid': _bids.isEmpty ? '0' : '${_bids[_winner]}',
+          })
+        : l10n.t('challengeAuctionWinnerPure', {
+            'player': PartyPlusStrings.player(context, _winner),
+            'bid': _bids.isEmpty ? '0' : '${_bids[_winner]}',
+          });
     final previewBid = _phase == _AuctionPhase.bidding
-        ? normalizeBidInput(
-            rawInput: _bidController.text,
-            fallback: _currentBid,
-            minBid: _currentBidRange.minBid,
-            maxBid: _currentBidRange.maxBid,
-          )
+        ? (int.tryParse(_bidController.text.trim()) ?? _currentBid)
         : _currentBid;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
+          const Web3GameBackground(
+            accentColor: AppColors.wheelOrange,
+            secondaryColor: AppColors.bombRed,
+          ),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -272,13 +319,21 @@ class _ChallengeAuctionScreenState
                         l10n.t('challengeAuction'),
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.8,
                         ),
                       ),
                       const Spacer(),
                       const SizedBox(width: 20),
                     ],
+                  ),
+                  const SizedBox(height: 10),
+                  Center(
+                    child: GameStageStepper(
+                      stage: stage,
+                      accentColor: AppColors.wheelOrange,
+                    ),
                   ),
                   const SizedBox(height: 24),
                   if (_phase == _AuctionPhase.setup) ...[
@@ -426,7 +481,22 @@ class _ChallengeAuctionScreenState
                           textAlign: TextAlign.center,
                           keyboardType: TextInputType.number,
                           inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly
+                            FilteringTextInputFormatter.digitsOnly,
+                            TextInputFormatter.withFunction(
+                              (oldValue, newValue) {
+                                final parsed =
+                                    int.tryParse(newValue.text.trim());
+                                if (newValue.text.isEmpty || parsed == null) {
+                                  return newValue;
+                                }
+                                if (parsed > _currentBidRange.maxBid) {
+                                  _showBidRangeHint(l10n);
+                                  HapticService.errorVibrate();
+                                  return oldValue;
+                                }
+                                return newValue;
+                              },
+                            ),
                           ],
                           style: const TextStyle(
                             color: Colors.white,
@@ -474,14 +544,10 @@ class _ChallengeAuctionScreenState
                         style: const TextStyle(color: AppColors.textSecondary),
                       ),
                       const Spacer(),
-                      ElevatedButton(
-                        onPressed: _submitBid,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.wheelOrange,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        child: Text(l10n.t('challengeAuctionConfirmBid')),
+                      GameResultActionBar(
+                        accentColor: AppColors.wheelOrange,
+                        primaryLabel: l10n.t('challengeAuctionConfirmBid'),
+                        onPrimaryTap: _submitBid,
                       ),
                     ] else if (_phase == _AuctionPhase.verdict) ...[
                       Text(
@@ -516,55 +582,27 @@ class _ChallengeAuctionScreenState
                         );
                       }),
                       const Spacer(),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: _onChallengeFail,
-                              style: OutlinedButton.styleFrom(
-                                side: BorderSide(
-                                    color: AppColors.bombRed.withAlpha(180)),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
-                              ),
-                              child: Text(
-                                l10n.t('challengeAuctionFailed'),
-                                style: const TextStyle(color: Colors.white),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: _onChallengeSuccess,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.wheelOrange,
-                                foregroundColor: Colors.white,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
-                              ),
-                              child: Text(l10n.t('challengeAuctionSucceeded')),
-                            ),
-                          ),
-                        ],
+                      GameResultActionBar(
+                        accentColor: AppColors.wheelOrange,
+                        secondaryLabel: l10n.t('challengeAuctionFailed'),
+                        onSecondaryTap: _onChallengeFail,
+                        primaryLabel: l10n.t('challengeAuctionSucceeded'),
+                        onPrimaryTap: _onChallengeSuccess,
                       ),
                     ] else ...[
                       const Spacer(),
-                      Text(
-                        _resultText,
-                        textAlign: TextAlign.center,
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 20),
+                      GameResultTemplateCard(
+                        accentColor: AppColors.wheelOrange,
+                        resultTitle: l10n.t('resultSummary'),
+                        resultText: winnerSummary,
+                        penaltyTitle: l10n.punishment,
+                        penaltyText: _resultText,
                       ),
                       const Spacer(),
-                      ElevatedButton(
-                        onPressed: _startRound,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.wheelOrange,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        child: Text(l10n.t('challengeAuctionNext')),
+                      GameResultActionBar(
+                        accentColor: AppColors.wheelOrange,
+                        primaryLabel: l10n.t('challengeAuctionNext'),
+                        onPrimaryTap: _startRound,
                       ),
                     ],
                   ],

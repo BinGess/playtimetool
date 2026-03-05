@@ -5,6 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../core/help/game_help_service.dart';
 import '../../core/constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/widgets/game_result_action_bar.dart';
+import '../../shared/widgets/game_stage_stepper.dart';
+import '../../shared/widgets/game_result_template_card.dart';
+import '../../shared/widgets/web3_game_background.dart';
 import 'models/finger_state.dart';
 import 'providers/finger_picker_provider.dart';
 import 'painters/finger_ring_painter.dart';
@@ -122,11 +126,20 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
 
     final isActive =
         state.phase == PickerPhase.waiting || state.phase == PickerPhase.result;
+    final stage = switch (state.phase) {
+      PickerPhase.waiting || PickerPhase.locked => GameStage.prepare,
+      PickerPhase.countdown || PickerPhase.eliminating => GameStage.playing,
+      PickerPhase.result => GameStage.result,
+    };
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
+          const Web3GameBackground(
+            accentColor: AppColors.fingerCyan,
+            secondaryColor: AppColors.wheelOrange,
+          ),
           // ─── 全屏触控画布 ─────────────────────────────────────────
           Listener(
             onPointerDown: (e) =>
@@ -372,17 +385,12 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
               bottom: 36,
               left: 0,
               right: 0,
-              child: GestureDetector(
-                onTap: notifier.reset,
-                child: Center(
-                  child: Text(
-                    l10n.again,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 14,
-                      letterSpacing: 4,
-                    ),
-                  ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: GameResultActionBar(
+                  accentColor: AppColors.fingerCyan,
+                  primaryLabel: l10n.again,
+                  onPrimaryTap: notifier.reset,
                 ),
               ),
             ),
@@ -391,54 +399,64 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              child: Row(
+              child: Column(
                 children: [
-                  // 返回按钮（仅在可安全返回的阶段显示）
-                  if (isActive)
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () => context.pop(),
-                      child: const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Icon(Icons.arrow_back_ios,
-                            color: AppColors.textDim, size: 20),
-                      ),
-                    ),
-                  const Spacer(),
-                  // 选中人数配置
-                  if (isActive)
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: _showWinnersDialog,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.people_outline,
-                                color: AppColors.textDim, size: 18),
-                            const SizedBox(width: 5),
-                            Text(
-                              l10n.selectWinnersCount(state.maxWinners),
-                              style: const TextStyle(
-                                color: AppColors.textDim,
-                                fontSize: 12,
-                                letterSpacing: 1,
-                              ),
-                            ),
-                          ],
+                  Row(
+                    children: [
+                      // 返回按钮（仅在可安全返回的阶段显示）
+                      if (isActive)
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => context.pop(),
+                          child: const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Icon(Icons.arrow_back_ios,
+                                color: AppColors.textDim, size: 20),
+                          ),
                         ),
-                      ),
+                      const Spacer(),
+                      // 选中人数配置
+                      if (isActive)
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: _showWinnersDialog,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.people_outline,
+                                    color: AppColors.textDim, size: 18),
+                                const SizedBox(width: 5),
+                                Text(
+                                  l10n.selectWinnersCount(state.maxWinners),
+                                  style: const TextStyle(
+                                    color: AppColors.textDim,
+                                    fontSize: 12,
+                                    letterSpacing: 1,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      if (_showHelpButton)
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: GameHelpButton(
+                            onTap: _showGameHelp,
+                            iconColor: AppColors.textSecondary,
+                            borderColor: AppColors.textDim,
+                          ),
+                        ),
+                    ],
+                  ),
+                  Center(
+                    child: GameStageStepper(
+                      stage: stage,
+                      accentColor: AppColors.fingerCyan,
                     ),
-                  if (_showHelpButton)
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: GameHelpButton(
-                        onTap: _showGameHelp,
-                        iconColor: AppColors.textSecondary,
-                        borderColor: AppColors.textDim,
-                      ),
-                    ),
+                  ),
                 ],
               ),
             ),
@@ -662,6 +680,8 @@ class _ResultOverlayContent extends StatelessWidget {
     if (winners.isEmpty) return const SizedBox.shrink();
 
     final accentColor = winners.first.neonColor;
+    final resultText =
+        winners.length == 1 ? l10n.victor : l10n.victorsCount(winners.length);
 
     return Center(
       child: TweenAnimationBuilder<double>(
@@ -671,55 +691,12 @@ class _ResultOverlayContent extends StatelessWidget {
         builder: (_, v, child) => Transform.scale(scale: v, child: child),
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 48),
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 18),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            color: Colors.black.withAlpha(200),
-            border: Border.all(
-              color: accentColor.withAlpha(130),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: accentColor.withAlpha(60),
-                blurRadius: 24,
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                winners.length == 1
-                    ? '🎉  ${l10n.victor}'
-                    : '🎉  ${l10n.victorsCount(winners.length)}',
-                style: TextStyle(
-                  color: accentColor.withAlpha(220),
-                  fontSize: 11,
-                  letterSpacing: 4,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 10,
-                children: winners
-                    .map((f) => Container(
-                          width: 22,
-                          height: 22,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: f.neonColor,
-                            boxShadow: [
-                              BoxShadow(
-                                color: f.neonColor.withAlpha(180),
-                                blurRadius: 14,
-                              ),
-                            ],
-                          ),
-                        ))
-                    .toList(),
-              ),
-            ],
+          child: GameResultTemplateCard(
+            accentColor: accentColor,
+            resultTitle: l10n.t('resultSummary'),
+            resultText: resultText,
+            penaltyTitle: l10n.punishment,
+            penaltyText: l10n.t('penaltyGuideParty'),
           ),
         ),
       ),

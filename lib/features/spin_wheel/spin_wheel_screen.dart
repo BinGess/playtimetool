@@ -9,6 +9,10 @@ import '../../core/help/game_help_service.dart';
 import '../../core/haptics/haptic_service.dart';
 import '../../core/audio/audio_service.dart';
 import '../../core/constants/app_sounds.dart';
+import '../../shared/widgets/game_result_action_bar.dart';
+import '../../shared/widgets/game_result_template_card.dart';
+import '../../shared/widgets/game_stage_stepper.dart';
+import '../../shared/widgets/web3_game_background.dart';
 import 'models/wheel_segment.dart';
 import 'providers/spin_wheel_provider.dart';
 import 'painters/wheel_painter.dart';
@@ -109,6 +113,11 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
     final notifier = ref.read(spinWheelProvider.notifier);
     final screenH = MediaQuery.sizeOf(context).height;
     final wheelSize = MediaQuery.sizeOf(context).width * 0.88;
+    final stage = switch (state.phase) {
+      SpinPhase.idle => GameStage.prepare,
+      SpinPhase.spinning => GameStage.playing,
+      SpinPhase.result => GameStage.result,
+    };
 
     ref.listen(spinWheelProvider, (prev, next) {
       if (prev?.phase != SpinPhase.result && next.phase == SpinPhase.result) {
@@ -123,6 +132,10 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
+          const Web3GameBackground(
+            accentColor: AppColors.wheelOrange,
+            secondaryColor: AppColors.fingerCyan,
+          ),
           SafeArea(
             child: Column(
               children: [
@@ -148,12 +161,23 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(color: AppColors.textDim),
                           ),
-                          child: Text(
-                            '✏  ${l10n.edit}',
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 12,
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.edit_outlined,
+                                color: AppColors.textSecondary,
+                                size: 14,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                l10n.edit,
+                                style: const TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -163,7 +187,22 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
                         isPrank: state.config.isPrankMode,
                         onToggle: notifier.togglePrankMode,
                       ),
+                      if (_showHelpButton) ...[
+                        const SizedBox(width: 10),
+                        GameHelpButton(
+                          onTap: _showGameHelp,
+                          iconColor: AppColors.textSecondary,
+                          borderColor: AppColors.textDim,
+                        ),
+                      ],
                     ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Center(
+                  child: GameStageStepper(
+                    stage: stage,
+                    accentColor: AppColors.wheelOrange,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -302,17 +341,6 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
               },
             ),
           ),
-
-          if (_showHelpButton)
-            Positioned(
-              top: MediaQuery.paddingOf(context).top + 8,
-              right: 12,
-              child: GameHelpButton(
-                onTap: _showGameHelp,
-                iconColor: AppColors.textSecondary,
-                borderColor: AppColors.textDim,
-              ),
-            ),
         ],
       ),
     );
@@ -430,9 +458,9 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
                     l10n.editWheel,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.8,
                     ),
                   ),
                   const Spacer(),
@@ -751,7 +779,7 @@ class _ModeToggle extends StatelessWidget {
           color: isPrank ? AppColors.bombRed.withAlpha(20) : Colors.transparent,
         ),
         child: Text(
-          isPrank ? '😈 ${l10n.prank}' : '⚖️ ${l10n.fair}',
+          isPrank ? l10n.prank : l10n.fair,
           style: TextStyle(
             color: isPrank ? AppColors.bombRed : AppColors.textSecondary,
             fontSize: 12,
@@ -789,67 +817,22 @@ class _ResultOverlay extends StatelessWidget {
             child: ScaleTransition(
               scale: animation,
               child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 32),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0D0D0D),
-                  borderRadius: BorderRadius.circular(28),
-                  border: Border.all(
-                    color: segment.color.withAlpha(150),
-                    width: 1.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: segment.color.withAlpha(60),
-                      blurRadius: 24,
-                      spreadRadius: 0,
-                    ),
-                  ],
-                ),
+                margin: const EdgeInsets.symmetric(horizontal: 28),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      l10n.result,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
-                        letterSpacing: 5,
-                        fontWeight: FontWeight.w500,
-                      ),
+                    GameResultTemplateCard(
+                      accentColor: segment.color,
+                      resultTitle: l10n.t('resultSummary'),
+                      resultText: segment.label,
+                      penaltyTitle: l10n.punishment,
+                      penaltyText: l10n.t('penaltyGuideWheel'),
                     ),
-                    const SizedBox(height: 18),
-                    Text(
-                      segment.label,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 44,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.2,
-                        height: 1.2,
-                        shadows: [
-                          Shadow(
-                            color: Colors.black.withAlpha(180),
-                            blurRadius: 12,
-                            offset: const Offset(0, 2),
-                          ),
-                          Shadow(
-                            color: segment.color.withAlpha(100),
-                            blurRadius: 20,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 22),
-                    Text(
-                      l10n.touchToContinue,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                        letterSpacing: 1.5,
-                        height: 1.4,
-                      ),
+                    const SizedBox(height: 14),
+                    GameResultActionBar(
+                      accentColor: segment.color,
+                      primaryLabel: l10n.touchToContinue,
+                      onPrimaryTap: onDismiss,
                     ),
                   ],
                 ),

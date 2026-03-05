@@ -13,6 +13,9 @@ class GameCard extends StatefulWidget {
     required this.accentColor,
     required this.route,
     required this.icon,
+    this.onTap,
+    this.locked = false,
+    this.lockBadgeText,
   });
 
   final String title;
@@ -21,6 +24,9 @@ class GameCard extends StatefulWidget {
   final Color accentColor;
   final String route;
   final IconData icon;
+  final VoidCallback? onTap;
+  final bool locked;
+  final String? lockBadgeText;
 
   @override
   State<GameCard> createState() => _GameCardState();
@@ -55,6 +61,10 @@ class _GameCardState extends State<GameCard>
 
   void _navigate(BuildContext context) {
     HapticService.lightImpact();
+    if (widget.onTap != null) {
+      widget.onTap!.call();
+      return;
+    }
     context.push(widget.route);
   }
 
@@ -87,149 +97,113 @@ class _GameCardState extends State<GameCard>
                   ],
                 ),
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _CardCover(
-                      key: const Key('game-card-cover'),
-                      accentColor: widget.accentColor,
-                      icon: widget.icon,
-                    ),
-                    const SizedBox(height: 10),
-                    // Subtitle
-                    Text(
-                      widget.subtitle,
-                      style: TextStyle(
-                        color: widget.accentColor.withAlpha(160),
-                        fontSize: 9,
-                        letterSpacing: 2,
-                        fontWeight: FontWeight.w400,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    // Title
-                    Text(
-                      widget.title,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
-                        height: 1.2,
-                        shadows: [
-                          Shadow(
-                            color: widget.accentColor.withAlpha(60),
-                            blurRadius: 8,
+              child: Stack(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          widget.icon,
+                          size: 34,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(height: 10),
+                        // Subtitle
+                        Text(
+                          widget.subtitle,
+                          style: TextStyle(
+                            color: widget.accentColor.withAlpha(160),
+                            fontSize: 9,
+                            letterSpacing: 2,
+                            fontWeight: FontWeight.w400,
                           ),
-                        ],
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        // Title
+                        Text(
+                          widget.title,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                            height: 1.2,
+                            shadows: [
+                              Shadow(
+                                color: widget.accentColor.withAlpha(60),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        // Description
+                        Text(
+                          widget.description,
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 11,
+                            height: 1.3,
+                          ),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    // Description
-                    Text(
-                      widget.description,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 11,
-                        height: 1.3,
-                      ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
+                  ),
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: widget.locked
+                        ? Container(
+                            key: const Key('game-card-cover'),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withAlpha(180),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: Colors.white.withAlpha(80),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.lock_outline,
+                                  color: Colors.white,
+                                  size: 12,
+                                ),
+                                if (widget.lockBadgeText != null) ...[
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    widget.lockBadgeText!,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          )
+                        : const SizedBox(
+                            key: Key('game-card-cover'),
+                          ),
+                  ),
+                ],
               ),
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _CardCover extends StatelessWidget {
-  const _CardCover({
-    super.key,
-    required this.accentColor,
-    required this.icon,
-  });
-
-  final Color accentColor;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 72,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            accentColor.withAlpha(150),
-            accentColor.withAlpha(45),
-            Colors.black.withAlpha(130),
-          ],
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -8,
-            top: -8,
-            child: _GlowDot(size: 46, color: accentColor.withAlpha(120)),
-          ),
-          Positioned(
-            left: 10,
-            bottom: -14,
-            child: _GlowDot(size: 38, color: accentColor.withAlpha(70)),
-          ),
-          Center(
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 30,
-              shadows: [
-                Shadow(
-                  color: accentColor.withAlpha(180),
-                  blurRadius: 20,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _GlowDot extends StatelessWidget {
-  const _GlowDot({required this.size, required this.color});
-
-  final double size;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color,
-        boxShadow: [
-          BoxShadow(
-            color: color,
-            blurRadius: 24,
-            spreadRadius: 4,
-          ),
-        ],
       ),
     );
   }

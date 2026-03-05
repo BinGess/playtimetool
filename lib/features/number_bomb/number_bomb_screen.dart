@@ -6,7 +6,10 @@ import '../../core/constants/app_colors.dart';
 import '../../core/help/game_help_service.dart';
 import '../../core/haptics/haptic_service.dart';
 import '../../l10n/app_localizations.dart';
-import '../../shared/widgets/glass_container.dart';
+import '../../shared/widgets/game_result_action_bar.dart';
+import '../../shared/widgets/game_result_template_card.dart';
+import '../../shared/widgets/game_stage_stepper.dart';
+import '../../shared/widgets/web3_game_background.dart';
 import 'models/bomb_state.dart';
 import 'providers/number_bomb_provider.dart';
 
@@ -85,6 +88,11 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
       AppColors.bombRedDark,
       state.pressureRatio,
     )!;
+    final stage = switch (state.phase) {
+      BombPhase.setup => GameStage.prepare,
+      BombPhase.playing => GameStage.playing,
+      BombPhase.explosion => GameStage.result,
+    };
 
     return Scaffold(
       body: AnimatedBuilder(
@@ -98,6 +106,11 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
         },
         child: Stack(
           children: [
+            const Web3GameBackground(
+              accentColor: AppColors.bombRed,
+              secondaryColor: AppColors.fingerCyan,
+              overlayOpacity: 0.38,
+            ),
             // Red breathing overlay (pressure escalation)
             if (state.phase == BombPhase.playing)
               AnimatedBuilder(
@@ -132,6 +145,18 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
                 onReset: notifier.reset,
                 l10n: AppLocalizations.of(context),
               ),
+
+            Positioned(
+              top: MediaQuery.paddingOf(context).top + 10,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: GameStageStepper(
+                  stage: stage,
+                  accentColor: AppColors.bombRed,
+                ),
+              ),
+            ),
 
             // Back edge swipe
             Positioned(
@@ -731,52 +756,23 @@ class _ExplosionOverlay extends StatelessWidget {
               Opacity(
                 opacity: ((t - 0.6) / 0.4).clamp(0.0, 1.0),
                 child: Center(
-                  child: GlassContainer(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 40, vertical: 32),
-                    borderRadius: BorderRadius.circular(28),
-                    borderColor: AppColors.bombRed.withAlpha(120),
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 26),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          '💥  ${l10n.punishment}',
-                          style: const TextStyle(
-                            color: AppColors.bombRed,
-                            fontSize: 13,
-                            letterSpacing: 3,
-                          ),
+                        GameResultTemplateCard(
+                          accentColor: AppColors.bombRed,
+                          resultTitle: l10n.t('resultSummary'),
+                          resultText: l10n.numberBombTitle,
+                          penaltyTitle: l10n.punishment,
+                          penaltyText: punishmentText,
                         ),
-                        const SizedBox(height: 20),
-                        Text(
-                          punishmentText,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w500,
-                            height: 1.4,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 24),
-                        GestureDetector(
-                          onTap: onReset,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 32, vertical: 12),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(30),
-                              border: Border.all(
-                                  color: AppColors.bombRed.withAlpha(120)),
-                            ),
-                            child: Text(
-                              l10n.againRound,
-                              style: const TextStyle(
-                                color: AppColors.bombRed,
-                                letterSpacing: 2,
-                              ),
-                            ),
-                          ),
+                        const SizedBox(height: 16),
+                        GameResultActionBar(
+                          accentColor: AppColors.bombRed,
+                          primaryLabel: l10n.againRound,
+                          onPrimaryTap: onReset,
                         ),
                       ],
                     ),

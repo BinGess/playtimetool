@@ -8,6 +8,10 @@ import '../../core/help/game_help_service.dart';
 import '../../core/haptics/haptic_service.dart';
 import '../../features/settings/providers/settings_provider.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/widgets/game_result_action_bar.dart';
+import '../../shared/widgets/game_result_template_card.dart';
+import '../../shared/widgets/game_stage_stepper.dart';
+import '../../shared/widgets/web3_game_background.dart';
 import 'logic/timed_round_logic.dart';
 import 'party_plus_strings.dart';
 
@@ -132,6 +136,9 @@ class _WordChainBombScreenState extends ConsumerState<WordChainBombScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final stage = _running
+        ? GameStage.playing
+        : (_exploded ? GameStage.result : GameStage.prepare);
     final category = _categories[_categoryIndex];
     final categoryName = l10n.t(category.nameKey);
     final progress = _roundSeconds == 0
@@ -142,6 +149,10 @@ class _WordChainBombScreenState extends ConsumerState<WordChainBombScreen> {
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
+          const Web3GameBackground(
+            accentColor: AppColors.fingerCyan,
+            secondaryColor: AppColors.bombRed,
+          ),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -160,13 +171,21 @@ class _WordChainBombScreenState extends ConsumerState<WordChainBombScreen> {
                         l10n.t('wordBomb'),
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.8,
                         ),
                       ),
                       const Spacer(),
                       const SizedBox(width: 20),
                     ],
+                  ),
+                  const SizedBox(height: 10),
+                  Center(
+                    child: GameStageStepper(
+                      stage: stage,
+                      accentColor: AppColors.fingerCyan,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -226,16 +245,26 @@ class _WordChainBombScreenState extends ConsumerState<WordChainBombScreen> {
                         Text(
                           l10n.t('wordBombCategoryLine',
                               {'category': categoryName}),
-                          style: const TextStyle(color: Colors.white),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 10),
                         Text(
                           _starterWord.isEmpty
                               ? l10n.t('wordBombStarterPending')
                               : l10n.t('wordBombStarterLine', {
                                   'word': _starterWord,
                                 }),
-                          style: const TextStyle(color: AppColors.fingerCyan),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: AppColors.fingerCyan,
+                            fontSize: 26,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ],
                     ),
@@ -253,55 +282,43 @@ class _WordChainBombScreenState extends ConsumerState<WordChainBombScreen> {
                   const SizedBox(height: 20),
                   Expanded(
                     child: Center(
-                      child: Text(
-                        _exploded
-                            ? l10n.t('wordBombExploded', {
+                      child: _exploded
+                          ? GameResultTemplateCard(
+                              accentColor: AppColors.fingerCyan,
+                              resultTitle: l10n.t('resultSummary'),
+                              resultText: l10n.t('wordBombExploded', {
                                 'player': PartyPlusStrings.player(
                                     context, _holderIndex),
                                 'penalty': _penalty,
-                              })
-                            : PartyPlusStrings.player(context, _holderIndex),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: _exploded ? AppColors.bombRed : Colors.white,
-                          fontSize: _exploded ? 22 : 34,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+                              }),
+                              penaltyTitle: l10n.punishment,
+                              penaltyText: _penalty,
+                            )
+                          : Text(
+                              PartyPlusStrings.player(context, _holderIndex),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 34,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                     ),
                   ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _running ? null : _startRound,
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(
-                                color: AppColors.fingerCyan.withAlpha(160)),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                          child: Text(
-                            _exploded
-                                ? l10n.t('nextRound')
-                                : l10n.t('startTimer'),
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: _running ? _nextPlayer : null,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.fingerCyan,
-                            foregroundColor: Colors.black,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                          child: Text(l10n.t('wordBombNext')),
-                        ),
-                      ),
-                    ],
-                  ),
+                  if (_exploded)
+                    GameResultActionBar(
+                      accentColor: AppColors.fingerCyan,
+                      primaryLabel: l10n.t('wordBombNext'),
+                      onPrimaryTap: _startRound,
+                    )
+                  else
+                    GameResultActionBar(
+                      accentColor: AppColors.fingerCyan,
+                      primaryLabel: _running
+                          ? l10n.t('wordBombNext')
+                          : l10n.t('startGame'),
+                      onPrimaryTap: _running ? _nextPlayer : _startRound,
+                    ),
                   const SizedBox(height: 8),
                 ],
               ),

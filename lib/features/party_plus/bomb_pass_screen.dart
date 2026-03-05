@@ -8,6 +8,10 @@ import '../../core/help/game_help_service.dart';
 import '../../core/haptics/haptic_service.dart';
 import '../../features/settings/providers/settings_provider.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/widgets/game_result_action_bar.dart';
+import '../../shared/widgets/game_result_template_card.dart';
+import '../../shared/widgets/game_stage_stepper.dart';
+import '../../shared/widgets/web3_game_background.dart';
 import 'logic/timed_round_logic.dart';
 import 'party_plus_strings.dart';
 
@@ -137,6 +141,9 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final stage = _running
+        ? GameStage.playing
+        : (_exploded ? GameStage.result : GameStage.prepare);
 
     // Dynamic background color based on intensity
     final bgColor = Color.lerp(
@@ -156,6 +163,11 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen>
       backgroundColor: bgColor,
       body: Stack(
         children: [
+          const Web3GameBackground(
+            accentColor: AppColors.bombRed,
+            secondaryColor: AppColors.fingerCyan,
+            overlayOpacity: 0.45,
+          ),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -174,14 +186,21 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen>
                         l10n.t('passBomb'),
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 1,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.8,
                         ),
                       ),
                       const Spacer(),
                       const SizedBox(width: 20),
                     ],
+                  ),
+                  const SizedBox(height: 10),
+                  Center(
+                    child: GameStageStepper(
+                      stage: stage,
+                      accentColor: AppColors.bombRed,
+                    ),
                   ),
                   const SizedBox(height: 18),
                   Text(
@@ -288,32 +307,30 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen>
                   if (_exploded)
                     Container(
                       margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withAlpha(120),
-                        borderRadius: BorderRadius.circular(14),
-                        border:
-                            Border.all(color: AppColors.bombRed.withAlpha(160)),
-                      ),
-                      child: Text(
-                        l10n.t('penaltyResult', {
+                      child: GameResultTemplateCard(
+                        accentColor: AppColors.bombRed,
+                        resultTitle: l10n.t('resultSummary'),
+                        resultText:
+                            '${PartyPlusStrings.player(context, _holderIndex)} ${l10n.t('passBombBoom')}',
+                        penaltyTitle: l10n.punishment,
+                        penaltyText: l10n.t('penaltyResult', {
                           'player':
                               PartyPlusStrings.player(context, _holderIndex),
                           'penalty': _penalty,
                         }),
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 14),
-                        textAlign: TextAlign.center,
                       ),
                     ),
-                  SizedBox(
-                    height: 68,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        if (_exploded) {
-                          _startRound();
-                          return;
-                        }
+                  if (_exploded)
+                    GameResultActionBar(
+                      accentColor: AppColors.bombRed,
+                      primaryLabel: l10n.t('nextRound'),
+                      onPrimaryTap: _startRound,
+                    )
+                  else
+                    GameResultActionBar(
+                      accentColor: AppColors.bombRed,
+                      primaryLabel: l10n.t('passBombPassButton'),
+                      onPrimaryTap: () {
                         if (_running) {
                           _passBomb();
                           return;
@@ -322,25 +339,7 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen>
                         // first tap on primary button starts the round.
                         _startRound();
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.bombRed,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        textStyle: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                      child: Text(
-                        _exploded
-                            ? l10n.t('nextRound')
-                            : l10n.t('passBombPassButton'),
-                      ),
                     ),
-                  ),
                   const SizedBox(height: 8),
                 ],
               ),
