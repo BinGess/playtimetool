@@ -37,6 +37,16 @@ class _ChallengeAuctionScreenState
     _ChallengeItem(textKey: 'challengeAuctionItem3', minBid: 2),
     _ChallengeItem(textKey: 'challengeAuctionItem4', minBid: 1),
     _ChallengeItem(textKey: 'challengeAuctionItem5', minBid: 3),
+    _ChallengeItem(textKey: 'challengeAuctionItem6', minBid: 2),
+    _ChallengeItem(textKey: 'challengeAuctionItem7', minBid: 1),
+    _ChallengeItem(textKey: 'challengeAuctionItem8', minBid: 1),
+    _ChallengeItem(textKey: 'challengeAuctionItem9', minBid: 2),
+    _ChallengeItem(textKey: 'challengeAuctionItem10', minBid: 3),
+    _ChallengeItem(textKey: 'challengeAuctionItem11', minBid: 1),
+    _ChallengeItem(textKey: 'challengeAuctionItem12', minBid: 2),
+    _ChallengeItem(textKey: 'challengeAuctionItem13', minBid: 2),
+    _ChallengeItem(textKey: 'challengeAuctionItem14', minBid: 1),
+    _ChallengeItem(textKey: 'challengeAuctionItem15', minBid: 2),
   ];
 
   final Random _random = Random();
@@ -128,12 +138,14 @@ class _ChallengeAuctionScreenState
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
               Row(
                 children: [
                   GestureDetector(
@@ -337,9 +349,24 @@ class _ChallengeAuctionScreenState
                   ),
                 ],
               ],
+              const SizedBox(height: 8),
             ],
           ),
         ),
+      ),
+      // Back edge swipe
+      Positioned(
+        left: 0,
+        top: 0,
+        bottom: 0,
+        width: 20,
+        child: GestureDetector(
+          onHorizontalDragEnd: (d) {
+            if ((d.primaryVelocity ?? 0) > 200) context.pop();
+          },
+        ),
+      ),
+        ],
       ),
     );
   }

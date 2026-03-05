@@ -28,6 +28,7 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
   List<int> _penalties = [];
 
   SwipeDirection _target = SwipeDirection.left;
+  bool _isReverse = false;
   bool _awaitingSwipe = false;
   DateTime? _swipeStart;
   String _status = '';
@@ -39,6 +40,15 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
     super.dispose();
   }
 
+  /// Compute the reaction window in milliseconds for the current round.
+  /// Starts at 2000ms for round 1, linearly decreases to 1200ms by the last
+  /// round.  For a single-round game the full 2000ms is used.
+  int _reactionWindowMs() {
+    if (_totalRounds <= 1) return 2000;
+    final progress = (_round - 1) / (_totalRounds - 1); // 0.0 .. 1.0
+    return (2000 - (800 * progress)).round(); // 2000 -> 1200
+  }
+
   void _startGame() {
     _timer?.cancel();
     setState(() {
@@ -48,6 +58,7 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
       _currentPlayer = 0;
       _penalties = List<int>.filled(_playerCount, 0);
       _awaitingSwipe = false;
+      _isReverse = false;
       _status = '';
     });
     _prepareRound();
@@ -56,6 +67,7 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
   void _prepareRound() {
     setState(() {
       _target = _random.nextBool() ? SwipeDirection.left : SwipeDirection.right;
+      _isReverse = _random.nextDouble() < 0.3; // 30% chance of reverse round
       _awaitingSwipe = false;
       _status = '';
     });
@@ -64,13 +76,14 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
   void _beginSwipeWindow() {
     _timer?.cancel();
     HapticService.lightImpact();
+    final windowMs = _reactionWindowMs();
     setState(() {
       _awaitingSwipe = true;
       _swipeStart = DateTime.now();
       _status = '';
     });
 
-    _timer = Timer(const Duration(milliseconds: 1800), () {
+    _timer = Timer(Duration(milliseconds: windowMs), () {
       if (!mounted || !_awaitingSwipe) return;
       HapticService.notificationWarning();
       final l10n = AppLocalizations.of(context);
@@ -89,16 +102,31 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
     _timer?.cancel();
     final l10n = AppLocalizations.of(context);
     final reaction = DateTime.now().difference(_swipeStart!).inMilliseconds;
-    final resolution = resolveReaction(target: _target, actual: dir);
+
+    // In reverse mode the player must swipe OPPOSITE to the shown direction.
+    // We derive the "effective target" so we can reuse resolveReaction().
+    final effectiveTarget = _isReverse
+        ? (_target == SwipeDirection.left
+            ? SwipeDirection.right
+            : SwipeDirection.left)
+        : _target;
+
+    final resolution = resolveReaction(target: effectiveTarget, actual: dir);
 
     setState(() {
       _awaitingSwipe = false;
-      _penalties[_currentPlayer] += resolution.penaltyDelta;
+
       if (resolution.success) {
         HapticService.notificationSuccess();
         _status = l10n.t('leftRightSuccessMs', {'ms': '$reaction'});
+      } else if (_isReverse) {
+        // Wrong direction in a reverse round is extra punishing: +2
+        HapticService.errorVibrate();
+        _penalties[_currentPlayer] += 2;
+        _status = l10n.t('leftRightReversed');
       } else {
         HapticService.errorVibrate();
+        _penalties[_currentPlayer] += resolution.penaltyDelta;
         _status = l10n.t('leftRightWrong');
       }
     });
@@ -121,14 +149,24 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
+    // Visual styling that changes for reverse rounds.
+    final Color roundAccent =
+        _isReverse ? Colors.deepOrange : AppColors.wheelOrange;
+    final Color instructionBorderColor =
+        _isReverse ? Colors.deepOrange.withAlpha(200) : AppColors.wheelOrange.withAlpha(160);
+    final Color swipeAreaBorderColor =
+        _isReverse ? Colors.deepOrange : AppColors.textDim;
+
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
               Row(
                 children: [
                   GestureDetector(
@@ -199,17 +237,26 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
-                    border:
-                        Border.all(color: AppColors.wheelOrange.withAlpha(160)),
+                    border: Border.all(color: instructionBorderColor),
                   ),
                   child: Text(
-                    l10n.t('leftRightSwipeTo', {
-                      'direction': _target == SwipeDirection.left
-                          ? l10n.t('directionLeft')
-                          : l10n.t('directionRight'),
-                    }),
+                    _isReverse
+                        ? l10n.t('leftRightReverseSwipeTo', {
+                            'direction': _target == SwipeDirection.left
+                                ? l10n.t('directionLeft')
+                                : l10n.t('directionRight'),
+                          })
+                        : l10n.t('leftRightSwipeTo', {
+                            'direction': _target == SwipeDirection.left
+                                ? l10n.t('directionLeft')
+                                : l10n.t('directionRight'),
+                          }),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white, fontSize: 16),
+                    style: TextStyle(
+                      color: _isReverse ? Colors.deepOrange.shade200 : Colors.white,
+                      fontSize: 16,
+                      fontWeight: _isReverse ? FontWeight.w700 : FontWeight.normal,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -228,14 +275,14 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(18),
                         color: AppColors.surfaceVariant,
-                        border: Border.all(color: AppColors.textDim),
+                        border: Border.all(color: swipeAreaBorderColor),
                       ),
                       child: Center(
                         child: Icon(
                           _target == SwipeDirection.left
                               ? Icons.arrow_back_rounded
                               : Icons.arrow_forward_rounded,
-                          color: AppColors.wheelOrange,
+                          color: roundAccent,
                           size: 90,
                         ),
                       ),
@@ -259,7 +306,7 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
                   ElevatedButton(
                     onPressed: _beginSwipeWindow,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.wheelOrange,
+                      backgroundColor: roundAccent,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
@@ -322,9 +369,24 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
                   child: Text(l10n.t('playAgain')),
                 ),
               ],
+              const SizedBox(height: 8),
             ],
           ),
         ),
+      ),
+      // Back edge swipe
+      Positioned(
+        left: 0,
+        top: 0,
+        bottom: 0,
+        width: 20,
+        child: GestureDetector(
+          onHorizontalDragEnd: (d) {
+            if ((d.primaryVelocity ?? 0) > 200) context.pop();
+          },
+        ),
+      ),
+        ],
       ),
     );
   }

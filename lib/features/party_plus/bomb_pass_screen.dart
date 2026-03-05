@@ -17,9 +17,14 @@ class BombPassScreen extends ConsumerStatefulWidget {
   ConsumerState<BombPassScreen> createState() => _BombPassScreenState();
 }
 
-class _BombPassScreenState extends ConsumerState<BombPassScreen> {
+class _BombPassScreenState extends ConsumerState<BombPassScreen>
+    with SingleTickerProviderStateMixin {
   final Random _random = Random();
   Timer? _timer;
+  Timer? _hapticTimer;
+
+  late AnimationController _pulseCtrl;
+  late Animation<double> _pulseAnim;
 
   int _playerCount = 4;
   int _holderIndex = 0;
@@ -30,13 +35,32 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen> {
   String _penalty = '';
 
   @override
+  void initState() {
+    super.initState();
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..repeat(reverse: true);
+    _pulseAnim = Tween<double>(begin: 0.92, end: 1.08).animate(
+      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
   void dispose() {
     _timer?.cancel();
+    _hapticTimer?.cancel();
+    _pulseCtrl.dispose();
     super.dispose();
   }
 
+  /// Intensity 0.0 → 1.0 based on how close to explosion
+  double get _intensity =>
+      _roundSeconds == 0 ? 0.0 : (1.0 - _remainingMs / (_roundSeconds * 1000)).clamp(0.0, 1.0);
+
   void _startRound() {
     _timer?.cancel();
+    _hapticTimer?.cancel();
     final settings = ref.read(settingsProvider).value ?? const AppSettings();
     final round = createTimedHolderRound(
       playerCount: _playerCount,
@@ -58,12 +82,16 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen> {
       _exploded = false;
     });
 
+    // Pulse speed increases as timer nears end
+    _pulseCtrl.duration = const Duration(milliseconds: 800);
+
     _timer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
       if (!mounted) return;
 
       final next = _remainingMs - 100;
       if (next <= 0) {
         timer.cancel();
+        _hapticTimer?.cancel();
         HapticService.tripleHeavyImpact();
         setState(() {
           _remainingMs = 0;
@@ -71,6 +99,22 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen> {
           _exploded = true;
         });
       } else {
+        // Escalate haptic feedback as danger increases
+        final newIntensity = (1.0 - next / (_roundSeconds * 1000)).clamp(0.0, 1.0);
+        if (newIntensity > 0.7) {
+          // Last 30% - frequent haptics
+          if (next % 400 < 100) HapticService.lightImpact();
+        } else if (newIntensity > 0.4) {
+          // Middle zone - occasional haptics
+          if (next % 1500 < 100) HapticService.selectionClick();
+        }
+
+        // Animate pulse speed based on intensity
+        final newDuration = (800 - (600 * newIntensity)).round().clamp(200, 800);
+        if ((_pulseCtrl.duration?.inMilliseconds ?? 800) != newDuration) {
+          _pulseCtrl.duration = Duration(milliseconds: newDuration);
+        }
+
         setState(() => _remainingMs = next);
       }
     });
@@ -87,18 +131,29 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final progress = _roundSeconds == 0
-        ? 0.0
-        : (_remainingMs / (_roundSeconds * 1000)).clamp(0.0, 1.0);
+
+    // Dynamic background color based on intensity
+    final bgColor = Color.lerp(
+      AppColors.bombBlueDark,
+      AppColors.bombRedDark,
+      _running ? _intensity : (_exploded ? 1.0 : 0.0),
+    )!;
+
+    // Dynamic bomb size based on intensity
+    final bombSize = 200.0 + (_running ? _intensity * 40 : 0);
+    final glowAlpha = _running ? (80 + 180 * _intensity).round() : (_exploded ? 220 : 60);
+    final bombAlpha = _running ? (120 + 135 * _intensity).round() : (_exploded ? 255 : 80);
 
     return Scaffold(
-      backgroundColor: AppColors.bombBlueDark,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+      backgroundColor: bgColor,
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
               Row(
                 children: [
                   GestureDetector(
@@ -137,79 +192,84 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen> {
                     : (v) => setState(() => _playerCount = v.round()),
               ),
               const SizedBox(height: 8),
+              // Hidden timer: only show a danger hint, no exact time
               if (_running)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.t(
-                        'passBombSecondsLeft',
-                        {'seconds': '${(progress * _roundSeconds).ceil()}'},
+                Center(
+                  child: AnimatedDefaultTextStyle(
+                    duration: const Duration(milliseconds: 300),
+                    style: TextStyle(
+                      color: Color.lerp(
+                        AppColors.textDim,
+                        AppColors.bombRed,
+                        _intensity,
                       ),
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                      ),
+                      fontSize: 13 + _intensity * 4,
+                      letterSpacing: 2,
                     ),
-                    const SizedBox(height: 6),
-                    LinearProgressIndicator(
-                      minHeight: 8,
-                      value: progress,
-                      borderRadius: BorderRadius.circular(6),
-                      valueColor:
-                          const AlwaysStoppedAnimation(AppColors.bombRed),
-                      backgroundColor: AppColors.surfaceVariant,
-                    ),
-                  ],
+                    child: Text(l10n.t('passBombDanger')),
+                  ),
                 ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 16),
               Expanded(
                 child: Center(
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 220),
-                    width: 230,
-                    height: 230,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          AppColors.bombRed.withAlpha(_running ? 220 : 100),
-                          AppColors.bombRedDark,
+                  child: AnimatedBuilder(
+                    animation: _pulseAnim,
+                    builder: (_, child) => Transform.scale(
+                      scale: _running ? _pulseAnim.value : 1.0,
+                      child: child,
+                    ),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      width: bombSize,
+                      height: bombSize,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            AppColors.bombRed.withAlpha(bombAlpha),
+                            AppColors.bombRedDark,
+                          ],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.bombRed.withAlpha(glowAlpha),
+                            blurRadius: 12 + (_running ? _intensity * 30 : 0),
+                            spreadRadius: _running ? _intensity * 8 : 0,
+                          ),
                         ],
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color:
-                              AppColors.bombRed.withAlpha(_running ? 160 : 80),
-                          blurRadius: _running ? 26 : 12,
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _exploded
+                                  ? l10n.t('passBombBoom')
+                                  : (_running
+                                      ? l10n.t('passBombCurrentHolder')
+                                      : l10n.t('passBombReady')),
+                              style: TextStyle(
+                                color: _exploded
+                                    ? Colors.white
+                                    : AppColors.textSecondary,
+                                letterSpacing: 1,
+                                fontSize: _exploded ? 16 : 14,
+                                fontWeight: _exploded
+                                    ? FontWeight.w700
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              PartyPlusStrings.player(context, _holderIndex),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 30,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _exploded
-                                ? l10n.t('passBombBoom')
-                                : (_running
-                                    ? l10n.t('passBombCurrentHolder')
-                                    : l10n.t('passBombReady')),
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
-                              letterSpacing: 1,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            PartyPlusStrings.player(context, _holderIndex),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 30,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
                       ),
                     ),
                   ),
@@ -263,9 +323,24 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen> {
                   ),
                 ],
               ),
+              const SizedBox(height: 8),
             ],
           ),
         ),
+      ),
+      // Back edge swipe
+      Positioned(
+        left: 0,
+        top: 0,
+        bottom: 0,
+        width: 20,
+        child: GestureDetector(
+          onHorizontalDragEnd: (d) {
+            if ((d.primaryVelocity ?? 0) > 200) context.pop();
+          },
+        ),
+      ),
+        ],
       ),
     );
   }

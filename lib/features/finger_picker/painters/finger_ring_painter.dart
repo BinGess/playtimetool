@@ -16,8 +16,8 @@ class FingerRingPainter extends CustomPainter {
     this.spinAngle = 0.0,
     this.elimOrder = const [],
     this.elimVisible = 0,
-    Listenable? repaint,
-  }) : super(repaint: repaint);
+    super.repaint,
+  });
 
   final Map<int, FingerData> fingers;
   final PickerPhase phase;

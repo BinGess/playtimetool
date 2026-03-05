@@ -147,7 +147,7 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
                           ),
                           child: Text(
                             '✏  ${l10n.edit}',
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 12,
                             ),
@@ -393,7 +393,7 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
                 children: [
                   Text(
                     l10n.editWheel,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
@@ -417,7 +417,7 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
                       ),
                       child: Text(
                         l10n.add,
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: AppColors.wheelOrange,
                           fontSize: 13,
                         ),

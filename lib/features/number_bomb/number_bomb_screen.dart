@@ -324,7 +324,7 @@ class _SetupViewState extends State<_SetupView> {
               ),
               child: Text(
                 widget.l10n.startGame,
-                style: TextStyle(
+                style: const TextStyle(
                   color: AppColors.bombRed,
                   fontSize: 18,
                   letterSpacing: 4,
@@ -431,7 +431,7 @@ class _PlayingView extends StatelessWidget {
                 onTap: () => notifier.reset(),
                 child: Text(
                   l10n.reset,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: AppColors.textDim,
                     fontSize: 12,
                     letterSpacing: 1,
@@ -468,7 +468,7 @@ class _PlayingView extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           l10n.safeRange,
-          style: TextStyle(
+          style: const TextStyle(
             color: AppColors.textDim,
             fontSize: 11,
             letterSpacing: 3,
@@ -708,7 +708,7 @@ class _ExplosionOverlay extends StatelessWidget {
                       children: [
                         Text(
                           '💥  ${l10n.punishment}',
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppColors.bombRed,
                             fontSize: 13,
                             letterSpacing: 3,
@@ -738,7 +738,7 @@ class _ExplosionOverlay extends StatelessWidget {
                             ),
                             child: Text(
                               l10n.againRound,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: AppColors.bombRed,
                                 letterSpacing: 2,
                               ),

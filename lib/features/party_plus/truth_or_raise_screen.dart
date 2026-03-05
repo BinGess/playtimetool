@@ -18,6 +18,7 @@ class TruthOrRaiseScreen extends StatefulWidget {
 
 class _TruthOrRaiseScreenState extends State<TruthOrRaiseScreen> {
   final Random _random = Random();
+  final Set<int> _usedQuestions = {};
 
   int _playerCount = 4;
   int _currentPlayer = 0;
@@ -31,6 +32,7 @@ class _TruthOrRaiseScreenState extends State<TruthOrRaiseScreen> {
   _TruthPhase _phase = _TruthPhase.setup;
 
   void _startGame() {
+    _usedQuestions.clear();
     setState(() {
       _phase = _TruthPhase.playing;
       _currentPlayer = 0;
@@ -45,14 +47,16 @@ class _TruthOrRaiseScreenState extends State<TruthOrRaiseScreen> {
 
   String _randomQuestion() {
     final l10n = AppLocalizations.of(context);
-    final pool = <String>[
-      l10n.t('truthRaiseQuestion1'),
-      l10n.t('truthRaiseQuestion2'),
-      l10n.t('truthRaiseQuestion3'),
-      l10n.t('truthRaiseQuestion4'),
-      l10n.t('truthRaiseQuestion5'),
-    ];
-    return pool[_random.nextInt(pool.length)];
+    const totalQuestions = 20;
+    if (_usedQuestions.length >= totalQuestions) {
+      _usedQuestions.clear();
+    }
+    int index;
+    do {
+      index = _random.nextInt(totalQuestions) + 1;
+    } while (_usedQuestions.contains(index));
+    _usedQuestions.add(index);
+    return l10n.t('truthRaiseQuestion$index');
   }
 
   void _answer() {
@@ -102,12 +106,14 @@ class _TruthOrRaiseScreenState extends State<TruthOrRaiseScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
               Row(
                 children: [
                   GestureDetector(
@@ -277,9 +283,24 @@ class _TruthOrRaiseScreenState extends State<TruthOrRaiseScreen> {
                   child: Text(l10n.t('playAgain')),
                 ),
               ],
+              const SizedBox(height: 8),
             ],
           ),
         ),
+      ),
+      // Back edge swipe
+      Positioned(
+        left: 0,
+        top: 0,
+        bottom: 0,
+        width: 20,
+        child: GestureDetector(
+          onHorizontalDragEnd: (d) {
+            if ((d.primaryVelocity ?? 0) > 200) context.pop();
+          },
+        ),
+      ),
+        ],
       ),
     );
   }

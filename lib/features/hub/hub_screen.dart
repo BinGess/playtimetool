@@ -14,15 +14,6 @@ class HubScreen extends ConsumerStatefulWidget {
 }
 
 class _HubScreenState extends ConsumerState<HubScreen> {
-  final _pageController = PageController(viewportFraction: 0.88);
-  int _currentPage = 0;
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -41,7 +32,7 @@ class _HubScreenState extends ConsumerState<HubScreen> {
           SafeArea(
             child: Column(
               children: [
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
                 // Title
                 Text(
                   l10n.appTitle,
@@ -52,62 +43,41 @@ class _HubScreenState extends ConsumerState<HubScreen> {
                     fontWeight: FontWeight.w300,
                   ),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 20),
 
-                // Game cards
+                // Game grid
                 Expanded(
-                  child: PageView(
-                    controller: _pageController,
-                    onPageChanged: (i) => setState(() => _currentPage = i),
-                    children: games
-                        .map(
-                          (g) => GameCard(
-                            title: g.title,
-                            subtitle: g.subtitle,
-                            description: g.description,
-                            accentColor: g.accentColor,
-                            route: g.route,
-                            icon: g.icon,
-                          ),
-                        )
-                        .toList(),
+                  child: GridView.builder(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 4),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 0.88,
+                    ),
+                    itemCount: games.length,
+                    itemBuilder: (_, i) {
+                      final g = games[i];
+                      return GameCard(
+                        title: g.title,
+                        subtitle: g.subtitle,
+                        description: g.description,
+                        accentColor: g.accentColor,
+                        route: g.route,
+                        icon: g.icon,
+                      );
+                    },
                   ),
                 ),
 
-                const SizedBox(height: 24),
-                // Page dots
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(games.length, (i) {
-                    final active = i == _currentPage;
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      width: active ? 24 : 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(3),
-                        color:
-                            active ? games[i].accentColor : AppColors.textDim,
-                        boxShadow: active
-                            ? [
-                                BoxShadow(
-                                  color: games[i].accentColor.withAlpha(120),
-                                  blurRadius: 8,
-                                ),
-                              ]
-                            : null,
-                      ),
-                    );
-                  }),
-                ),
-
-                const SizedBox(height: 16),
                 // Settings link
                 GestureDetector(
                   onTap: () => context.push('/settings'),
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     child: Text(
                       '⚙  ${l10n.settingsTitle}',
                       style: const TextStyle(
@@ -118,7 +88,7 @@ class _HubScreenState extends ConsumerState<HubScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
               ],
             ),
           ),

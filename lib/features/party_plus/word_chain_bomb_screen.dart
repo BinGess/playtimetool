@@ -42,6 +42,14 @@ class _WordChainBombScreenState extends ConsumerState<WordChainBombScreen> {
       nameKey: 'wordBombCategoryTravel',
       wordsKey: 'wordBombTravelWords',
     ),
+    _WordCategory(
+      nameKey: 'wordBombCategoryAnimal',
+      wordsKey: 'wordBombAnimalWords',
+    ),
+    _WordCategory(
+      nameKey: 'wordBombCategorySport',
+      wordsKey: 'wordBombSportWords',
+    ),
   ];
 
   final Random _random = Random();
@@ -124,12 +132,14 @@ class _WordChainBombScreenState extends ConsumerState<WordChainBombScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
               Row(
                 children: [
                   GestureDetector(
@@ -281,9 +291,24 @@ class _WordChainBombScreenState extends ConsumerState<WordChainBombScreen> {
                   ),
                 ],
               ),
+              const SizedBox(height: 8),
             ],
           ),
         ),
+      ),
+      // Back edge swipe
+      Positioned(
+        left: 0,
+        top: 0,
+        bottom: 0,
+        width: 20,
+        child: GestureDetector(
+          onHorizontalDragEnd: (d) {
+            if ((d.primaryVelocity ?? 0) > 200) context.pop();
+          },
+        ),
+      ),
+        ],
       ),
     );
   }

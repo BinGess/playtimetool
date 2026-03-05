@@ -9,7 +9,7 @@ import '../../l10n/app_localizations.dart';
 import 'logic/gesture_duel_logic.dart';
 import 'party_plus_strings.dart';
 
-enum _DuelPhase { setup, picking, result }
+enum _DuelPhase { setup, picking, roundResult, finalResult }
 
 class GestureDuelScreen extends ConsumerStatefulWidget {
   const GestureDuelScreen({super.key});
@@ -26,13 +26,27 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
   bool _minorityLoses = true;
   _DuelPhase _phase = _DuelPhase.setup;
 
+  int _totalRounds = 4;
+  int _round = 0;
+  List<int> _scores = [];
+
   List<DuelGesture?> _picks = [];
   List<int> _losers = [];
   String _resultText = '';
 
+  void _startGame() {
+    setState(() {
+      _totalRounds = _playerCount;
+      _round = 0;
+      _scores = List<int>.filled(_playerCount, 0);
+    });
+    _startRound();
+  }
+
   void _startRound() {
     setState(() {
       _phase = _DuelPhase.picking;
+      _round += 1;
       _currentPlayer = 0;
       _picks = List<DuelGesture?>.filled(_playerCount, null);
       _losers = [];
@@ -49,12 +63,11 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
       return;
     }
 
-    _resolveResult();
+    _resolveRound();
   }
 
-  void _resolveResult() {
+  void _resolveRound() {
     final l10n = AppLocalizations.of(context);
-    final settings = ref.read(settingsProvider).value ?? const AppSettings();
 
     final picks = _picks.whereType<DuelGesture>().toList();
     final resolution = resolveGestureDuel(
@@ -62,30 +75,71 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
       minorityLoses: _minorityLoses,
     );
 
-    setState(() {
-      _phase = _DuelPhase.result;
-      _losers = resolution.losers;
-      if (resolution.isDraw && resolution.losers.isEmpty) {
-        _resultText = l10n.t('gestureSameDraw');
-      } else if (resolution.isDraw &&
-          resolution.losers.length == _playerCount) {
-        _resultText = l10n.t('gestureEveryoneHitDraw');
-      } else if (resolution.losers.isEmpty) {
-        _resultText = l10n.t('gestureNoLoserDraw');
-      } else {
-        final names = resolution.losers
-            .map((i) => PartyPlusStrings.player(context, i))
-            .join('、');
-        final penalty = PartyPlusStrings.randomPenalty(
-          context,
-          _random,
-          alcoholPenaltyEnabled: settings.alcoholPenaltyEnabled,
-        );
-        _resultText = l10n.t('gesturePenaltyResult', {
-          'players': names,
-          'penalty': penalty,
-        });
+    _losers = resolution.losers;
+
+    // Award +1 to each loser (unless draw with no real losers)
+    if (!resolution.isDraw && _losers.isNotEmpty) {
+      for (final i in _losers) {
+        _scores[i] += 1;
       }
+      final names = _losers
+          .map((i) => PartyPlusStrings.player(context, i))
+          .join('、');
+      _resultText = l10n.t('gestureRoundScore', {'players': names});
+    } else if (resolution.isDraw && resolution.losers.isEmpty) {
+      _resultText = l10n.t('gestureSameDraw');
+    } else if (resolution.isDraw &&
+        resolution.losers.length == _playerCount) {
+      _resultText = l10n.t('gestureEveryoneHitDraw');
+    } else {
+      _resultText = l10n.t('gestureNoLoserDraw');
+    }
+
+    setState(() {
+      _phase = _DuelPhase.roundResult;
+    });
+  }
+
+  void _proceedAfterRound() {
+    if (_round >= _totalRounds) {
+      _showFinalResult();
+    } else {
+      _startRound();
+    }
+  }
+
+  void _showFinalResult() {
+    final l10n = AppLocalizations.of(context);
+    final settings = ref.read(settingsProvider).value ?? const AppSettings();
+
+    final maxScore = _scores.reduce(max);
+    final losers = <int>[];
+    for (int i = 0; i < _playerCount; i++) {
+      if (_scores[i] == maxScore && maxScore > 0) {
+        losers.add(i);
+      }
+    }
+
+    _losers = losers;
+
+    if (losers.isEmpty) {
+      _resultText = l10n.t('gestureNoLoserDraw');
+    } else {
+      final names =
+          losers.map((i) => PartyPlusStrings.player(context, i)).join('、');
+      final penalty = PartyPlusStrings.randomPenalty(
+        context,
+        _random,
+        alcoholPenaltyEnabled: settings.alcoholPenaltyEnabled,
+      );
+      _resultText = l10n.t('gesturePenaltyResult', {
+        'players': names,
+        'penalty': penalty,
+      });
+    }
+
+    setState(() {
+      _phase = _DuelPhase.finalResult;
     });
   }
 
@@ -118,12 +172,14 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
               Row(
                 children: [
                   GestureDetector(
@@ -156,7 +212,18 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
                   max: 6,
                   divisions: 3,
                   activeColor: AppColors.fingerCyan,
-                  onChanged: (v) => setState(() => _playerCount = v.round()),
+                  onChanged: (v) => setState(() {
+                    _playerCount = v.round();
+                    _totalRounds = _playerCount;
+                  }),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  l10n.t('gestureRoundOf', {
+                    'current': '$_playerCount',
+                    'total': '$_playerCount',
+                  }),
+                  style: const TextStyle(color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 8),
                 SwitchListTile(
@@ -168,11 +235,12 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
                   ),
                   value: _minorityLoses,
                   onChanged: (v) => setState(() => _minorityLoses = v),
-                  activeColor: AppColors.fingerCyan,
+                  activeTrackColor: AppColors.fingerCyan,
+                  thumbColor: WidgetStateProperty.all(AppColors.fingerCyan),
                 ),
                 const Spacer(),
                 ElevatedButton(
-                  onPressed: _startRound,
+                  onPressed: _startGame,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.fingerCyan,
                     foregroundColor: Colors.black,
@@ -181,6 +249,19 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
                   child: Text(l10n.t('gestureStartDuel')),
                 ),
               ] else if (_phase == _DuelPhase.picking) ...[
+                Text(
+                  l10n.t('gestureRoundOf', {
+                    'current': '$_round',
+                    'total': '$_totalRounds',
+                  }),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: AppColors.fingerCyan,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
@@ -226,7 +307,20 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: AppColors.textSecondary),
                 ),
-              ] else ...[
+              ] else if (_phase == _DuelPhase.roundResult) ...[
+                Text(
+                  l10n.t('gestureRoundOf', {
+                    'current': '$_round',
+                    'total': '$_totalRounds',
+                  }),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: AppColors.fingerCyan,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
                 Text(
                   l10n.t('gestureRoundResult'),
                   textAlign: TextAlign.center,
@@ -269,6 +363,14 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
+                        const SizedBox(width: 10),
+                        Text(
+                          '${_scores[i]}',
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ],
                     ),
                   );
@@ -281,18 +383,101 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
                 ),
                 const Spacer(),
                 ElevatedButton(
-                  onPressed: _startRound,
+                  onPressed: _proceedAfterRound,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.fingerCyan,
                     foregroundColor: Colors.black,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  child: Text(l10n.t('nextRound')),
+                  child: Text(
+                    _round >= _totalRounds
+                        ? l10n.t('gestureFinalResult')
+                        : l10n.t('nextRound'),
+                  ),
+                ),
+              ] else ...[
+                // finalResult phase
+                Text(
+                  l10n.t('gestureFinalResult'),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ...List.generate(_playerCount, (i) {
+                  final hit = _losers.contains(i);
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      color: hit
+                          ? AppColors.bombRed.withAlpha(30)
+                          : AppColors.surfaceVariant,
+                      border: Border.all(
+                        color: hit ? AppColors.bombRed : AppColors.textDim,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            PartyPlusStrings.player(context, i),
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                        Text(
+                          '${_scores[i]}',
+                          style: TextStyle(
+                            color:
+                                hit ? AppColors.bombRed : AppColors.fingerCyan,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+                const SizedBox(height: 10),
+                Text(
+                  _resultText,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white, fontSize: 15),
+                ),
+                const Spacer(),
+                ElevatedButton(
+                  onPressed: _startGame,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.fingerCyan,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: Text(l10n.t('gestureStartDuel')),
                 ),
               ],
+              const SizedBox(height: 8),
             ],
           ),
         ),
+      ),
+      // Back edge swipe
+      Positioned(
+        left: 0,
+        top: 0,
+        bottom: 0,
+        width: 20,
+        child: GestureDetector(
+          onHorizontalDragEnd: (d) {
+            if ((d.primaryVelocity ?? 0) > 200) context.pop();
+          },
+        ),
+      ),
+        ],
       ),
     );
   }

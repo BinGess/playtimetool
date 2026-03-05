@@ -194,7 +194,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
                     const SizedBox(height: 10),
                     Text(
                       l10n.placeFingersEn,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: AppColors.textDim,
                         fontSize: 10,
                         letterSpacing: 3,
@@ -281,7 +281,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
                     ),
                     child: Text(
                       l10n.start,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: AppColors.fingerCyan,
                         letterSpacing: 10,
                         fontSize: 20,
@@ -377,7 +377,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
                 child: Center(
                   child: Text(
                     l10n.again,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 14,
                       letterSpacing: 4,
@@ -470,7 +470,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
         ),
           title: Text(
           l10n.someoneEscaped,
-          style: TextStyle(
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 22,
             fontWeight: FontWeight.w500,
@@ -479,7 +479,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
         ),
         content: Text(
           l10n.escapeHint,
-          style: TextStyle(
+          style: const TextStyle(
             color: AppColors.textSecondary,
             height: 1.6,
           ),
@@ -493,7 +493,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
             },
             child: Text(
               l10n.okRetry,
-              style: TextStyle(
+              style: const TextStyle(
                 color: AppColors.fingerCyan,
                 fontSize: 15,
               ),
@@ -518,7 +518,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
         ),
         title: Text(
           l10n.overflowTitle,
-          style: TextStyle(
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 22,
             fontWeight: FontWeight.w500,
@@ -527,7 +527,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
         ),
         content: Text(
           l10n.overflowHint,
-          style: TextStyle(
+          style: const TextStyle(
             color: AppColors.textSecondary,
             height: 1.6,
           ),
@@ -541,7 +541,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
             },
             child: Text(
               l10n.ok,
-              style: TextStyle(
+              style: const TextStyle(
                 color: AppColors.fingerCyan,
                 fontSize: 15,
               ),
@@ -567,7 +567,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
           ),
           title: Text(
             l10n.selectWinners,
-            style: TextStyle(color: Colors.white),
+            style: const TextStyle(color: Colors.white),
             textAlign: TextAlign.center,
           ),
           content: Row(

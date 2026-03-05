@@ -38,7 +38,7 @@ class _GameCardState extends State<GameCard>
       vsync: this,
       duration: const Duration(milliseconds: 120),
     );
-    _scaleAnim = Tween<double>(begin: 1.0, end: 0.96).animate(
+    _scaleAnim = Tween<double>(begin: 1.0, end: 0.95).animate(
       CurvedAnimation(parent: _pressController, curve: Curves.easeOut),
     );
   }
@@ -67,84 +67,88 @@ class _GameCardState extends State<GameCard>
       onTap: () => _navigate(context),
       child: ScaleTransition(
         scale: _scaleAnim,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(28),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(28),
-                  border: Border.all(
-                    color: widget.accentColor.withAlpha(60),
-                    width: 1.5,
-                  ),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      widget.accentColor.withAlpha(20),
-                      Colors.black.withAlpha(180),
-                    ],
-                  ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: widget.accentColor.withAlpha(50),
+                  width: 1,
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      // Icon with glow
-                      Icon(
-                        widget.icon,
-                        color: widget.accentColor,
-                        size: 40,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    widget.accentColor.withAlpha(18),
+                    Colors.black.withAlpha(200),
+                  ],
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Icon with glow
+                    Icon(
+                      widget.icon,
+                      color: widget.accentColor,
+                      size: 28,
+                      shadows: [
+                        Shadow(
+                          color: widget.accentColor.withAlpha(150),
+                          blurRadius: 16,
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    // Subtitle
+                    Text(
+                      widget.subtitle,
+                      style: TextStyle(
+                        color: widget.accentColor.withAlpha(160),
+                        fontSize: 9,
+                        letterSpacing: 2,
+                        fontWeight: FontWeight.w400,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    // Title
+                    Text(
+                      widget.title,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                        height: 1.2,
                         shadows: [
                           Shadow(
-                            color: widget.accentColor.withAlpha(180),
-                            blurRadius: 20,
+                            color: widget.accentColor.withAlpha(60),
+                            blurRadius: 8,
                           ),
                         ],
                       ),
-                      const Spacer(),
-                      // Subtitle
-                      Text(
-                        widget.subtitle,
-                        style: TextStyle(
-                          color: widget.accentColor.withAlpha(180),
-                          fontSize: 11,
-                          letterSpacing: 3,
-                          fontWeight: FontWeight.w400,
-                        ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    // Description
+                    Text(
+                      widget.description,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                        height: 1.3,
                       ),
-                      const SizedBox(height: 8),
-                      // Title
-                      Text(
-                        widget.title,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.w600,
-                          shadows: [
-                            Shadow(
-                              color: widget.accentColor.withAlpha(80),
-                              blurRadius: 12,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      // Description
-                      Text(
-                        widget.description,
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
               ),
             ),
