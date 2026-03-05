@@ -5,6 +5,11 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/help/game_help_service.dart';
 import '../../core/haptics/haptic_service.dart';
+import '../../features/penalty_plugin/application/penalty_resolver.dart';
+import '../../features/penalty_plugin/application/penalty_runtime.dart';
+import '../../features/penalty_plugin/domain/penalty_models.dart';
+import '../../features/penalty_plugin/domain/penalty_policy.dart';
+import '../../features/penalty_plugin/presentation/penalty_picker_sheet.dart';
 import '../../features/settings/providers/settings_provider.dart';
 import '../../l10n/app_localizations.dart';
 import 'logic/gesture_duel_logic.dart';
@@ -34,6 +39,8 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
   List<DuelGesture?> _picks = [];
   List<int> _losers = [];
   String _resultText = '';
+  PenaltyResolution? _penaltyResolution;
+  PenaltyItem? _selectedPenalty;
   bool _showHelpButton = false;
 
   @override
@@ -130,14 +137,23 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
 
     if (losers.isEmpty) {
       _resultText = l10n.t('gestureNoLoserDraw');
+      _penaltyResolution = null;
+      _selectedPenalty = null;
     } else {
       final names =
           losers.map((i) => PartyPlusStrings.player(context, i)).join('、');
-      final penalty = PartyPlusStrings.randomPenalty(
-        context,
-        _random,
-        alcoholPenaltyEnabled: settings.alcoholPenaltyEnabled,
+      final resolution = defaultPenaltyResolver.resolve(
+        policy: penaltyPolicyFromSettings(settings),
+        context: PenaltyContext(
+          gameId: 'gesture_duel',
+          loserCount: losers.length,
+          round: _round,
+        ),
+        random: _random,
       );
+      _penaltyResolution = resolution;
+      _selectedPenalty = resolution.selected;
+      final penalty = l10n.t(resolution.selected.textKey);
       _resultText = l10n.t('gesturePenaltyResult', {
         'players': names,
         'penalty': penalty,
@@ -146,6 +162,28 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
 
     setState(() {
       _phase = _DuelPhase.finalResult;
+    });
+  }
+
+  Future<void> _openPenaltyPicker() async {
+    if (_penaltyResolution == null || _selectedPenalty == null) return;
+    final l10n = AppLocalizations.of(context);
+    final selected = await showPenaltyPickerSheet(
+      context,
+      candidates: _penaltyResolution!.candidates,
+      selected: _selectedPenalty!,
+      labelBuilder: (item) => l10n.t(item.textKey),
+    );
+    if (selected == null || !mounted) return;
+
+    final names =
+        _losers.map((i) => PartyPlusStrings.player(context, i)).join('、');
+    setState(() {
+      _selectedPenalty = selected;
+      _resultText = l10n.t('gesturePenaltyResult', {
+        'players': names,
+        'penalty': l10n.t(selected.textKey),
+      });
     });
   }
 
@@ -458,6 +496,15 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
                       textAlign: TextAlign.center,
                       style: const TextStyle(color: Colors.white, fontSize: 15),
                     ),
+                    if (_penaltyResolution != null && _selectedPenalty != null)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: OutlinedButton(
+                          key: const Key('open-penalty-picker'),
+                          onPressed: _openPenaltyPicker,
+                          child: Text(l10n.t('penaltyChoose')),
+                        ),
+                      ),
                     const Spacer(),
                     ElevatedButton(
                       onPressed: _startGame,

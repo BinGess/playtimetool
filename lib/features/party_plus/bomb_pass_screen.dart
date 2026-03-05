@@ -80,29 +80,17 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen>
       maxDuration: 14,
       random: _random,
     );
-
-    PenaltyResolution? resolution;
-    PenaltyItem? selected;
-    String penaltyText;
-    try {
-      resolution = defaultPenaltyResolver.resolve(
-        policy: penaltyPolicyFromSettings(settings),
-        context: const PenaltyContext(
-          gameId: 'pass_bomb',
-          loserCount: 1,
-          round: 1,
-        ),
-        random: _random,
-      );
-      selected = resolution.selected;
-      penaltyText = l10n.t(selected.textKey);
-    } catch (_) {
-      penaltyText = PartyPlusStrings.randomPenalty(
-        context,
-        _random,
-        alcoholPenaltyEnabled: settings.alcoholPenaltyEnabled,
-      );
-    }
+    final resolution = defaultPenaltyResolver.resolve(
+      policy: penaltyPolicyFromSettings(settings),
+      context: const PenaltyContext(
+        gameId: 'pass_bomb',
+        loserCount: 1,
+        round: 1,
+      ),
+      random: _random,
+    );
+    final selected = resolution.selected;
+    final penaltyText = l10n.t(selected.textKey);
 
     setState(() {
       _roundSeconds = round.durationSeconds;

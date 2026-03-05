@@ -6,6 +6,11 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/help/game_help_service.dart';
 import '../../core/haptics/haptic_service.dart';
+import '../../features/penalty_plugin/application/penalty_resolver.dart';
+import '../../features/penalty_plugin/application/penalty_runtime.dart';
+import '../../features/penalty_plugin/domain/penalty_models.dart';
+import '../../features/penalty_plugin/domain/penalty_policy.dart';
+import '../../features/penalty_plugin/presentation/penalty_picker_sheet.dart';
 import '../../features/settings/providers/settings_provider.dart';
 import '../../l10n/app_localizations.dart';
 import 'logic/challenge_auction_logic.dart';
@@ -71,6 +76,9 @@ class _ChallengeAuctionScreenState
   List<int> _bids = [];
   int _winner = 0;
   String _resultText = '';
+  String _resultPenaltyText = '';
+  PenaltyResolution? _penaltyResolution;
+  PenaltyItem? _selectedPenalty;
   bool _showHelpButton = false;
 
   @override
@@ -166,6 +174,9 @@ class _ChallengeAuctionScreenState
       _bidController.text = '$_currentBid';
       _winner = 0;
       _resultText = '';
+      _resultPenaltyText = '';
+      _penaltyResolution = null;
+      _selectedPenalty = null;
     });
     _focusBidInput();
   }
@@ -205,6 +216,7 @@ class _ChallengeAuctionScreenState
   void _onChallengeSuccess() {
     final l10n = AppLocalizations.of(context);
     final settings = ref.read(settingsProvider).value ?? const AppSettings();
+    final penaltyText = _buildSuggestedPenalty(settings, l10n);
     setState(() {
       _phase = _AuctionPhase.result;
       _resultText = settings.alcoholPenaltyEnabled
@@ -214,6 +226,7 @@ class _ChallengeAuctionScreenState
           : l10n.t('challengeAuctionResultSuccessPure', {
               'player': PartyPlusStrings.player(context, _winner),
             });
+      _resultPenaltyText = penaltyText;
     });
   }
 
@@ -221,6 +234,7 @@ class _ChallengeAuctionScreenState
     final l10n = AppLocalizations.of(context);
     final settings = ref.read(settingsProvider).value ?? const AppSettings();
     final bid = _bids[_winner];
+    final penaltyText = _buildSuggestedPenalty(settings, l10n);
     setState(() {
       _phase = _AuctionPhase.result;
       _resultText = settings.alcoholPenaltyEnabled
@@ -232,6 +246,42 @@ class _ChallengeAuctionScreenState
               'player': PartyPlusStrings.player(context, _winner),
               'count': '${bid + 1}',
             });
+      _resultPenaltyText = penaltyText;
+    });
+  }
+
+  String _buildSuggestedPenalty(AppSettings settings, AppLocalizations l10n) {
+    final resolution = defaultPenaltyResolver.resolve(
+      policy: penaltyPolicyFromSettings(settings),
+      context: const PenaltyContext(
+        gameId: 'challenge_auction',
+        loserCount: 1,
+        round: 1,
+      ),
+      random: _random,
+    );
+    _penaltyResolution = resolution;
+    _selectedPenalty = resolution.selected;
+    return l10n.t('penaltySuggestionLine', {
+      'penalty': l10n.t(resolution.selected.textKey),
+    });
+  }
+
+  Future<void> _openPenaltyPicker() async {
+    if (_penaltyResolution == null || _selectedPenalty == null) return;
+    final l10n = AppLocalizations.of(context);
+    final selected = await showPenaltyPickerSheet(
+      context,
+      candidates: _penaltyResolution!.candidates,
+      selected: _selectedPenalty!,
+      labelBuilder: (item) => l10n.t(item.textKey),
+    );
+    if (selected == null || !mounted) return;
+    setState(() {
+      _selectedPenalty = selected;
+      _resultPenaltyText = l10n.t('penaltySuggestionLine', {
+        'penalty': l10n.t(selected.textKey),
+      });
     });
   }
 
@@ -556,6 +606,27 @@ class _ChallengeAuctionScreenState
                         style:
                             const TextStyle(color: Colors.white, fontSize: 20),
                       ),
+                      if (_resultPenaltyText.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Text(
+                          _resultPenaltyText,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 14,
+                          ),
+                        ),
+                        if (_penaltyResolution != null &&
+                            _selectedPenalty != null)
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: OutlinedButton(
+                              key: const Key('open-penalty-picker'),
+                              onPressed: _openPenaltyPicker,
+                              child: Text(l10n.t('penaltyChoose')),
+                            ),
+                          ),
+                      ],
                       const Spacer(),
                       ElevatedButton(
                         onPressed: _startRound,

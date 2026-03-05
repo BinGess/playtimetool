@@ -1,24 +1,32 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/help/game_help_service.dart';
 import '../../core/haptics/haptic_service.dart';
+import '../../features/penalty_plugin/application/penalty_resolver.dart';
+import '../../features/penalty_plugin/application/penalty_runtime.dart';
+import '../../features/penalty_plugin/domain/penalty_models.dart';
+import '../../features/penalty_plugin/domain/penalty_policy.dart';
+import '../../features/penalty_plugin/presentation/penalty_picker_sheet.dart';
+import '../../features/settings/providers/settings_provider.dart';
 import '../../l10n/app_localizations.dart';
 import 'logic/left_right_logic.dart';
 import 'party_plus_strings.dart';
 
 enum _ReactPhase { setup, playing, result }
 
-class LeftRightReactScreen extends StatefulWidget {
+class LeftRightReactScreen extends ConsumerStatefulWidget {
   const LeftRightReactScreen({super.key});
 
   @override
-  State<LeftRightReactScreen> createState() => _LeftRightReactScreenState();
+  ConsumerState<LeftRightReactScreen> createState() =>
+      _LeftRightReactScreenState();
 }
 
-class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
+class _LeftRightReactScreenState extends ConsumerState<LeftRightReactScreen> {
   final Random _random = Random();
 
   Timer? _timer;
@@ -35,6 +43,10 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
   String _status = '';
   _ReactPhase _phase = _ReactPhase.setup;
   bool _showHelpButton = false;
+  PenaltyResolution? _penaltyResolution;
+  PenaltyItem? _selectedPenalty;
+  String _resultPenaltyText = '';
+  List<int> _resultLosers = const [];
 
   @override
   void initState() {
@@ -68,6 +80,10 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
       _awaitingSwipe = false;
       _isReverse = false;
       _status = '';
+      _penaltyResolution = null;
+      _selectedPenalty = null;
+      _resultPenaltyText = '';
+      _resultLosers = const [];
     });
     _prepareRound();
   }
@@ -142,6 +158,7 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
 
   void _nextTurn() {
     if (_round >= _totalRounds) {
+      _prepareResultPenalty();
       setState(() => _phase = _ReactPhase.result);
       return;
     }
@@ -151,6 +168,65 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
       _currentPlayer = (_currentPlayer + 1) % _playerCount;
     });
     _prepareRound();
+  }
+
+  void _prepareResultPenalty() {
+    final l10n = AppLocalizations.of(context);
+    final maxPenalty = _penalties.isEmpty ? 0 : _penalties.reduce(max);
+    if (maxPenalty <= 0) {
+      _penaltyResolution = null;
+      _selectedPenalty = null;
+      _resultPenaltyText = '';
+      _resultLosers = const [];
+      return;
+    }
+
+    final losers = <int>[];
+    for (int i = 0; i < _penalties.length; i++) {
+      if (_penalties[i] == maxPenalty) losers.add(i);
+    }
+    final settings = ref.read(settingsProvider).value ?? const AppSettings();
+    final names =
+        losers.map((i) => PartyPlusStrings.player(context, i)).join('、');
+
+    final resolution = defaultPenaltyResolver.resolve(
+      policy: penaltyPolicyFromSettings(settings),
+      context: PenaltyContext(
+        gameId: 'left_right',
+        loserCount: losers.length,
+        round: _round,
+      ),
+      random: _random,
+    );
+    _penaltyResolution = resolution;
+    _selectedPenalty = resolution.selected;
+    _resultPenaltyText = l10n.t('gesturePenaltyResult', {
+      'players': names,
+      'penalty': l10n.t(resolution.selected.textKey),
+    });
+    _resultLosers = losers;
+  }
+
+  Future<void> _openPenaltyPicker() async {
+    if (_penaltyResolution == null || _selectedPenalty == null) return;
+    final l10n = AppLocalizations.of(context);
+    final selected = await showPenaltyPickerSheet(
+      context,
+      candidates: _penaltyResolution!.candidates,
+      selected: _selectedPenalty!,
+      labelBuilder: (item) => l10n.t(item.textKey),
+    );
+    if (selected == null || !mounted) return;
+
+    final names =
+        _resultLosers.map((i) => PartyPlusStrings.player(context, i)).join('、');
+    setState(() {
+      _selectedPenalty = selected;
+      _resultPenaltyText = l10n.t('gesturePenaltyResult', {
+        'players': names,
+        'penalty': l10n.t(selected.textKey),
+      });
+    });
   }
 
   @override
@@ -372,6 +448,25 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
                         ),
                       );
                     }),
+                    if (_resultPenaltyText.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        _resultPenaltyText,
+                        textAlign: TextAlign.center,
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 15),
+                      ),
+                      if (_penaltyResolution != null &&
+                          _selectedPenalty != null)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: OutlinedButton(
+                            key: const Key('open-penalty-picker'),
+                            onPressed: _openPenaltyPicker,
+                            child: Text(l10n.t('penaltyChoose')),
+                          ),
+                        ),
+                    ],
                     const Spacer(),
                     ElevatedButton(
                       onPressed: _startGame,

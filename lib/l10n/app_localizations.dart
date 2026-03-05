@@ -84,6 +84,7 @@ class AppLocalizations {
       'penaltyRandom': '随机',
       'penaltyChoose': '选择',
       'penaltyApply': '应用',
+      'penaltySuggestionLine': '推荐惩罚：{penalty}',
       'langFollowSystem': '跟随系统',
       'langChinese': '中文',
       'langEnglish': 'English',
@@ -405,6 +406,7 @@ class AppLocalizations {
       'penaltyRandom': 'Random',
       'penaltyChoose': 'Choose',
       'penaltyApply': 'Apply',
+      'penaltySuggestionLine': 'Suggested penalty: {penalty}',
       'langFollowSystem': 'System',
       'langChinese': '中文',
       'langEnglish': 'English',
@@ -493,7 +495,7 @@ class AppLocalizations {
       'penaltyClapBeat': 'Clap a beat for 10 seconds',
       'penaltyCnAlcoholLightToast': 'Cheers with any player and take 1 sip',
       'penaltyCnAlcoholMediumDoubleSip':
-          'Take 2 sips in a row and say \"I can handle this\"',
+          'Take 2 sips in a row and say "I can handle this"',
       'penaltyCnAlcoholWildBottomsUp': 'Add one extra cup and bottoms up',
       'penaltyCnCleanLightCountdown':
           'Count down and name 3 fruits in 10 seconds',
