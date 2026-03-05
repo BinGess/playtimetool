@@ -151,6 +151,18 @@ class AppLocalizations {
       'penaltyComplimentLeft': '夸左手边玩家 3 句',
       'penaltyPlankTen': '平板支撑 10 秒',
       'penaltyClapBeat': '用手打节拍 10 秒',
+      'penaltyCnAlcoholLightToast': '和任意玩家碰杯并喝 1 口',
+      'penaltyCnAlcoholMediumDoubleSip': '连续喝 2 口后说“我还能行”',
+      'penaltyCnAlcoholWildBottomsUp': '本轮追加 1 杯，一口闷',
+      'penaltyCnCleanLightCountdown': '10 秒内倒数并说出 3 个水果',
+      'penaltyCnCleanMediumSquat': '做 12 个深蹲',
+      'penaltyCnCleanWildActing': '即兴表演 15 秒情景剧',
+      'penaltyUsAlcoholLightCheers': 'Cheers and take 1 sip',
+      'penaltyUsAlcoholMediumTwoSips': 'Take 2 sips without pause',
+      'penaltyUsAlcoholWildShot': 'Take one full shot',
+      'penaltyUsCleanLightAlphabet': 'Name 5 words from one letter',
+      'penaltyUsCleanMediumPushup': 'Do 10 push-ups',
+      'penaltyUsCleanWildFreestyle': 'Freestyle rap for 20 seconds',
 
       // Pass Bomb
       'passBombReady': '准备开局',
@@ -437,6 +449,20 @@ class AppLocalizations {
       'penaltyComplimentLeft': 'Give 3 compliments to left player',
       'penaltyPlankTen': 'Hold plank for 10 seconds',
       'penaltyClapBeat': 'Clap a beat for 10 seconds',
+      'penaltyCnAlcoholLightToast': 'Cheers with any player and take 1 sip',
+      'penaltyCnAlcoholMediumDoubleSip':
+          'Take 2 sips in a row and say \"I can handle this\"',
+      'penaltyCnAlcoholWildBottomsUp': 'Add one extra cup and bottoms up',
+      'penaltyCnCleanLightCountdown':
+          'Count down and name 3 fruits in 10 seconds',
+      'penaltyCnCleanMediumSquat': 'Do 12 squats',
+      'penaltyCnCleanWildActing': 'Do a 15-second improv scene',
+      'penaltyUsAlcoholLightCheers': 'Cheers and take 1 sip',
+      'penaltyUsAlcoholMediumTwoSips': 'Take 2 sips without pause',
+      'penaltyUsAlcoholWildShot': 'Take one full shot',
+      'penaltyUsCleanLightAlphabet': 'Name 5 words from one letter',
+      'penaltyUsCleanMediumPushup': 'Do 10 push-ups',
+      'penaltyUsCleanWildFreestyle': 'Freestyle rap for 20 seconds',
 
       // Pass Bomb
       'passBombReady': 'Ready',
