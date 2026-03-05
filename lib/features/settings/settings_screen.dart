@@ -5,6 +5,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/locale/locale_provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/glass_container.dart';
+import '../penalty_plugin/domain/penalty_models.dart';
 import 'providers/settings_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -68,6 +69,41 @@ class SettingsScreen extends ConsumerWidget {
               accentColor: AppColors.wheelOrange,
               onToggle: () =>
                   ref.read(settingsProvider.notifier).toggleAlcoholPenalty(),
+            ),
+            const SizedBox(height: 12),
+            _LanguageTile(
+              label: l10n.t('penaltyCountry'),
+              sublabel: l10n.t('penaltyCountrySub'),
+              value: _countryLabel(l10n, settings.defaultPenaltyCountry),
+              onTap: () => _showPenaltyCountrySheet(context, ref, settings),
+            ),
+            const SizedBox(height: 12),
+            _LanguageTile(
+              label: l10n.t('penaltyDifficulty'),
+              sublabel: l10n.t('penaltyDifficultySub'),
+              value: _difficultyLabel(
+                l10n,
+                settings.defaultPenaltyDifficulty,
+              ),
+              onTap: () => _showPenaltyDifficultySheet(context, ref, settings),
+            ),
+            const SizedBox(height: 12),
+            _LanguageTile(
+              label: l10n.t('penaltyScale'),
+              sublabel: l10n.t('penaltyScaleSub'),
+              value: _scaleLabel(l10n, settings.defaultPenaltyScale),
+              onTap: () => _showPenaltyScaleSheet(context, ref, settings),
+            ),
+            const SizedBox(height: 12),
+            _LanguageTile(
+              label: l10n.t('penaltySelectionMode'),
+              sublabel: l10n.t('penaltySelectionModeSub'),
+              value: _selectionModeLabel(
+                l10n,
+                settings.defaultPenaltySelectionMode,
+              ),
+              onTap: () =>
+                  _showPenaltySelectionModeSheet(context, ref, settings),
             ),
             const SizedBox(height: 12),
             _LanguageTile(
@@ -182,6 +218,231 @@ class SettingsScreen extends ConsumerWidget {
       ),
     );
   }
+
+  String _countryLabel(AppLocalizations l10n, PenaltyCountry value) {
+    switch (value) {
+      case PenaltyCountry.cn:
+        return l10n.t('penaltyCountryCn');
+      case PenaltyCountry.us:
+        return l10n.t('penaltyCountryUs');
+    }
+  }
+
+  String _difficultyLabel(AppLocalizations l10n, PenaltyDifficulty value) {
+    switch (value) {
+      case PenaltyDifficulty.easy:
+        return l10n.t('penaltyDifficultyEasy');
+      case PenaltyDifficulty.normal:
+        return l10n.t('penaltyDifficultyNormal');
+      case PenaltyDifficulty.hard:
+        return l10n.t('penaltyDifficultyHard');
+    }
+  }
+
+  String _scaleLabel(AppLocalizations l10n, PenaltyScale value) {
+    switch (value) {
+      case PenaltyScale.light:
+        return l10n.t('penaltyScaleLight');
+      case PenaltyScale.medium:
+        return l10n.t('penaltyScaleMedium');
+      case PenaltyScale.wild:
+        return l10n.t('penaltyScaleWild');
+    }
+  }
+
+  String _selectionModeLabel(
+    AppLocalizations l10n,
+    PenaltySelectionMode value,
+  ) {
+    switch (value) {
+      case PenaltySelectionMode.manual:
+        return l10n.t('penaltySelectionManual');
+      case PenaltySelectionMode.random:
+        return l10n.t('penaltySelectionRandom');
+    }
+  }
+
+  void _showPenaltyCountrySheet(
+    BuildContext context,
+    WidgetRef ref,
+    AppSettings settings,
+  ) {
+    final l10n = AppLocalizations.of(context);
+    _showSelectionSheet<PenaltyCountry>(
+      context: context,
+      title: l10n.t('penaltyCountry'),
+      options: [
+        _SelectionOption(
+          value: PenaltyCountry.cn,
+          label: l10n.t('penaltyCountryCn'),
+        ),
+        _SelectionOption(
+          value: PenaltyCountry.us,
+          label: l10n.t('penaltyCountryUs'),
+        ),
+      ],
+      selected: settings.defaultPenaltyCountry,
+      onSelect: (value) =>
+          ref.read(settingsProvider.notifier).setPenaltyCountry(value),
+    );
+  }
+
+  void _showPenaltyDifficultySheet(
+    BuildContext context,
+    WidgetRef ref,
+    AppSettings settings,
+  ) {
+    final l10n = AppLocalizations.of(context);
+    _showSelectionSheet<PenaltyDifficulty>(
+      context: context,
+      title: l10n.t('penaltyDifficulty'),
+      options: [
+        _SelectionOption(
+          value: PenaltyDifficulty.easy,
+          label: l10n.t('penaltyDifficultyEasy'),
+        ),
+        _SelectionOption(
+          value: PenaltyDifficulty.normal,
+          label: l10n.t('penaltyDifficultyNormal'),
+        ),
+        _SelectionOption(
+          value: PenaltyDifficulty.hard,
+          label: l10n.t('penaltyDifficultyHard'),
+        ),
+      ],
+      selected: settings.defaultPenaltyDifficulty,
+      onSelect: (value) =>
+          ref.read(settingsProvider.notifier).setPenaltyDifficulty(value),
+    );
+  }
+
+  void _showPenaltyScaleSheet(
+    BuildContext context,
+    WidgetRef ref,
+    AppSettings settings,
+  ) {
+    final l10n = AppLocalizations.of(context);
+    _showSelectionSheet<PenaltyScale>(
+      context: context,
+      title: l10n.t('penaltyScale'),
+      options: [
+        _SelectionOption(
+          value: PenaltyScale.light,
+          label: l10n.t('penaltyScaleLight'),
+        ),
+        _SelectionOption(
+          value: PenaltyScale.medium,
+          label: l10n.t('penaltyScaleMedium'),
+        ),
+        _SelectionOption(
+          value: PenaltyScale.wild,
+          label: l10n.t('penaltyScaleWild'),
+        ),
+      ],
+      selected: settings.defaultPenaltyScale,
+      onSelect: (value) =>
+          ref.read(settingsProvider.notifier).setPenaltyScale(value),
+    );
+  }
+
+  void _showPenaltySelectionModeSheet(
+    BuildContext context,
+    WidgetRef ref,
+    AppSettings settings,
+  ) {
+    final l10n = AppLocalizations.of(context);
+    _showSelectionSheet<PenaltySelectionMode>(
+      context: context,
+      title: l10n.t('penaltySelectionMode'),
+      options: [
+        _SelectionOption(
+          value: PenaltySelectionMode.manual,
+          label: l10n.t('penaltySelectionManual'),
+        ),
+        _SelectionOption(
+          value: PenaltySelectionMode.random,
+          label: l10n.t('penaltySelectionRandom'),
+        ),
+      ],
+      selected: settings.defaultPenaltySelectionMode,
+      onSelect: (value) =>
+          ref.read(settingsProvider.notifier).setPenaltySelectionMode(value),
+    );
+  }
+
+  void _showSelectionSheet<T>({
+    required BuildContext context,
+    required String title,
+    required List<_SelectionOption<T>> options,
+    required T selected,
+    required Future<void> Function(T value) onSelect,
+  }) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          border: Border.all(color: AppColors.glassBorder),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                  letterSpacing: 2,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ...options.map(
+                (option) => ListTile(
+                  title: Text(
+                    option.label,
+                    style: TextStyle(
+                      color: option.value == selected
+                          ? AppColors.fingerCyan
+                          : AppColors.textPrimary,
+                      fontWeight: option.value == selected
+                          ? FontWeight.w600
+                          : FontWeight.normal,
+                    ),
+                  ),
+                  trailing: option.value == selected
+                      ? const Icon(
+                          Icons.check,
+                          color: AppColors.fingerCyan,
+                          size: 20,
+                        )
+                      : null,
+                  onTap: () async {
+                    await onSelect(option.value);
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SelectionOption<T> {
+  const _SelectionOption({
+    required this.value,
+    required this.label,
+  });
+
+  final T value;
+  final String label;
 }
 
 class _LangOption extends StatelessWidget {
@@ -217,22 +478,26 @@ class _LanguageTile extends StatelessWidget {
   const _LanguageTile({
     required this.label,
     required this.sublabel,
-    required this.localeOverride,
+    this.localeOverride,
+    this.value,
     required this.onTap,
   });
 
   final String label;
   final String sublabel;
   final Locale? localeOverride;
+  final String? value;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     String value;
-    if (localeOverride == null) {
+    if (this.value != null) {
+      value = this.value!;
+    } else if (localeOverride == null) {
       value = l10n.langFollowSystem;
-    } else if (localeOverride!.languageCode == 'zh') {
+    } else if (localeOverride?.languageCode == 'zh') {
       value = l10n.langChinese;
     } else {
       value = l10n.langEnglish;
