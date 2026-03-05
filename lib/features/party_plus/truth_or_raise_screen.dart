@@ -7,8 +7,8 @@ import '../../core/haptics/haptic_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/game_result_action_bar.dart';
 import '../../shared/widgets/game_result_template_card.dart';
-import '../../shared/widgets/game_stage_stepper.dart';
 import '../../shared/widgets/web3_game_background.dart';
+import '../../shared/services/penalty_service.dart';
 import 'logic/truth_raise_logic.dart';
 import 'party_plus_strings.dart';
 
@@ -158,28 +158,29 @@ class _TruthOrRaiseScreenState extends State<TruthOrRaiseScreen> {
   String _resultPenaltyText(AppLocalizations l10n) {
     final maxPenalty =
         _penalties.isEmpty ? 0 : _penalties.reduce((a, b) => a > b ? a : b);
-    if (maxPenalty <= 0) return l10n.t('penaltyGuideDefault');
+    if (maxPenalty <= 0) {
+      return PenaltyService.guidancePlan(
+        l10n: l10n,
+        guide: PenaltyGuideType.defaultGuide,
+      ).text;
+    }
     final losers = <String>[];
     for (int i = 0; i < _penalties.length; i++) {
       if (_penalties[i] == maxPenalty) {
         losers.add(PartyPlusStrings.player(context, i));
       }
     }
-    return l10n.t('penaltyResult', {
-      'player': losers.join('、'),
-      'penalty': l10n.pointsCount(maxPenalty),
-    });
+    return PenaltyService.pointsPlan(
+      l10n: l10n,
+      players: losers,
+      points: maxPenalty,
+    ).text;
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final scaleConfig = _scaleConfig;
-    final stage = switch (_phase) {
-      _TruthPhase.setup => GameStage.prepare,
-      _TruthPhase.playing => GameStage.playing,
-      _TruthPhase.result => GameStage.result,
-    };
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -217,12 +218,6 @@ class _TruthOrRaiseScreenState extends State<TruthOrRaiseScreen> {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  Center(
-                    child: GameStageStepper(
-                      stage: stage,
-                      accentColor: AppColors.bombRed,
-                    ),
-                  ),
                   const SizedBox(height: 22),
                   if (_phase == _TruthPhase.setup) ...[
                     Text(

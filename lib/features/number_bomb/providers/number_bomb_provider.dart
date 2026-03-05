@@ -62,7 +62,7 @@ class NumberBombNotifier extends StateNotifier<BombState> {
       state = state.copyWith(
         phase: BombPhase.explosion,
         currentInput: '',
-        punishmentText: randomPunishment(),
+        punishmentText: '',
       );
       HapticService.tripleHeavyImpact();
       AudioService.play(AppSounds.bombExplosion);
@@ -97,6 +97,11 @@ class NumberBombNotifier extends StateNotifier<BombState> {
 
   void reset() {
     state = const BombState();
+  }
+
+  void setPunishmentText(String text) {
+    if (state.phase != BombPhase.explosion) return;
+    state = state.copyWith(punishmentText: text);
   }
 }
 

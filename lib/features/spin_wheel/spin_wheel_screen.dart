@@ -9,9 +9,9 @@ import '../../core/help/game_help_service.dart';
 import '../../core/haptics/haptic_service.dart';
 import '../../core/audio/audio_service.dart';
 import '../../core/constants/app_sounds.dart';
+import '../../shared/services/penalty_service.dart';
 import '../../shared/widgets/game_result_action_bar.dart';
 import '../../shared/widgets/game_result_template_card.dart';
-import '../../shared/widgets/game_stage_stepper.dart';
 import '../../shared/widgets/web3_game_background.dart';
 import 'models/wheel_segment.dart';
 import 'providers/spin_wheel_provider.dart';
@@ -113,11 +113,6 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
     final notifier = ref.read(spinWheelProvider.notifier);
     final screenH = MediaQuery.sizeOf(context).height;
     final wheelSize = MediaQuery.sizeOf(context).width * 0.88;
-    final stage = switch (state.phase) {
-      SpinPhase.idle => GameStage.prepare,
-      SpinPhase.spinning => GameStage.playing,
-      SpinPhase.result => GameStage.result,
-    };
 
     ref.listen(spinWheelProvider, (prev, next) {
       if (prev?.phase != SpinPhase.result && next.phase == SpinPhase.result) {
@@ -199,12 +194,6 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
                   ),
                 ),
                 const SizedBox(height: 8),
-                Center(
-                  child: GameStageStepper(
-                    stage: stage,
-                    accentColor: AppColors.wheelOrange,
-                  ),
-                ),
                 const SizedBox(height: 8),
 
                 // Wheel area
@@ -826,7 +815,10 @@ class _ResultOverlay extends StatelessWidget {
                       resultTitle: l10n.t('resultSummary'),
                       resultText: segment.label,
                       penaltyTitle: l10n.punishment,
-                      penaltyText: l10n.t('penaltyGuideWheel'),
+                      penaltyText: PenaltyService.guidancePlan(
+                        l10n: l10n,
+                        guide: PenaltyGuideType.wheel,
+                      ).text,
                     ),
                     const SizedBox(height: 14),
                     GameResultActionBar(

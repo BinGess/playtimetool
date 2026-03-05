@@ -21,6 +21,10 @@ class AppLocalizations {
       'penaltyGuideDefault': '按当前规则执行惩罚玩法',
       'penaltyGuideParty': '未命中玩家执行约定惩罚',
       'penaltyGuideWheel': '按抽中的选项执行任务或惩罚',
+      'penaltyMethodRandom': '随机惩罚',
+      'penaltyMethodScore': '积分结算',
+      'penaltyMethodRule': '规则结算',
+      'penaltyMethodGuide': '玩法引导',
 
       // Hub
       'hubSubtitle': 'PARTY GAMES',
@@ -61,6 +65,8 @@ class AppLocalizations {
       'iapPurchasePending': '正在处理购买结果，请稍候...',
       'iapPurchaseFailed': '发起购买失败，请稍后重试',
       'iapUnlockSuccess': '已解锁：{game}',
+      'iapPaywallSwitch': '游戏付费开关',
+      'iapPaywallSwitchSub': 'IAP PAYWALL (DEBUG)',
 
       // Settings
       'sound': '音效',
@@ -151,6 +157,8 @@ class AppLocalizations {
       'playAgain': '再玩一次',
       'directionLeft': '左',
       'directionRight': '右',
+      'directionUp': '上',
+      'directionDown': '下',
       'penaltyLabel': '受罚',
       'penaltyResult': '{player} 受罚：{penalty}',
 
@@ -165,6 +173,19 @@ class AppLocalizations {
       'penaltyComplimentLeft': '夸左手边玩家 3 句',
       'penaltyPlankTen': '平板支撑 10 秒',
       'penaltyClapBeat': '用手打节拍 10 秒',
+      'penaltyCarryLoop': '公主抱旁边的人绕场一圈',
+      'penaltyBarkThree': '学狗叫三声',
+      'penaltyBowAll': '给在场所有人鞠躬道歉',
+      'penaltyOpenDrinkMouth': '用嘴打开一瓶饮料',
+      'penaltyPerformTalent': '表演一个才艺',
+      'penaltyWriteNameFoot': '用脚写下自己的名字',
+      'penaltyUglySelfie': '用最丑表情自拍发朋友圈',
+      'penaltyForeheadFlick': '被在场所有人弹脑门一下',
+      'penaltySendLoveMsg': '给最近联系的人发一条“我爱你”',
+      'penaltySingChorus': '唱一首歌的副歌部分',
+      'penaltyOneLegThirty': '单脚站立 30 秒',
+      'penaltyMimicWalk': '学一个人走路的样子',
+      'penaltyTongueTwisterBreath': '一口气说完绕口令',
 
       // Pass Bomb
       'passBombReady': '准备开局',
@@ -193,6 +214,13 @@ class AppLocalizations {
 
       // Left Right
       'leftRightRule': '每位玩家两次机会，含反转回合，错误或超时记罚分',
+      'leftRightDifficultyTitle': '难度模式',
+      'leftRightDifficultyEasy': '简单',
+      'leftRightDifficultyMedium': '中等',
+      'leftRightDifficultyHard': '困难',
+      'leftRightDifficultyEasyHint': '反转概率 20%，只会出现左右方向',
+      'leftRightDifficultyMediumHint': '反转概率 50%，只会出现左右方向',
+      'leftRightDifficultyHardHint': '反转概率 75%，会出现上下左右四方向',
       'leftRightSwipeTo': '请向 {direction} 方向滑动',
       'leftRightReverseSwipeTo': '⚡ 反转！请向 {direction} 的反方向滑动',
       'leftRightReversed': '反向操作！+2 罚分',
@@ -326,6 +354,10 @@ class AppLocalizations {
       'penaltyGuideParty': 'Non-winning players perform the agreed penalty.',
       'penaltyGuideWheel':
           'Execute the task or penalty of the selected option.',
+      'penaltyMethodRandom': 'Random',
+      'penaltyMethodScore': 'Score Rule',
+      'penaltyMethodRule': 'Rule Result',
+      'penaltyMethodGuide': 'Gameplay Guide',
 
       'hubSubtitle': 'PARTY GAMES',
       'fingerPicker': 'Finger Picker',
@@ -366,6 +398,8 @@ class AppLocalizations {
       'iapPurchasePending': 'Processing purchase result...',
       'iapPurchaseFailed': 'Failed to start purchase. Please try again.',
       'iapUnlockSuccess': 'Unlocked: {game}',
+      'iapPaywallSwitch': 'Game paywall switch',
+      'iapPaywallSwitchSub': 'IAP PAYWALL (DEBUG)',
 
       'sound': 'Sound',
       'soundSub': 'SOUND',
@@ -453,6 +487,8 @@ class AppLocalizations {
       'playAgain': 'Play again',
       'directionLeft': 'LEFT',
       'directionRight': 'RIGHT',
+      'directionUp': 'UP',
+      'directionDown': 'DOWN',
       'penaltyLabel': 'Penalty',
       'penaltyResult': '{player} penalty: {penalty}',
 
@@ -467,6 +503,19 @@ class AppLocalizations {
       'penaltyComplimentLeft': 'Give 3 compliments to left player',
       'penaltyPlankTen': 'Hold plank for 10 seconds',
       'penaltyClapBeat': 'Clap a beat for 10 seconds',
+      'penaltyCarryLoop': 'Carry the next player around the room once',
+      'penaltyBarkThree': 'Bark like a dog three times',
+      'penaltyBowAll': 'Bow to everyone and apologize',
+      'penaltyOpenDrinkMouth': 'Open a drink bottle with your mouth',
+      'penaltyPerformTalent': 'Perform a quick talent show',
+      'penaltyWriteNameFoot': 'Write your name using your foot',
+      'penaltyUglySelfie': 'Take your ugliest selfie and post it',
+      'penaltyForeheadFlick': 'Let everyone flick your forehead once',
+      'penaltySendLoveMsg': 'Text your last contact: "I love you"',
+      'penaltySingChorus': 'Sing the chorus of any song',
+      'penaltyOneLegThirty': 'Stand on one leg for 30 seconds',
+      'penaltyMimicWalk': 'Mimic someone’s walking style',
+      'penaltyTongueTwisterBreath': 'Finish a tongue twister in one breath',
 
       // Pass Bomb
       'passBombReady': 'Ready',
@@ -496,6 +545,16 @@ class AppLocalizations {
       // Left Right
       'leftRightRule':
           'Two attempts each. Includes reverse rounds! Wrong/timeout adds penalty',
+      'leftRightDifficultyTitle': 'Difficulty',
+      'leftRightDifficultyEasy': 'Easy',
+      'leftRightDifficultyMedium': 'Medium',
+      'leftRightDifficultyHard': 'Hard',
+      'leftRightDifficultyEasyHint':
+          '20% reverse chance, horizontal directions only',
+      'leftRightDifficultyMediumHint':
+          '50% reverse chance, horizontal directions only',
+      'leftRightDifficultyHardHint':
+          '75% reverse chance, all four directions enabled',
       'leftRightSwipeTo': 'Swipe {direction}',
       'leftRightReverseSwipeTo': '⚡ REVERSE! Swipe OPPOSITE of {direction}',
       'leftRightReversed': 'Reversed! +2 penalty',

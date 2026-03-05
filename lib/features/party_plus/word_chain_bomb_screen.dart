@@ -10,7 +10,6 @@ import '../../features/settings/providers/settings_provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/game_result_action_bar.dart';
 import '../../shared/widgets/game_result_template_card.dart';
-import '../../shared/widgets/game_stage_stepper.dart';
 import '../../shared/widgets/web3_game_background.dart';
 import 'logic/timed_round_logic.dart';
 import 'party_plus_strings.dart';
@@ -136,9 +135,6 @@ class _WordChainBombScreenState extends ConsumerState<WordChainBombScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final stage = _running
-        ? GameStage.playing
-        : (_exploded ? GameStage.result : GameStage.prepare);
     final category = _categories[_categoryIndex];
     final categoryName = l10n.t(category.nameKey);
     final progress = _roundSeconds == 0
@@ -181,12 +177,6 @@ class _WordChainBombScreenState extends ConsumerState<WordChainBombScreen> {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  Center(
-                    child: GameStageStepper(
-                      stage: stage,
-                      accentColor: AppColors.fingerCyan,
-                    ),
-                  ),
                   const SizedBox(height: 16),
                   Text(
                     l10n.playersCount(_playerCount),

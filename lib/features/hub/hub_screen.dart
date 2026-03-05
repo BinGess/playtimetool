@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/sensors/gyroscope_service.dart';
+import '../../features/settings/providers/settings_provider.dart';
 import '../purchase/iap_purchase_provider.dart';
 import '../purchase/purchase_catalog.dart';
 import '../../l10n/app_localizations.dart';
@@ -26,6 +27,8 @@ class _HubScreenState extends ConsumerState<HubScreen> {
     final l10n = AppLocalizations.of(context);
     final gyroAsync = ref.watch(gyroscopeProvider);
     final purchaseState = ref.watch(iapPurchaseProvider);
+    final settings = ref.watch(settingsProvider).value ?? const AppSettings();
+    final paywallEnabled = settings.iapPaywallEnabled;
     final gyroX = gyroAsync.value?.x ?? 0.0;
     final gyroY = gyroAsync.value?.y ?? 0.0;
     final games = _games(l10n);
@@ -94,7 +97,8 @@ class _HubScreenState extends ConsumerState<HubScreen> {
                         itemBuilder: (_, i) {
                           final g = games[i];
                           final productId = g.purchaseProductId;
-                          final locked = productId != null &&
+                          final locked = paywallEnabled &&
+                              productId != null &&
                               !purchaseState.isUnlocked(productId);
                           final lockBadgeText = locked
                               ? (purchaseState.productById(productId)?.price ??
@@ -143,6 +147,14 @@ class _HubScreenState extends ConsumerState<HubScreen> {
   }
 
   Future<void> _handleGameTap(_HubGameItem game, AppLocalizations l10n) async {
+    final paywallEnabled =
+        (ref.read(settingsProvider).value ?? const AppSettings())
+            .iapPaywallEnabled;
+    if (!paywallEnabled) {
+      context.push(game.route);
+      return;
+    }
+
     final productId = game.purchaseProductId;
     if (productId == null) {
       context.push(game.route);

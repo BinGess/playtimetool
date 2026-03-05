@@ -8,9 +8,9 @@ import '../../core/help/game_help_service.dart';
 import '../../core/haptics/haptic_service.dart';
 import '../../features/settings/providers/settings_provider.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/services/penalty_service.dart';
 import '../../shared/widgets/game_result_action_bar.dart';
 import '../../shared/widgets/game_result_template_card.dart';
-import '../../shared/widgets/game_stage_stepper.dart';
 import '../../shared/widgets/web3_game_background.dart';
 import 'logic/timed_round_logic.dart';
 import 'party_plus_strings.dart';
@@ -141,9 +141,6 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final stage = _running
-        ? GameStage.playing
-        : (_exploded ? GameStage.result : GameStage.prepare);
 
     // Dynamic background color based on intensity
     final bgColor = Color.lerp(
@@ -196,12 +193,6 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen>
                     ],
                   ),
                   const SizedBox(height: 10),
-                  Center(
-                    child: GameStageStepper(
-                      stage: stage,
-                      accentColor: AppColors.bombRed,
-                    ),
-                  ),
                   const SizedBox(height: 18),
                   Text(
                     l10n.playersCount(_playerCount),
@@ -313,11 +304,13 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen>
                         resultText:
                             '${PartyPlusStrings.player(context, _holderIndex)} ${l10n.t('passBombBoom')}',
                         penaltyTitle: l10n.punishment,
-                        penaltyText: l10n.t('penaltyResult', {
-                          'player':
-                              PartyPlusStrings.player(context, _holderIndex),
-                          'penalty': _penalty,
-                        }),
+                        penaltyText: PenaltyService.actionPlan(
+                          l10n: l10n,
+                          players: [
+                            PartyPlusStrings.player(context, _holderIndex),
+                          ],
+                          actionText: _penalty,
+                        ).text,
                       ),
                     ),
                   if (_exploded)

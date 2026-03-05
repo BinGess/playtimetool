@@ -10,8 +10,8 @@ import '../../features/settings/providers/settings_provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/game_result_action_bar.dart';
 import '../../shared/widgets/game_result_template_card.dart';
-import '../../shared/widgets/game_stage_stepper.dart';
 import '../../shared/widgets/web3_game_background.dart';
+import '../../shared/services/penalty_service.dart';
 import 'logic/challenge_auction_logic.dart';
 import 'party_plus_strings.dart';
 
@@ -237,35 +237,35 @@ class _ChallengeAuctionScreenState
   }
 
   void _onChallengeSuccess() {
-    final l10n = AppLocalizations.of(context);
     final settings = ref.read(settingsProvider).value ?? const AppSettings();
+    final l10n = AppLocalizations.of(context);
+    final winner = PartyPlusStrings.player(context, _winner);
     setState(() {
       _phase = _AuctionPhase.result;
-      _resultText = settings.alcoholPenaltyEnabled
-          ? l10n.t('challengeAuctionResultSuccessAlcohol', {
-              'player': PartyPlusStrings.player(context, _winner),
-            })
-          : l10n.t('challengeAuctionResultSuccessPure', {
-              'player': PartyPlusStrings.player(context, _winner),
-            });
+      _resultText = PenaltyService.challengeAuctionPlan(
+        l10n: l10n,
+        alcoholPenaltyEnabled: settings.alcoholPenaltyEnabled,
+        success: true,
+        player: winner,
+        bid: _bids[_winner],
+      ).text;
     });
   }
 
   void _onChallengeFail() {
-    final l10n = AppLocalizations.of(context);
     final settings = ref.read(settingsProvider).value ?? const AppSettings();
+    final l10n = AppLocalizations.of(context);
+    final winner = PartyPlusStrings.player(context, _winner);
     final bid = _bids[_winner];
     setState(() {
       _phase = _AuctionPhase.result;
-      _resultText = settings.alcoholPenaltyEnabled
-          ? l10n.t('challengeAuctionResultFailAlcohol', {
-              'player': PartyPlusStrings.player(context, _winner),
-              'count': '${bid + 1}',
-            })
-          : l10n.t('challengeAuctionResultFailPure', {
-              'player': PartyPlusStrings.player(context, _winner),
-              'count': '${bid + 1}',
-            });
+      _resultText = PenaltyService.challengeAuctionPlan(
+        l10n: l10n,
+        alcoholPenaltyEnabled: settings.alcoholPenaltyEnabled,
+        success: false,
+        player: winner,
+        bid: bid,
+      ).text;
     });
   }
 
@@ -273,11 +273,6 @@ class _ChallengeAuctionScreenState
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final settings = ref.watch(settingsProvider).value ?? const AppSettings();
-    final stage = switch (_phase) {
-      _AuctionPhase.setup => GameStage.prepare,
-      _AuctionPhase.bidding || _AuctionPhase.verdict => GameStage.playing,
-      _AuctionPhase.result => GameStage.result,
-    };
     final challengeText =
         _challenge == null ? '-' : l10n.t(_challenge!.textKey);
     final winnerSummary = settings.alcoholPenaltyEnabled
@@ -329,12 +324,6 @@ class _ChallengeAuctionScreenState
                     ],
                   ),
                   const SizedBox(height: 10),
-                  Center(
-                    child: GameStageStepper(
-                      stage: stage,
-                      accentColor: AppColors.wheelOrange,
-                    ),
-                  ),
                   const SizedBox(height: 24),
                   if (_phase == _AuctionPhase.setup) ...[
                     Text(

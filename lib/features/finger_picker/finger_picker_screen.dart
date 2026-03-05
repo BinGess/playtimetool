@@ -5,8 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/help/game_help_service.dart';
 import '../../core/constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/services/penalty_service.dart';
 import '../../shared/widgets/game_result_action_bar.dart';
-import '../../shared/widgets/game_stage_stepper.dart';
 import '../../shared/widgets/game_result_template_card.dart';
 import '../../shared/widgets/web3_game_background.dart';
 import 'models/finger_state.dart';
@@ -126,11 +126,6 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
 
     final isActive =
         state.phase == PickerPhase.waiting || state.phase == PickerPhase.result;
-    final stage = switch (state.phase) {
-      PickerPhase.waiting || PickerPhase.locked => GameStage.prepare,
-      PickerPhase.countdown || PickerPhase.eliminating => GameStage.playing,
-      PickerPhase.result => GameStage.result,
-    };
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -451,12 +446,6 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
                         ),
                     ],
                   ),
-                  Center(
-                    child: GameStageStepper(
-                      stage: stage,
-                      accentColor: AppColors.fingerCyan,
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -696,7 +685,10 @@ class _ResultOverlayContent extends StatelessWidget {
             resultTitle: l10n.t('resultSummary'),
             resultText: resultText,
             penaltyTitle: l10n.punishment,
-            penaltyText: l10n.t('penaltyGuideParty'),
+            penaltyText: PenaltyService.guidancePlan(
+              l10n: l10n,
+              guide: PenaltyGuideType.party,
+            ).text,
           ),
         ),
       ),

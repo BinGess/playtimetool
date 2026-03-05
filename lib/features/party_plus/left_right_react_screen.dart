@@ -8,12 +8,24 @@ import '../../core/haptics/haptic_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/game_result_action_bar.dart';
 import '../../shared/widgets/game_result_template_card.dart';
-import '../../shared/widgets/game_stage_stepper.dart';
 import '../../shared/widgets/web3_game_background.dart';
+import '../../shared/services/penalty_service.dart';
 import 'logic/left_right_logic.dart';
 import 'party_plus_strings.dart';
 
 enum _ReactPhase { setup, playing, result }
+
+enum _LeftRightDifficulty { easy, medium, hard }
+
+class _LeftRightDifficultyConfig {
+  const _LeftRightDifficultyConfig({
+    required this.reverseProbability,
+    required this.enableVerticalSwipe,
+  });
+
+  final double reverseProbability;
+  final bool enableVerticalSwipe;
+}
 
 class LeftRightReactScreen extends StatefulWidget {
   const LeftRightReactScreen({super.key});
@@ -38,9 +50,28 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
   DateTime? _swipeStart;
   String _status = '';
   _ReactPhase _phase = _ReactPhase.setup;
+  _LeftRightDifficulty _difficulty = _LeftRightDifficulty.medium;
   bool _showHelpButton = false;
-  double _reverseProbability = 0.5;
-  bool _enableVerticalSwipe = false;
+
+  _LeftRightDifficultyConfig get _difficultyConfig {
+    return switch (_difficulty) {
+      _LeftRightDifficulty.easy => const _LeftRightDifficultyConfig(
+          reverseProbability: 0.2,
+          enableVerticalSwipe: false,
+        ),
+      _LeftRightDifficulty.medium => const _LeftRightDifficultyConfig(
+          reverseProbability: 0.5,
+          enableVerticalSwipe: false,
+        ),
+      _LeftRightDifficulty.hard => const _LeftRightDifficultyConfig(
+          reverseProbability: 0.75,
+          enableVerticalSwipe: true,
+        ),
+    };
+  }
+
+  double get _reverseProbability => _difficultyConfig.reverseProbability;
+  bool get _enableVerticalSwipe => _difficultyConfig.enableVerticalSwipe;
 
   @override
   void initState() {
@@ -186,10 +217,31 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
     }
   }
 
+  String _difficultyLabel(_LeftRightDifficulty level, AppLocalizations l10n) {
+    return switch (level) {
+      _LeftRightDifficulty.easy => l10n.t('leftRightDifficultyEasy'),
+      _LeftRightDifficulty.medium => l10n.t('leftRightDifficultyMedium'),
+      _LeftRightDifficulty.hard => l10n.t('leftRightDifficultyHard'),
+    };
+  }
+
+  String _difficultyHint(_LeftRightDifficulty level, AppLocalizations l10n) {
+    return switch (level) {
+      _LeftRightDifficulty.easy => l10n.t('leftRightDifficultyEasyHint'),
+      _LeftRightDifficulty.medium => l10n.t('leftRightDifficultyMediumHint'),
+      _LeftRightDifficulty.hard => l10n.t('leftRightDifficultyHardHint'),
+    };
+  }
+
   String _resultPenaltyText(AppLocalizations l10n) {
     final maxPenalty =
         _penalties.isEmpty ? 0 : _penalties.reduce((a, b) => a > b ? a : b);
-    if (maxPenalty <= 0) return l10n.t('penaltyGuideDefault');
+    if (maxPenalty <= 0) {
+      return PenaltyService.guidancePlan(
+        l10n: l10n,
+        guide: PenaltyGuideType.defaultGuide,
+      ).text;
+    }
 
     final losers = <String>[];
     for (int i = 0; i < _penalties.length; i++) {
@@ -197,20 +249,16 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
         losers.add(PartyPlusStrings.player(context, i));
       }
     }
-    return l10n.t('penaltyResult', {
-      'player': losers.join('、'),
-      'penalty': l10n.pointsCount(maxPenalty),
-    });
+    return PenaltyService.pointsPlan(
+      l10n: l10n,
+      players: losers,
+      points: maxPenalty,
+    ).text;
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final stage = switch (_phase) {
-      _ReactPhase.setup => GameStage.prepare,
-      _ReactPhase.playing => GameStage.playing,
-      _ReactPhase.result => GameStage.result,
-    };
 
     // Visual styling that changes for reverse rounds.
     final Color roundAccent =
@@ -258,12 +306,6 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  Center(
-                    child: GameStageStepper(
-                      stage: stage,
-                      accentColor: AppColors.wheelOrange,
-                    ),
-                  ),
                   const SizedBox(height: 22),
                   if (_phase == _ReactPhase.setup) ...[
                     Text(
@@ -285,66 +327,49 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
                       style: const TextStyle(color: AppColors.textSecondary),
                     ),
                     const SizedBox(height: 14),
+                    Text(
+                      l10n.t('leftRightDifficultyTitle'),
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _LeftRightDifficulty.values.map((level) {
+                        final selected = _difficulty == level;
+                        return ChoiceChip(
+                          label: Text(_difficultyLabel(level, l10n)),
+                          selected: selected,
+                          onSelected: (_) =>
+                              setState(() => _difficulty = level),
+                          selectedColor: AppColors.wheelOrange,
+                          backgroundColor: AppColors.surfaceVariant,
+                          labelStyle: TextStyle(
+                            color: selected
+                                ? Colors.white
+                                : AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          side: BorderSide(
+                            color: selected
+                                ? AppColors.wheelOrange
+                                : AppColors.textDim.withAlpha(120),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                         color: AppColors.surfaceVariant,
                         border: Border.all(color: AppColors.glassBorder),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${l10n.t('leftRightReverseChance')}: '
-                            '${(_reverseProbability * 100).round()}%',
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                          Slider(
-                            value: _reverseProbability,
-                            min: 0.1,
-                            max: 0.9,
-                            divisions: 8,
-                            activeColor: AppColors.wheelOrange,
-                            onChanged: (value) {
-                              setState(() => _reverseProbability = value);
-                            },
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      l10n.t('leftRightEnableVerticalSwipe'),
-                                      style:
-                                          const TextStyle(color: Colors.white),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '${l10n.t('leftRightDirectionMode')}: '
-                                      '${_enableVerticalSwipe ? l10n.t('leftRightDirectionModeAll') : l10n.t('leftRightDirectionModeHorizontal')}',
-                                      style: const TextStyle(
-                                        color: AppColors.textSecondary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Switch(
-                                value: _enableVerticalSwipe,
-                                onChanged: (value) {
-                                  setState(() => _enableVerticalSwipe = value);
-                                },
-                                activeThumbColor: AppColors.wheelOrange,
-                                activeTrackColor:
-                                    AppColors.wheelOrange.withAlpha(120),
-                              ),
-                            ],
-                          ),
-                        ],
+                      child: Text(
+                        _difficultyHint(_difficulty, l10n),
+                        style: const TextStyle(color: AppColors.textSecondary),
                       ),
                     ),
                     const Spacer(),

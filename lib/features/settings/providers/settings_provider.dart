@@ -9,18 +9,21 @@ class AppSettings {
     this.vibrationEnabled = true,
     this.minimalMode = false,
     this.alcoholPenaltyEnabled = true,
+    this.iapPaywallEnabled = false,
   });
 
   final bool soundEnabled;
   final bool vibrationEnabled;
   final bool minimalMode;
   final bool alcoholPenaltyEnabled;
+  final bool iapPaywallEnabled;
 
   AppSettings copyWith({
     bool? soundEnabled,
     bool? vibrationEnabled,
     bool? minimalMode,
     bool? alcoholPenaltyEnabled,
+    bool? iapPaywallEnabled,
   }) {
     return AppSettings(
       soundEnabled: soundEnabled ?? this.soundEnabled,
@@ -28,6 +31,7 @@ class AppSettings {
       minimalMode: minimalMode ?? this.minimalMode,
       alcoholPenaltyEnabled:
           alcoholPenaltyEnabled ?? this.alcoholPenaltyEnabled,
+      iapPaywallEnabled: iapPaywallEnabled ?? this.iapPaywallEnabled,
     );
   }
 }
@@ -37,6 +41,7 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
   static const _keyVibration = 'vibrationEnabled';
   static const _keyMinimal = 'minimalMode';
   static const _keyAlcoholPenalty = 'alcoholPenaltyEnabled';
+  static const _keyIapPaywallEnabled = 'iapPaywallEnabled';
 
   @override
   Future<AppSettings> build() async {
@@ -46,6 +51,7 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
       vibrationEnabled: prefs.getBool(_keyVibration) ?? true,
       minimalMode: prefs.getBool(_keyMinimal) ?? false,
       alcoholPenaltyEnabled: prefs.getBool(_keyAlcoholPenalty) ?? true,
+      iapPaywallEnabled: prefs.getBool(_keyIapPaywallEnabled) ?? false,
     );
     _applySettings(settings);
     return settings;
@@ -89,12 +95,22 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
     state = AsyncData(updated);
   }
 
+  Future<void> toggleIapPaywallEnabled() async {
+    final current = state.value ?? const AppSettings();
+    final updated = current.copyWith(
+      iapPaywallEnabled: !current.iapPaywallEnabled,
+    );
+    await _save(updated);
+    state = AsyncData(updated);
+  }
+
   Future<void> _save(AppSettings s) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keySound, s.soundEnabled);
     await prefs.setBool(_keyVibration, s.vibrationEnabled);
     await prefs.setBool(_keyMinimal, s.minimalMode);
     await prefs.setBool(_keyAlcoholPenalty, s.alcoholPenaltyEnabled);
+    await prefs.setBool(_keyIapPaywallEnabled, s.iapPaywallEnabled);
   }
 }
 

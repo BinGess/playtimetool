@@ -48,6 +48,7 @@ void main() {
       l10n.t('penaltyCheersRight'),
       l10n.t('penaltyTruthOne'),
       l10n.t('penaltyMiniShot'),
+      l10n.t('penaltyOpenDrinkMouth'),
     };
     final purePool = <String>{
       l10n.t('penaltySquatEight'),
@@ -55,6 +56,18 @@ void main() {
       l10n.t('penaltyComplimentLeft'),
       l10n.t('penaltyPlankTen'),
       l10n.t('penaltyClapBeat'),
+      l10n.t('penaltyCarryLoop'),
+      l10n.t('penaltyBarkThree'),
+      l10n.t('penaltyBowAll'),
+      l10n.t('penaltyPerformTalent'),
+      l10n.t('penaltyWriteNameFoot'),
+      l10n.t('penaltyUglySelfie'),
+      l10n.t('penaltyForeheadFlick'),
+      l10n.t('penaltySendLoveMsg'),
+      l10n.t('penaltySingChorus'),
+      l10n.t('penaltyOneLegThirty'),
+      l10n.t('penaltyMimicWalk'),
+      l10n.t('penaltyTongueTwisterBreath'),
     };
 
     expect(alcoholPool.contains(alcoholPenalty), true);

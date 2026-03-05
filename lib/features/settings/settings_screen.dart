@@ -70,6 +70,15 @@ class SettingsScreen extends ConsumerWidget {
                   ref.read(settingsProvider.notifier).toggleAlcoholPenalty(),
             ),
             const SizedBox(height: 12),
+            _SettingsTile(
+              label: l10n.t('iapPaywallSwitch'),
+              sublabel: l10n.t('iapPaywallSwitchSub'),
+              value: settings.iapPaywallEnabled,
+              accentColor: AppColors.bombRed,
+              onToggle: () =>
+                  ref.read(settingsProvider.notifier).toggleIapPaywallEnabled(),
+            ),
+            const SizedBox(height: 12),
             _LanguageTile(
               label: l10n.language,
               sublabel: l10n.languageSub,

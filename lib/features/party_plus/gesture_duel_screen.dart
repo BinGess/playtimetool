@@ -7,9 +7,9 @@ import '../../core/help/game_help_service.dart';
 import '../../core/haptics/haptic_service.dart';
 import '../../features/settings/providers/settings_provider.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/services/penalty_service.dart';
 import '../../shared/widgets/game_result_action_bar.dart';
 import '../../shared/widgets/game_result_template_card.dart';
-import '../../shared/widgets/game_stage_stepper.dart';
 import '../../shared/widgets/web3_game_background.dart';
 import 'logic/gesture_duel_logic.dart';
 import 'party_plus_strings.dart';
@@ -154,19 +154,22 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
     _losers = losers;
 
     if (losers.isEmpty) {
-      _resultText = l10n.t('gestureNoLoserDraw');
+      _resultText = PenaltyService.guidancePlan(
+        l10n: l10n,
+        guide: PenaltyGuideType.defaultGuide,
+      ).text;
     } else {
-      final names =
-          losers.map((i) => PartyPlusStrings.player(context, i)).join('、');
+      final names = losers.map((i) => PartyPlusStrings.player(context, i));
       final penalty = PartyPlusStrings.randomPenalty(
         context,
         _random,
         alcoholPenaltyEnabled: settings.alcoholPenaltyEnabled,
       );
-      _resultText = l10n.t('gesturePenaltyResult', {
-        'players': names,
-        'penalty': penalty,
-      });
+      _resultText = PenaltyService.actionPlan(
+        l10n: l10n,
+        players: names.toList(),
+        actionText: penalty,
+      ).text;
     }
 
     setState(() {
@@ -200,11 +203,6 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final stage = switch (_phase) {
-      _DuelPhase.setup => GameStage.prepare,
-      _DuelPhase.picking || _DuelPhase.roundResult => GameStage.playing,
-      _DuelPhase.finalResult => GameStage.result,
-    };
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -242,12 +240,6 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  Center(
-                    child: GameStageStepper(
-                      stage: stage,
-                      accentColor: AppColors.fingerCyan,
-                    ),
-                  ),
                   const SizedBox(height: 24),
                   if (_phase == _DuelPhase.setup) ...[
                     Text(

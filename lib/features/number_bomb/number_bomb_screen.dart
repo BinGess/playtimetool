@@ -5,10 +5,11 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/help/game_help_service.dart';
 import '../../core/haptics/haptic_service.dart';
+import '../../features/settings/providers/settings_provider.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/services/penalty_service.dart';
 import '../../shared/widgets/game_result_action_bar.dart';
 import '../../shared/widgets/game_result_template_card.dart';
-import '../../shared/widgets/game_stage_stepper.dart';
 import '../../shared/widgets/web3_game_background.dart';
 import 'models/bomb_state.dart';
 import 'providers/number_bomb_provider.dart';
@@ -22,6 +23,7 @@ class NumberBombScreen extends ConsumerStatefulWidget {
 
 class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
     with TickerProviderStateMixin {
+  final Random _penaltyRandom = Random();
   late AnimationController _bombPulseController;
   late AnimationController _explosionController;
   late Animation<double> _bombPulse;
@@ -78,6 +80,16 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
       }
       if (next.phase == BombPhase.explosion &&
           prev?.phase != BombPhase.explosion) {
+        final settings =
+            ref.read(settingsProvider).value ?? const AppSettings();
+        final penaltyPlan = PenaltyService.randomPlan(
+          l10n: AppLocalizations.of(context),
+          random: _penaltyRandom,
+          alcoholPenaltyEnabled: settings.alcoholPenaltyEnabled,
+        );
+        ref
+            .read(numberBombProvider.notifier)
+            .setPunishmentText(penaltyPlan.text);
         _explosionController.reset();
         _explosionController.forward();
       }
@@ -88,11 +100,6 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
       AppColors.bombRedDark,
       state.pressureRatio,
     )!;
-    final stage = switch (state.phase) {
-      BombPhase.setup => GameStage.prepare,
-      BombPhase.playing => GameStage.playing,
-      BombPhase.explosion => GameStage.result,
-    };
 
     return Scaffold(
       body: AnimatedBuilder(
@@ -145,18 +152,6 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
                 onReset: notifier.reset,
                 l10n: AppLocalizations.of(context),
               ),
-
-            Positioned(
-              top: MediaQuery.paddingOf(context).top + 10,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: GameStageStepper(
-                  stage: stage,
-                  accentColor: AppColors.bombRed,
-                ),
-              ),
-            ),
 
             // Back edge swipe
             Positioned(
