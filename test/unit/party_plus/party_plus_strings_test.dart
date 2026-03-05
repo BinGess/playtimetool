@@ -10,9 +10,9 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        locale: Locale('en'),
-        supportedLocales: [Locale('en'), Locale('zh')],
-        localizationsDelegates: [
+        locale: const Locale('en'),
+        supportedLocales: const [Locale('en'), Locale('zh')],
+        localizationsDelegates: const [
           AppLocalizationsDelegate(),
         ],
         home: Scaffold(
