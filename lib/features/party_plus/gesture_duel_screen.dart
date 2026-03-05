@@ -225,7 +225,7 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
                       GestureDetector(
                         onTap: () => context.pop(),
                         child: const Icon(Icons.arrow_back_ios,
-                            color: AppColors.textDim, size: 20),
+                            color: Colors.white, size: 20),
                       ),
                       const Spacer(),
                       Text(

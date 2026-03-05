@@ -257,7 +257,7 @@ class _SetupViewState extends State<_SetupView> {
             child: GestureDetector(
               onTap: () => context.pop(),
               child: const Icon(Icons.arrow_back_ios,
-                  color: AppColors.textDim, size: 20),
+                  color: Colors.white, size: 20),
             ),
           ),
           const Spacer(flex: 2),
@@ -482,7 +482,7 @@ class _PlayingView extends StatelessWidget {
               GestureDetector(
                 onTap: () => notifier.reset(),
                 child: const Icon(Icons.arrow_back_ios,
-                    color: AppColors.textDim, size: 20),
+                    color: Colors.white, size: 20),
               ),
               const Spacer(),
               GestureDetector(

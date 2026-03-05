@@ -411,7 +411,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
                           child: const Padding(
                             padding: EdgeInsets.all(16),
                             child: Icon(Icons.arrow_back_ios,
-                                color: AppColors.textDim, size: 20),
+                                color: Colors.white, size: 20),
                           ),
                         ),
                       const Spacer(),
