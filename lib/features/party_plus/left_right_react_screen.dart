@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/help/game_help_service.dart';
 import '../../core/haptics/haptic_service.dart';
 import '../../l10n/app_localizations.dart';
 import 'logic/left_right_logic.dart';
@@ -33,6 +34,13 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
   DateTime? _swipeStart;
   String _status = '';
   _ReactPhase _phase = _ReactPhase.setup;
+  bool _showHelpButton = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initGameHelp();
+  }
 
   @override
   void dispose() {
@@ -152,8 +160,9 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
     // Visual styling that changes for reverse rounds.
     final Color roundAccent =
         _isReverse ? Colors.deepOrange : AppColors.wheelOrange;
-    final Color instructionBorderColor =
-        _isReverse ? Colors.deepOrange.withAlpha(200) : AppColors.wheelOrange.withAlpha(160);
+    final Color instructionBorderColor = _isReverse
+        ? Colors.deepOrange.withAlpha(200)
+        : AppColors.wheelOrange.withAlpha(160);
     final Color swipeAreaBorderColor =
         _isReverse ? Colors.deepOrange : AppColors.textDim;
 
@@ -167,227 +176,265 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => context.pop(),
-                    child: const Icon(Icons.arrow_back_ios,
-                        color: AppColors.textDim, size: 20),
-                  ),
-                  const Spacer(),
-                  Text(
-                    l10n.t('leftRight'),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const Spacer(),
-                  const SizedBox(width: 20),
-                ],
-              ),
-              const SizedBox(height: 22),
-              if (_phase == _ReactPhase.setup) ...[
-                Text(
-                  l10n.playersCount(_playerCount),
-                  style: const TextStyle(color: AppColors.textSecondary),
-                ),
-                Slider(
-                  value: _playerCount.toDouble(),
-                  min: 3,
-                  max: 6,
-                  divisions: 3,
-                  activeColor: AppColors.wheelOrange,
-                  onChanged: (v) => setState(() => _playerCount = v.round()),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  l10n.t('leftRightRule'),
-                  style: const TextStyle(color: AppColors.textSecondary),
-                ),
-                const Spacer(),
-                ElevatedButton(
-                  onPressed: _startGame,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.wheelOrange,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: Text(l10n.start),
-                ),
-              ] else if (_phase == _ReactPhase.playing) ...[
-                Text(
-                  l10n.roundProgress(_round, _totalRounds),
-                  style: const TextStyle(color: AppColors.textSecondary),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  PartyPlusStrings.player(context, _currentPlayer),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: instructionBorderColor),
-                  ),
-                  child: Text(
-                    _isReverse
-                        ? l10n.t('leftRightReverseSwipeTo', {
-                            'direction': _target == SwipeDirection.left
-                                ? l10n.t('directionLeft')
-                                : l10n.t('directionRight'),
-                          })
-                        : l10n.t('leftRightSwipeTo', {
-                            'direction': _target == SwipeDirection.left
-                                ? l10n.t('directionLeft')
-                                : l10n.t('directionRight'),
-                          }),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: _isReverse ? Colors.deepOrange.shade200 : Colors.white,
-                      fontSize: 16,
-                      fontWeight: _isReverse ? FontWeight.w700 : FontWeight.normal,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: GestureDetector(
-                    onHorizontalDragEnd: (details) {
-                      final velocity = details.primaryVelocity ?? 0;
-                      if (velocity.abs() < 120) return;
-                      _handleSwipe(
-                        velocity > 0
-                            ? SwipeDirection.right
-                            : SwipeDirection.left,
-                      );
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        color: AppColors.surfaceVariant,
-                        border: Border.all(color: swipeAreaBorderColor),
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => context.pop(),
+                        child: const Icon(Icons.arrow_back_ios,
+                            color: AppColors.textDim, size: 20),
                       ),
-                      child: Center(
-                        child: Icon(
-                          _target == SwipeDirection.left
-                              ? Icons.arrow_back_rounded
-                              : Icons.arrow_forward_rounded,
-                          color: roundAccent,
-                          size: 90,
+                      const Spacer(),
+                      Text(
+                        l10n.t('leftRight'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Spacer(),
+                      const SizedBox(width: 20),
+                    ],
+                  ),
+                  const SizedBox(height: 22),
+                  if (_phase == _ReactPhase.setup) ...[
+                    Text(
+                      l10n.playersCount(_playerCount),
+                      style: const TextStyle(color: AppColors.textSecondary),
+                    ),
+                    Slider(
+                      value: _playerCount.toDouble(),
+                      min: 3,
+                      max: 6,
+                      divisions: 3,
+                      activeColor: AppColors.wheelOrange,
+                      onChanged: (v) =>
+                          setState(() => _playerCount = v.round()),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.t('leftRightRule'),
+                      style: const TextStyle(color: AppColors.textSecondary),
+                    ),
+                    const Spacer(),
+                    ElevatedButton(
+                      onPressed: _startGame,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.wheelOrange,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: Text(l10n.start),
+                    ),
+                  ] else if (_phase == _ReactPhase.playing) ...[
+                    Text(
+                      l10n.roundProgress(_round, _totalRounds),
+                      style: const TextStyle(color: AppColors.textSecondary),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      PartyPlusStrings.player(context, _currentPlayer),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: instructionBorderColor),
+                      ),
+                      child: Text(
+                        _isReverse
+                            ? l10n.t('leftRightReverseSwipeTo', {
+                                'direction': _target == SwipeDirection.left
+                                    ? l10n.t('directionLeft')
+                                    : l10n.t('directionRight'),
+                              })
+                            : l10n.t('leftRightSwipeTo', {
+                                'direction': _target == SwipeDirection.left
+                                    ? l10n.t('directionLeft')
+                                    : l10n.t('directionRight'),
+                              }),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: _isReverse
+                              ? Colors.deepOrange.shade200
+                              : Colors.white,
+                          fontSize: 16,
+                          fontWeight:
+                              _isReverse ? FontWeight.w700 : FontWeight.normal,
                         ),
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                if (_status.isNotEmpty)
-                  Text(
-                    _status,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                const SizedBox(height: 8),
-                if (_awaitingSwipe)
-                  OutlinedButton(
-                    onPressed: null,
-                    child: Text(l10n.t('leftRightWaitingSwipe')),
-                  )
-                else if (_status.isEmpty)
-                  ElevatedButton(
-                    onPressed: _beginSwipeWindow,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: roundAccent,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    child: Text(l10n.t('leftRightBeginReaction')),
-                  )
-                else
-                  ElevatedButton(
-                    onPressed: _nextTurn,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.wheelOrange,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    child: Text(l10n.t('nextPlayer')),
-                  ),
-              ] else ...[
-                Text(
-                  l10n.t('leftRightFinalPenalties'),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ...List.generate(_penalties.length, (i) {
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      color: AppColors.surfaceVariant,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            PartyPlusStrings.player(context, i),
-                            style: const TextStyle(color: Colors.white),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: GestureDetector(
+                        onHorizontalDragEnd: (details) {
+                          final velocity = details.primaryVelocity ?? 0;
+                          if (velocity.abs() < 120) return;
+                          _handleSwipe(
+                            velocity > 0
+                                ? SwipeDirection.right
+                                : SwipeDirection.left,
+                          );
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(18),
+                            color: AppColors.surfaceVariant,
+                            border: Border.all(color: swipeAreaBorderColor),
+                          ),
+                          child: Center(
+                            child: Icon(
+                              _target == SwipeDirection.left
+                                  ? Icons.arrow_back_rounded
+                                  : Icons.arrow_forward_rounded,
+                              color: roundAccent,
+                              size: 90,
+                            ),
                           ),
                         ),
-                        Text(
-                          l10n.pointsCount(_penalties[i]),
-                          style: const TextStyle(color: AppColors.wheelOrange),
-                        ),
-                      ],
+                      ),
                     ),
-                  );
-                }),
-                const Spacer(),
-                ElevatedButton(
-                  onPressed: _startGame,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.wheelOrange,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: Text(l10n.t('playAgain')),
-                ),
-              ],
-              const SizedBox(height: 8),
-            ],
+                    const SizedBox(height: 12),
+                    if (_status.isNotEmpty)
+                      Text(
+                        _status,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    const SizedBox(height: 8),
+                    if (_awaitingSwipe)
+                      OutlinedButton(
+                        onPressed: null,
+                        child: Text(l10n.t('leftRightWaitingSwipe')),
+                      )
+                    else if (_status.isEmpty)
+                      ElevatedButton(
+                        onPressed: _beginSwipeWindow,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: roundAccent,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: Text(l10n.t('leftRightBeginReaction')),
+                      )
+                    else
+                      ElevatedButton(
+                        onPressed: _nextTurn,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.wheelOrange,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: Text(l10n.t('nextPlayer')),
+                      ),
+                  ] else ...[
+                    Text(
+                      l10n.t('leftRightFinalPenalties'),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ...List.generate(_penalties.length, (i) {
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          color: AppColors.surfaceVariant,
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                PartyPlusStrings.player(context, i),
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            ),
+                            Text(
+                              l10n.pointsCount(_penalties[i]),
+                              style:
+                                  const TextStyle(color: AppColors.wheelOrange),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                    const Spacer(),
+                    ElevatedButton(
+                      onPressed: _startGame,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.wheelOrange,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: Text(l10n.t('playAgain')),
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
-      // Back edge swipe
-      Positioned(
-        left: 0,
-        top: 0,
-        bottom: 0,
-        width: 20,
-        child: GestureDetector(
-          onHorizontalDragEnd: (d) {
-            if ((d.primaryVelocity ?? 0) > 200) context.pop();
-          },
-        ),
-      ),
+          // Back edge swipe
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 20,
+            child: GestureDetector(
+              onHorizontalDragEnd: (d) {
+                if ((d.primaryVelocity ?? 0) > 200) context.pop();
+              },
+            ),
+          ),
+          if (_showHelpButton)
+            Positioned(
+              top: MediaQuery.paddingOf(context).top + 8,
+              right: 12,
+              child: GameHelpButton(
+                onTap: _showGameHelp,
+                iconColor: AppColors.textSecondary,
+                borderColor: AppColors.textDim,
+              ),
+            ),
         ],
       ),
+    );
+  }
+
+  void _initGameHelp() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
+      await GameHelpService.ensureFirstTimeShown(
+        context: context,
+        gameId: 'left_right',
+        gameTitle: l10n.t('leftRight'),
+        helpBody: l10n.t('helpLeftRightBody'),
+      );
+      if (mounted) setState(() => _showHelpButton = true);
+    });
+  }
+
+  void _showGameHelp() {
+    final l10n = AppLocalizations.of(context);
+    GameHelpService.showGameHelpDialog(
+      context,
+      gameTitle: l10n.t('leftRight'),
+      helpBody: l10n.t('helpLeftRightBody'),
     );
   }
 }

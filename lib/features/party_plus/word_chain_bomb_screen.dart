@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/help/game_help_service.dart';
 import '../../core/haptics/haptic_service.dart';
 import '../../features/settings/providers/settings_provider.dart';
 import '../../l10n/app_localizations.dart';
@@ -64,6 +65,13 @@ class _WordChainBombScreenState extends ConsumerState<WordChainBombScreen> {
   bool _exploded = false;
   String _starterWord = '';
   String _penalty = '';
+  bool _showHelpButton = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initGameHelp();
+  }
 
   @override
   void dispose() {
@@ -140,176 +148,212 @@ class _WordChainBombScreenState extends ConsumerState<WordChainBombScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => context.pop(),
-                    child: const Icon(Icons.arrow_back_ios,
-                        color: AppColors.textDim, size: 20),
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => context.pop(),
+                        child: const Icon(Icons.arrow_back_ios,
+                            color: AppColors.textDim, size: 20),
+                      ),
+                      const Spacer(),
+                      Text(
+                        l10n.t('wordBomb'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Spacer(),
+                      const SizedBox(width: 20),
+                    ],
                   ),
-                  const Spacer(),
+                  const SizedBox(height: 16),
                   Text(
-                    l10n.t('wordBomb'),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    l10n.playersCount(_playerCount),
+                    style: const TextStyle(color: AppColors.textSecondary),
                   ),
-                  const Spacer(),
-                  const SizedBox(width: 20),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                l10n.playersCount(_playerCount),
-                style: const TextStyle(color: AppColors.textSecondary),
-              ),
-              Slider(
-                value: _playerCount.toDouble(),
-                min: 3,
-                max: 6,
-                divisions: 3,
-                activeColor: AppColors.fingerCyan,
-                onChanged: _running
-                    ? null
-                    : (v) => setState(() => _playerCount = v.round()),
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<int>(
-                initialValue: _categoryIndex,
-                dropdownColor: AppColors.surface,
-                decoration: InputDecoration(
-                  labelText: l10n.t('wordBombCategory'),
-                  labelStyle: const TextStyle(color: AppColors.textSecondary),
-                  enabledBorder: const OutlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.textDim),
+                  Slider(
+                    value: _playerCount.toDouble(),
+                    min: 3,
+                    max: 6,
+                    divisions: 3,
+                    activeColor: AppColors.fingerCyan,
+                    onChanged: _running
+                        ? null
+                        : (v) => setState(() => _playerCount = v.round()),
                   ),
-                  focusedBorder: const OutlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.fingerCyan),
-                  ),
-                ),
-                items: List.generate(_categories.length, (i) {
-                  final c = _categories[i];
-                  return DropdownMenuItem(
-                    value: i,
-                    child: Text(
-                      l10n.t(c.nameKey),
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  );
-                }),
-                onChanged: _running
-                    ? null
-                    : (v) => setState(() => _categoryIndex = v ?? 0),
-              ),
-              const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  color: AppColors.surfaceVariant,
-                  border:
-                      Border.all(color: AppColors.fingerCyan.withAlpha(120)),
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      l10n.t(
-                          'wordBombCategoryLine', {'category': categoryName}),
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      _starterWord.isEmpty
-                          ? l10n.t('wordBombStarterPending')
-                          : l10n.t('wordBombStarterLine', {
-                              'word': _starterWord,
-                            }),
-                      style: const TextStyle(color: AppColors.fingerCyan),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              if (_running)
-                LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 8,
-                  backgroundColor: AppColors.surfaceVariant,
-                  valueColor:
-                      const AlwaysStoppedAnimation(AppColors.fingerCyan),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              const SizedBox(height: 20),
-              Expanded(
-                child: Center(
-                  child: Text(
-                    _exploded
-                        ? l10n.t('wordBombExploded', {
-                            'player':
-                                PartyPlusStrings.player(context, _holderIndex),
-                            'penalty': _penalty,
-                          })
-                        : PartyPlusStrings.player(context, _holderIndex),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: _exploded ? AppColors.bombRed : Colors.white,
-                      fontSize: _exploded ? 22 : 34,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _running ? null : _startRound,
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(
-                            color: AppColors.fingerCyan.withAlpha(160)),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<int>(
+                    initialValue: _categoryIndex,
+                    dropdownColor: AppColors.surface,
+                    decoration: InputDecoration(
+                      labelText: l10n.t('wordBombCategory'),
+                      labelStyle:
+                          const TextStyle(color: AppColors.textSecondary),
+                      enabledBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(color: AppColors.textDim),
                       ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(color: AppColors.fingerCyan),
+                      ),
+                    ),
+                    items: List.generate(_categories.length, (i) {
+                      final c = _categories[i];
+                      return DropdownMenuItem(
+                        value: i,
+                        child: Text(
+                          l10n.t(c.nameKey),
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      );
+                    }),
+                    onChanged: _running
+                        ? null
+                        : (v) => setState(() => _categoryIndex = v ?? 0),
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: AppColors.surfaceVariant,
+                      border: Border.all(
+                          color: AppColors.fingerCyan.withAlpha(120)),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          l10n.t('wordBombCategoryLine',
+                              {'category': categoryName}),
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          _starterWord.isEmpty
+                              ? l10n.t('wordBombStarterPending')
+                              : l10n.t('wordBombStarterLine', {
+                                  'word': _starterWord,
+                                }),
+                          style: const TextStyle(color: AppColors.fingerCyan),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (_running)
+                    LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 8,
+                      backgroundColor: AppColors.surfaceVariant,
+                      valueColor:
+                          const AlwaysStoppedAnimation(AppColors.fingerCyan),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  const SizedBox(height: 20),
+                  Expanded(
+                    child: Center(
                       child: Text(
-                        _exploded ? l10n.t('nextRound') : l10n.t('startTimer'),
-                        style: const TextStyle(color: Colors.white),
+                        _exploded
+                            ? l10n.t('wordBombExploded', {
+                                'player': PartyPlusStrings.player(
+                                    context, _holderIndex),
+                                'penalty': _penalty,
+                              })
+                            : PartyPlusStrings.player(context, _holderIndex),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: _exploded ? AppColors.bombRed : Colors.white,
+                          fontSize: _exploded ? 22 : 34,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _running ? _nextPlayer : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.fingerCyan,
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _running ? null : _startRound,
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(
+                                color: AppColors.fingerCyan.withAlpha(160)),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          child: Text(
+                            _exploded
+                                ? l10n.t('nextRound')
+                                : l10n.t('startTimer'),
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
                       ),
-                      child: Text(l10n.t('wordBombNext')),
-                    ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _running ? _nextPlayer : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.fingerCyan,
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          child: Text(l10n.t('wordBombNext')),
+                        ),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 8),
                 ],
               ),
-              const SizedBox(height: 8),
-            ],
+            ),
           ),
-        ),
-      ),
-      // Back edge swipe
-      Positioned(
-        left: 0,
-        top: 0,
-        bottom: 0,
-        width: 20,
-        child: GestureDetector(
-          onHorizontalDragEnd: (d) {
-            if ((d.primaryVelocity ?? 0) > 200) context.pop();
-          },
-        ),
-      ),
+          // Back edge swipe
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 20,
+            child: GestureDetector(
+              onHorizontalDragEnd: (d) {
+                if ((d.primaryVelocity ?? 0) > 200) context.pop();
+              },
+            ),
+          ),
+          if (_showHelpButton)
+            Positioned(
+              top: MediaQuery.paddingOf(context).top + 8,
+              right: 12,
+              child: GameHelpButton(
+                onTap: _showGameHelp,
+                iconColor: AppColors.textSecondary,
+                borderColor: AppColors.textDim,
+              ),
+            ),
         ],
       ),
+    );
+  }
+
+  void _initGameHelp() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
+      await GameHelpService.ensureFirstTimeShown(
+        context: context,
+        gameId: 'word_bomb',
+        gameTitle: l10n.t('wordBomb'),
+        helpBody: l10n.t('helpWordBombBody'),
+      );
+      if (mounted) setState(() => _showHelpButton = true);
+    });
+  }
+
+  void _showGameHelp() {
+    final l10n = AppLocalizations.of(context);
+    GameHelpService.showGameHelpDialog(
+      context,
+      gameTitle: l10n.t('wordBomb'),
+      helpBody: l10n.t('helpWordBombBody'),
     );
   }
 }

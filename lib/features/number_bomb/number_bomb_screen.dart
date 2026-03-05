@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/help/game_help_service.dart';
 import '../../core/haptics/haptic_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/glass_container.dart';
@@ -22,6 +23,7 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
   late AnimationController _explosionController;
   late Animation<double> _bombPulse;
   late Animation<double> _explosionAnim;
+  bool _showHelpButton = false;
 
   @override
   void initState() {
@@ -41,6 +43,7 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
     );
     _explosionAnim =
         Tween<double>(begin: 0.0, end: 1.0).animate(_explosionController);
+    _initGameHelp();
   }
 
   @override
@@ -100,8 +103,7 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
               AnimatedBuilder(
                 animation: _bombPulse,
                 builder: (_, __) => Opacity(
-                  opacity:
-                      state.pressureRatio * 0.15 * (1 - _bombPulse.value),
+                  opacity: state.pressureRatio * 0.15 * (1 - _bombPulse.value),
                   child: Container(color: AppColors.bombRed),
                 ),
               ),
@@ -143,9 +145,43 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
                 },
               ),
             ),
+
+            if (_showHelpButton)
+              Positioned(
+                top: MediaQuery.paddingOf(context).top + 8,
+                right: 12,
+                child: GameHelpButton(
+                  onTap: _showGameHelp,
+                  iconColor: AppColors.textSecondary,
+                  borderColor: AppColors.textDim,
+                ),
+              ),
           ],
         ),
       ),
+    );
+  }
+
+  void _initGameHelp() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
+      await GameHelpService.ensureFirstTimeShown(
+        context: context,
+        gameId: 'number_bomb',
+        gameTitle: l10n.numberBomb,
+        helpBody: l10n.t('helpNumberBombBody'),
+      );
+      if (mounted) setState(() => _showHelpButton = true);
+    });
+  }
+
+  void _showGameHelp() {
+    final l10n = AppLocalizations.of(context);
+    GameHelpService.showGameHelpDialog(
+      context,
+      gameTitle: l10n.numberBomb,
+      helpBody: l10n.t('helpNumberBombBody'),
     );
   }
 }
@@ -309,8 +345,7 @@ class _SetupViewState extends State<_SetupView> {
           GestureDetector(
             onTap: () => widget.onStart(min: _effectiveMin, max: _effectiveMax),
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 48, vertical: 18),
+              padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 18),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(40),
                 border: Border.all(color: AppColors.bombRed.withAlpha(150)),
@@ -373,8 +408,7 @@ class _RangeRow extends StatelessWidget {
               thumbColor: AppColors.bombRed,
               overlayColor: AppColors.bombRed.withAlpha(30),
               trackHeight: 2,
-              thumbShape:
-                  const RoundSliderThumbShape(enabledThumbRadius: 8),
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
             ),
             child: Slider(
               value: value.toDouble().clamp(min.toDouble(), max.toDouble()),
@@ -390,8 +424,7 @@ class _RangeRow extends StatelessWidget {
           child: Text(
             '$value',
             textAlign: TextAlign.right,
-            style: const TextStyle(
-                color: AppColors.bombRed, fontSize: 14),
+            style: const TextStyle(color: AppColors.bombRed, fontSize: 14),
           ),
         ),
       ],
@@ -484,12 +517,12 @@ class _PlayingView extends StatelessWidget {
             child: Icon(
               Icons.circle,
               size: 80,
-              color: AppColors.bombRed.withAlpha(
-                  (60 + 60 * state.pressureRatio).round()),
+              color: AppColors.bombRed
+                  .withAlpha((60 + 60 * state.pressureRatio).round()),
               shadows: [
                 Shadow(
-                  color: AppColors.bombRed.withAlpha(
-                      (120 * state.pressureRatio).round()),
+                  color: AppColors.bombRed
+                      .withAlpha((120 * state.pressureRatio).round()),
                   blurRadius: 30,
                 ),
               ],
@@ -506,7 +539,9 @@ class _PlayingView extends StatelessWidget {
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 150),
             child: Text(
-              state.currentInput.isEmpty ? l10n.inputNumber : state.currentInput,
+              state.currentInput.isEmpty
+                  ? l10n.inputNumber
+                  : state.currentInput,
               key: ValueKey(state.currentInput),
               style: TextStyle(
                 color: state.currentInput.isEmpty
@@ -633,20 +668,18 @@ class _KeyButtonState extends State<_KeyButton>
             border: Border.all(
               color: widget.isConfirm
                   ? AppColors.bombRed.withAlpha(150)
-                  : Colors.white.withAlpha(
-                      (30 + 180 * _pressAnim.value).round()),
+                  : Colors.white
+                      .withAlpha((30 + 180 * _pressAnim.value).round()),
               width: 1,
             ),
             color: Colors.white.withAlpha(
-                (widget.isConfirm ? 50 : 15) +
-                    (20 * _pressAnim.value).round()),
+                (widget.isConfirm ? 50 : 15) + (20 * _pressAnim.value).round()),
           ),
           child: Center(
             child: Text(
               widget.label,
               style: TextStyle(
-                color:
-                    widget.isConfirm ? AppColors.bombRed : Colors.white,
+                color: widget.isConfirm ? AppColors.bombRed : Colors.white,
                 fontSize: 22,
                 fontWeight: FontWeight.w300,
               ),
@@ -772,8 +805,7 @@ class _ExplosionPainter extends CustomPainter {
       final speed = rng.nextDouble() * 420 + 80;
       final radius = rng.nextDouble() * 7 + 2;
       final colorT = rng.nextDouble();
-      final color =
-          Color.lerp(AppColors.bombRed, Colors.orange, colorT)!;
+      final color = Color.lerp(AppColors.bombRed, Colors.orange, colorT)!;
 
       final x = center.dx + cos(angle) * speed * t;
       final y = center.dy + sin(angle) * speed * t - 200 * t * t;

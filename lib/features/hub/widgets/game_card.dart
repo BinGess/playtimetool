@@ -88,23 +88,16 @@ class _GameCardState extends State<GameCard>
                 ),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Icon with glow
-                    Icon(
-                      widget.icon,
-                      color: widget.accentColor,
-                      size: 28,
-                      shadows: [
-                        Shadow(
-                          color: widget.accentColor.withAlpha(150),
-                          blurRadius: 16,
-                        ),
-                      ],
+                    _CardCover(
+                      key: const Key('game-card-cover'),
+                      accentColor: widget.accentColor,
+                      icon: widget.icon,
                     ),
-                    const Spacer(),
+                    const SizedBox(height: 10),
                     // Subtitle
                     Text(
                       widget.subtitle,
@@ -145,7 +138,7 @@ class _GameCardState extends State<GameCard>
                         fontSize: 11,
                         height: 1.3,
                       ),
-                      maxLines: 2,
+                      maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
@@ -154,6 +147,89 @@ class _GameCardState extends State<GameCard>
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _CardCover extends StatelessWidget {
+  const _CardCover({
+    super.key,
+    required this.accentColor,
+    required this.icon,
+  });
+
+  final Color accentColor;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 72,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            accentColor.withAlpha(150),
+            accentColor.withAlpha(45),
+            Colors.black.withAlpha(130),
+          ],
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -8,
+            top: -8,
+            child: _GlowDot(size: 46, color: accentColor.withAlpha(120)),
+          ),
+          Positioned(
+            left: 10,
+            bottom: -14,
+            child: _GlowDot(size: 38, color: accentColor.withAlpha(70)),
+          ),
+          Center(
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: 30,
+              shadows: [
+                Shadow(
+                  color: accentColor.withAlpha(180),
+                  blurRadius: 20,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GlowDot extends StatelessWidget {
+  const _GlowDot({required this.size, required this.color});
+
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color,
+        boxShadow: [
+          BoxShadow(
+            color: color,
+            blurRadius: 24,
+            spreadRadius: 4,
+          ),
+        ],
       ),
     );
   }

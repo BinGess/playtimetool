@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../l10n/app_localizations.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/help/game_help_service.dart';
 import '../../core/haptics/haptic_service.dart';
 import '../../core/audio/audio_service.dart';
 import '../../core/constants/app_sounds.dart';
@@ -28,6 +29,7 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
 
   double _lastDragAngle = 0;
   double _dragVelocity = 0;
+  bool _showHelpButton = false;
 
   @override
   void initState() {
@@ -59,6 +61,7 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
       }
       AudioService.play(AppSounds.wheelTick, volume: 0.6);
     };
+    _initGameHelp();
   }
 
   Animation<double> _buildSpringAnim() {
@@ -299,13 +302,47 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
               },
             ),
           ),
+
+          if (_showHelpButton)
+            Positioned(
+              top: MediaQuery.paddingOf(context).top + 8,
+              right: 12,
+              child: GameHelpButton(
+                onTap: _showGameHelp,
+                iconColor: AppColors.textSecondary,
+                borderColor: AppColors.textDim,
+              ),
+            ),
         ],
       ),
     );
   }
 
-  void _showEditorSheet(BuildContext ctx, SpinWheelState state,
-      SpinWheelNotifier notifier) {
+  void _initGameHelp() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
+      await GameHelpService.ensureFirstTimeShown(
+        context: context,
+        gameId: 'spin_wheel',
+        gameTitle: l10n.spinWheel,
+        helpBody: l10n.t('helpSpinWheelBody'),
+      );
+      if (mounted) setState(() => _showHelpButton = true);
+    });
+  }
+
+  void _showGameHelp() {
+    final l10n = AppLocalizations.of(context);
+    GameHelpService.showGameHelpDialog(
+      context,
+      gameTitle: l10n.spinWheel,
+      helpBody: l10n.t('helpSpinWheelBody'),
+    );
+  }
+
+  void _showEditorSheet(
+      BuildContext ctx, SpinWheelState state, SpinWheelNotifier notifier) {
     final l10n = AppLocalizations.of(ctx);
     showModalBottomSheet<void>(
       context: ctx,
@@ -348,7 +385,7 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
     Color(0xFFFFE135), // Bright yellow
     Color(0xFFFF8C00), // Amber
     Color(0xFFFF6B35), // Orange
-    Color(0xFF9B00FF),  // Violet
+    Color(0xFF9B00FF), // Violet
     Color(0xFFFF44B8), // Pink
     Color(0xFF00A8FF), // Azure
     Color(0xFFFFFFFF), // White
@@ -358,8 +395,7 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
   Widget build(BuildContext context) {
     final l10n = widget.l10n;
     // Watch live state for real-time segment list updates
-    final liveSegments =
-        ref.watch(spinWheelProvider).config.segments;
+    final liveSegments = ref.watch(spinWheelProvider).config.segments;
 
     return DraggableScrollableSheet(
       initialChildSize: 0.65,
@@ -387,8 +423,7 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
             ),
             // Title row
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
               child: Row(
                 children: [
                   Text(
@@ -467,8 +502,7 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
       initialColor: _paletteColors[0],
       onConfirm: (label, color) {
         if (label.isNotEmpty) {
-          widget.notifier
-              .addSegment(WheelSegment(label: label, color: color));
+          widget.notifier.addSegment(WheelSegment(label: label, color: color));
           HapticService.lightImpact();
         }
       },
@@ -488,8 +522,8 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
       initialColor: seg.color,
       onConfirm: (label, color) {
         if (label.isNotEmpty) {
-          widget.notifier.updateSegment(
-              index, WheelSegment(label: label, color: color));
+          widget.notifier
+              .updateSegment(index, WheelSegment(label: label, color: color));
           HapticService.lightImpact();
         }
       },
@@ -542,18 +576,15 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
                 maxLength: 8,
                 decoration: InputDecoration(
                   hintText: optionNameHint,
-                  hintStyle:
-                      const TextStyle(color: AppColors.textDim),
-                  counterStyle:
-                      const TextStyle(color: AppColors.textDim),
+                  hintStyle: const TextStyle(color: AppColors.textDim),
+                  counterStyle: const TextStyle(color: AppColors.textDim),
                   enabledBorder: UnderlineInputBorder(
                     borderSide: BorderSide(
                       color: AppColors.wheelOrange.withAlpha(100),
                     ),
                   ),
                   focusedBorder: const UnderlineInputBorder(
-                    borderSide:
-                        BorderSide(color: AppColors.wheelOrange),
+                    borderSide: BorderSide(color: AppColors.wheelOrange),
                   ),
                 ),
               ),
@@ -579,9 +610,7 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
                         shape: BoxShape.circle,
                         color: c,
                         border: Border.all(
-                          color: selected
-                              ? Colors.white
-                              : Colors.transparent,
+                          color: selected ? Colors.white : Colors.transparent,
                           width: 2.5,
                         ),
                         boxShadow: [
@@ -645,8 +674,7 @@ class _SegmentTile extends StatelessWidget {
         border: Border.all(color: const Color(0xFF2A2A2A)),
       ),
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
         leading: Container(
           width: 28,
           height: 28,
@@ -686,8 +714,7 @@ class _SegmentTile extends StatelessWidget {
                 onPressed: onDelete,
                 visualDensity: VisualDensity.compact,
               ),
-            const Icon(Icons.drag_handle,
-                color: AppColors.textDim, size: 20),
+            const Icon(Icons.drag_handle, color: AppColors.textDim, size: 20),
           ],
         ),
       ),
@@ -718,16 +745,13 @@ class _ModeToggle extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isPrank
-                ? AppColors.bombRed.withAlpha(150)
-                : AppColors.textDim,
+            color:
+                isPrank ? AppColors.bombRed.withAlpha(150) : AppColors.textDim,
           ),
-          color: isPrank
-              ? AppColors.bombRed.withAlpha(20)
-              : Colors.transparent,
+          color: isPrank ? AppColors.bombRed.withAlpha(20) : Colors.transparent,
         ),
         child: Text(
-                      isPrank ? '😈 ${l10n.prank}' : '⚖️ ${l10n.fair}',
+          isPrank ? '😈 ${l10n.prank}' : '⚖️ ${l10n.fair}',
           style: TextStyle(
             color: isPrank ? AppColors.bombRed : AppColors.textSecondary,
             fontSize: 12,
@@ -766,8 +790,8 @@ class _ResultOverlay extends StatelessWidget {
               scale: animation,
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 32),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 40, vertical: 32),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
                 decoration: BoxDecoration(
                   color: const Color(0xFF0D0D0D),
                   borderRadius: BorderRadius.circular(28),

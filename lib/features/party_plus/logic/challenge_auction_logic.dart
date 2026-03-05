@@ -10,6 +10,36 @@ class AuctionResolution {
   final int winningBid;
 }
 
+class BidRange {
+  const BidRange({
+    required this.minBid,
+    required this.maxBid,
+  });
+
+  final int minBid;
+  final int maxBid;
+}
+
+BidRange normalizeBidRange({
+  required int configuredMinBid,
+  required int configuredMaxBid,
+  required int challengeMinBid,
+}) {
+  final minBid = max(1, max(configuredMinBid, challengeMinBid));
+  final maxBid = max(minBid, configuredMaxBid);
+  return BidRange(minBid: minBid, maxBid: maxBid);
+}
+
+int normalizeBidInput({
+  required String rawInput,
+  required int fallback,
+  required int minBid,
+  required int maxBid,
+}) {
+  final parsed = int.tryParse(rawInput.trim()) ?? fallback;
+  return parsed.clamp(minBid, maxBid).toInt();
+}
+
 AuctionResolution resolveAuctionWinner({
   required List<int> bids,
   required Random random,

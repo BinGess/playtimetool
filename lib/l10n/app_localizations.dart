@@ -208,6 +208,9 @@ class AppLocalizations {
       'wordBombNext': '下一个',
 
       // Challenge Auction
+      'challengeAuctionBidRangeLabel': '出价范围',
+      'challengeAuctionBidRangeActive': '可出价范围：{min} - {max}',
+      'challengeAuctionBidInputHint': '直接输入出价',
       'challengeAuctionRule': '每人报一个出价争夺挑战资格，最低价中标',
       'challengeAuctionRulePure': '每人报一个出价争夺挑战资格，最低价中标（纯净模式）',
       'challengeAuctionStart': '开始拍卖',
@@ -241,7 +244,16 @@ class AppLocalizations {
       'challengeAuctionItem15': '表演慢动作接电话并假装很紧张',
 
       // Truth or Raise
-      'truthRaiseRule': '回答则重置加码；跳过则本轮加码+1并计入罚分',
+      'truthRaiseSetupTitle': '开局设置',
+      'truthRaiseScaleTitle': '尺度等级',
+      'truthRaiseScaleHint': '跳过每次 +{step} 码，最高 {max} 码',
+      'truthRaiseScaleCurrent': '当前尺度：{level}',
+      'truthRaiseScaleGentle': '轻松',
+      'truthRaiseScaleStandard': '标准',
+      'truthRaiseScaleSpicy': '刺激',
+      'truthRaiseScaleExtreme': '爆表',
+      'truthRaiseBackToSetup': '返回设置',
+      'truthRaiseRule': '回答则重置加码；跳过按所选档位加码并计入罚分',
       'truthRaiseCurrent': '当前加码：{count}',
       'truthRaiseSkipRaise': '跳过 + 加码',
       'truthRaiseAnswer': '我回答',
@@ -268,6 +280,27 @@ class AppLocalizations {
       'truthRaiseQuestion18': '你小时候最蠢的一个想法是什么？',
       'truthRaiseQuestion19': '用一个词形容你对右手边的人的印象',
       'truthRaiseQuestion20': '你这辈子收到过最奇怪的礼物是什么？',
+
+      // Game Help
+      'gameHelpTitle': '游戏说明',
+      'gameHelpGotIt': '知道了',
+      'helpFingerPickerBody':
+          '把手指放在屏幕上。\n所有人静止后会锁定并倒计时。\n系统随机选出胜者，其余人淘汰。\n可在右上角设置胜者人数。',
+      'helpSpinWheelBody':
+          '左右滑动让转盘旋转。\n指针停下所指即本轮结果。\n可编辑选项、颜色与模板。\n适合抽惩罚、抽任务、抽人。',
+      'helpNumberBombBody':
+          '先选数字范围并开始。\n每人轮流猜一个数字。\n如果猜中隐藏数字，立即爆炸受罚。\n若没猜中，安全区间会继续收缩。',
+      'helpPassBombBody':
+          '开始后会随机倒计时。\n当前持有者点击“传递炸弹”把手机传下去。\n倒计时归零时，持有者受罚。\n适合快节奏热场。',
+      'helpGestureDuelBody':
+          '每位玩家依次选择手势。\n可切换“少数受罚/多数受罚”模式。\n系统按本轮分布判定受罚玩家。\n平局时直接重开一轮。',
+      'helpLeftRightBody': '按提示方向快速滑动。\n方向错误或超时会加罚分。\n每位玩家轮流进行两次。\n最后按总罚分结算。',
+      'helpWordBombBody':
+          '选择词库后开始倒计时。\n按顺序说同类词并传给下一位。\n卡壳、重复或超时导致爆炸受罚。\n起始词会在每轮开始时随机给出。',
+      'helpChallengeAuctionBody':
+          '每位玩家先为挑战出价。\n最低价中标并执行挑战。\n成功/失败按当前模式结算。\n酒精惩罚关闭后自动改为纯净积分规则。',
+      'helpTruthRaiseBody':
+          '轮到你时可“回答”或“跳过+加码”。\n回答会重置加码。\n跳过会提高本轮加码并累积罚分。\n回合结束后按总罚分结算。',
     },
     'en': {
       'appTitle': 'Finger Party',
@@ -431,7 +464,8 @@ class AppLocalizations {
       'gesturePenaltyResult': '{players} penalty: {penalty}',
 
       // Left Right
-      'leftRightRule': 'Two attempts each. Includes reverse rounds! Wrong/timeout adds penalty',
+      'leftRightRule':
+          'Two attempts each. Includes reverse rounds! Wrong/timeout adds penalty',
       'leftRightSwipeTo': 'Swipe {direction}',
       'leftRightReverseSwipeTo': '⚡ REVERSE! Swipe OPPOSITE of {direction}',
       'leftRightReversed': 'Reversed! +2 penalty',
@@ -453,14 +487,22 @@ class AppLocalizations {
       'wordBombCategoryTravel': 'Travel',
       'wordBombCategoryAnimal': 'Animals',
       'wordBombCategorySport': 'Sports',
-      'wordBombFoodWords': 'Pizza|Burger|Noodles|Taco|Sushi|Steak|Pasta|Curry|Dumpling|Pancake|Waffle|Ramen',
-      'wordBombMovieWords': 'Sci-fi|Comedy|Romance|Animation|Horror|Documentary|Thriller|Action',
-      'wordBombTravelWords': 'Beach|Mountain|Old Town|Night Market|Desert|Hot Spring|Prairie|Forest|Waterfall|Island',
-      'wordBombAnimalWords': 'Panda|Goldfish|Cheetah|Dolphin|Kangaroo|Parrot|Penguin|Koala|Tiger|Polar Bear',
-      'wordBombSportWords': 'Basketball|Yoga|Parkour|Fencing|Surfing|Climbing|Boxing|Skiing|Ping Pong|Badminton',
+      'wordBombFoodWords':
+          'Pizza|Burger|Noodles|Taco|Sushi|Steak|Pasta|Curry|Dumpling|Pancake|Waffle|Ramen',
+      'wordBombMovieWords':
+          'Sci-fi|Comedy|Romance|Animation|Horror|Documentary|Thriller|Action',
+      'wordBombTravelWords':
+          'Beach|Mountain|Old Town|Night Market|Desert|Hot Spring|Prairie|Forest|Waterfall|Island',
+      'wordBombAnimalWords':
+          'Panda|Goldfish|Cheetah|Dolphin|Kangaroo|Parrot|Penguin|Koala|Tiger|Polar Bear',
+      'wordBombSportWords':
+          'Basketball|Yoga|Parkour|Fencing|Surfing|Climbing|Boxing|Skiing|Ping Pong|Badminton',
       'wordBombNext': 'Next',
 
       // Challenge Auction
+      'challengeAuctionBidRangeLabel': 'Bid range',
+      'challengeAuctionBidRangeActive': 'Allowed bids: {min} - {max}',
+      'challengeAuctionBidInputHint': 'Type your bid',
       'challengeAuctionRule': 'Each player bids for challenge, lowest bid wins',
       'challengeAuctionRulePure': 'Each player bids points, lowest bid wins',
       'challengeAuctionStart': 'Start auction',
@@ -484,19 +526,33 @@ class AppLocalizations {
       'challengeAuctionItem3': 'Give 5 compliments to left player',
       'challengeAuctionItem4': 'Improvise an ad for tissue',
       'challengeAuctionItem5': 'Sing a chorus with eyes closed',
-      'challengeAuctionItem6': 'Stare at the right player for 15s without laughing',
+      'challengeAuctionItem6':
+          'Stare at the right player for 15s without laughing',
       'challengeAuctionItem7': 'Sing 3 things you did today as a song',
       'challengeAuctionItem8': 'Mime eating noodles without any props',
-      'challengeAuctionItem9': 'Make 5 funny faces and let others guess emotions',
-      'challengeAuctionItem10': 'Stand on one foot for 20s while reciting a poem',
+      'challengeAuctionItem9':
+          'Make 5 funny faces and let others guess emotions',
+      'challengeAuctionItem10':
+          'Stand on one foot for 20s while reciting a poem',
       'challengeAuctionItem11': 'Imitate an animal sound for 15s',
       'challengeAuctionItem12': 'Make up a story using 3 random words',
       'challengeAuctionItem13': 'Improvise a rhyme for the player across',
       'challengeAuctionItem14': 'Say a tongue twister in a funny accent',
-      'challengeAuctionItem15': 'Mime answering a phone call nervously in slow motion',
+      'challengeAuctionItem15':
+          'Mime answering a phone call nervously in slow motion',
 
       // Truth or Raise
-      'truthRaiseRule': 'Answer resets raise; skip adds +1 raise and penalty',
+      'truthRaiseSetupTitle': 'Game setup',
+      'truthRaiseScaleTitle': 'Intensity level',
+      'truthRaiseScaleHint': 'Skip adds +{step}; capped at {max}',
+      'truthRaiseScaleCurrent': 'Current level: {level}',
+      'truthRaiseScaleGentle': 'Gentle',
+      'truthRaiseScaleStandard': 'Standard',
+      'truthRaiseScaleSpicy': 'Spicy',
+      'truthRaiseScaleExtreme': 'Extreme',
+      'truthRaiseBackToSetup': 'Back to setup',
+      'truthRaiseRule':
+          'Answer resets raise; skip adds raise by selected level',
       'truthRaiseCurrent': 'Current raise: {count}',
       'truthRaiseSkipRaise': 'Skip + Raise',
       'truthRaiseAnswer': 'Answer',
@@ -515,7 +571,8 @@ class AppLocalizations {
       'truthRaiseQuestion10': 'Who here do you think is the best looking?',
       'truthRaiseQuestion11': 'What weird habit do others not know about you?',
       'truthRaiseQuestion12': 'Which day of your life would you relive?',
-      'truthRaiseQuestion13': 'Whose chat history would you least want exposed?',
+      'truthRaiseQuestion13':
+          'Whose chat history would you least want exposed?',
       'truthRaiseQuestion14': 'When was the last time you cried and why?',
       'truthRaiseQuestion15': 'What is your biggest regret?',
       'truthRaiseQuestion16': 'What category of app do you have most of?',
@@ -523,6 +580,28 @@ class AppLocalizations {
       'truthRaiseQuestion18': 'What was your dumbest childhood idea?',
       'truthRaiseQuestion19': 'Describe the player on your right in one word',
       'truthRaiseQuestion20': 'What is the weirdest gift you ever received?',
+
+      // Game Help
+      'gameHelpTitle': 'How To Play',
+      'gameHelpGotIt': 'Got it',
+      'helpFingerPickerBody':
+          'Place fingers on screen.\nWhen everyone stays still, the round locks and starts countdown.\nWinners are chosen randomly, others are eliminated.\nYou can set winner count from top right.',
+      'helpSpinWheelBody':
+          'Swipe to spin the wheel.\nThe pointer decides the result when wheel stops.\nYou can edit options, colors and presets.\nGreat for random picks or punishments.',
+      'helpNumberBombBody':
+          'Select a range and start.\nPlayers take turns guessing a number.\nIf someone hits the hidden number, they lose instantly.\nOtherwise, the safe range keeps shrinking.',
+      'helpPassBombBody':
+          'A random timer starts each round.\nCurrent holder taps “Pass bomb” and passes the phone.\nWhen timer reaches zero, current holder loses.\nFast and good for warm-up.',
+      'helpGestureDuelBody':
+          'Each player picks a gesture in turn.\nSwitch between “minority loses” and “majority loses”.\nSystem decides losers by distribution.\nDraws restart the round.',
+      'helpLeftRightBody':
+          'Swipe in the prompted direction as fast as possible.\nWrong direction or timeout adds penalty points.\nEach player gets two turns.\nFinal result is based on total penalties.',
+      'helpWordBombBody':
+          'Choose a category and start countdown.\nSpeak a valid word then pass to next player.\nStuck/repeat/timeout causes explosion and penalty.\nA starter word is generated each round.',
+      'helpChallengeAuctionBody':
+          'All players bid to take the challenge.\nLowest bid wins and must perform it.\nSuccess/fail follows current rule mode.\nIf alcohol mode is off, it switches to pure point rules.',
+      'helpTruthRaiseBody':
+          'On your turn, choose “Answer” or “Skip + Raise”.\nAnswer resets raise level.\nSkip increases raise and accumulates penalties.\nEnd of rounds is settled by total penalties.',
     },
   };
 

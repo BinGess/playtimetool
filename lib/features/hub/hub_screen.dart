@@ -30,65 +30,69 @@ class _HubScreenState extends ConsumerState<HubScreen> {
           _ParallaxGrid(offsetX: gyroX * 6, offsetY: gyroY * 6),
 
           SafeArea(
-            child: Column(
+            child: Stack(
               children: [
-                const SizedBox(height: 24),
-                // Title
-                Text(
-                  l10n.appTitle,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 13,
-                    letterSpacing: 4,
-                    fontWeight: FontWeight.w300,
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Game grid
-                Expanded(
-                  child: GridView.builder(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 4),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 0.88,
-                    ),
-                    itemCount: games.length,
-                    itemBuilder: (_, i) {
-                      final g = games[i];
-                      return GameCard(
-                        title: g.title,
-                        subtitle: g.subtitle,
-                        description: g.description,
-                        accentColor: g.accentColor,
-                        route: g.route,
-                        icon: g.icon,
-                      );
-                    },
-                  ),
-                ),
-
-                // Settings link
-                GestureDetector(
-                  onTap: () => context.push('/settings'),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    child: Text(
-                      '⚙  ${l10n.settingsTitle}',
+                Column(
+                  children: [
+                    const SizedBox(height: 24),
+                    // Title
+                    Text(
+                      l10n.appTitle,
                       style: const TextStyle(
-                        color: AppColors.textDim,
-                        fontSize: 11,
-                        letterSpacing: 2,
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                        letterSpacing: 4,
+                        fontWeight: FontWeight.w300,
                       ),
                     ),
+                    const SizedBox(height: 20),
+
+                    // Game grid
+                    Expanded(
+                      child: GridView.builder(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 4),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 0.88,
+                        ),
+                        itemCount: games.length,
+                        itemBuilder: (_, i) {
+                          final g = games[i];
+                          return GameCard(
+                            title: g.title,
+                            subtitle: g.subtitle,
+                            description: g.description,
+                            accentColor: g.accentColor,
+                            route: g.route,
+                            icon: g.icon,
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                Positioned(
+                  top: 6,
+                  right: 8,
+                  child: IconButton(
+                    key: const Key('hub-settings-button'),
+                    onPressed: () => context.push('/settings'),
+                    tooltip: l10n.settings,
+                    icon: const Icon(Icons.settings_rounded),
+                    color: AppColors.textSecondary,
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.black.withAlpha(125),
+                      side: BorderSide(
+                        color: AppColors.textDim.withAlpha(110),
+                      ),
+                      padding: const EdgeInsets.all(10),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 4),
               ],
             ),
           ),

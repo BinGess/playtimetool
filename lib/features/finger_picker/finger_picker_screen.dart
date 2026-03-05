@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/help/game_help_service.dart';
 import '../../core/constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import 'models/finger_state.dart';
@@ -13,8 +14,7 @@ class FingerPickerScreen extends ConsumerStatefulWidget {
   const FingerPickerScreen({super.key});
 
   @override
-  ConsumerState<FingerPickerScreen> createState() =>
-      _FingerPickerScreenState();
+  ConsumerState<FingerPickerScreen> createState() => _FingerPickerScreenState();
 }
 
 class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
@@ -36,6 +36,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
   late Animation<double> _lockAnim;
 
   late Listenable _repaintAnim;
+  bool _showHelpButton = false;
 
   @override
   void initState() {
@@ -71,6 +72,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
     );
 
     _repaintAnim = Listenable.merge([_glowAnim, _spinAnim]);
+    _initGameHelp();
   }
 
   @override
@@ -118,8 +120,8 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
       }
     });
 
-    final isActive = state.phase == PickerPhase.waiting ||
-        state.phase == PickerPhase.result;
+    final isActive =
+        state.phase == PickerPhase.waiting || state.phase == PickerPhase.result;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -154,8 +156,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
               child: AnimatedBuilder(
                 animation: _arcAnim,
                 builder: (_, __) => CustomPaint(
-                  painter:
-                      CountdownBorderPainter(progress: _arcAnim.value),
+                  painter: CountdownBorderPainter(progress: _arcAnim.value),
                   size: MediaQuery.sizeOf(context),
                 ),
               ),
@@ -172,8 +173,8 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
                       animation: _glowAnim,
                       builder: (_, __) => Icon(
                         Icons.fingerprint,
-                        color: AppColors.fingerCyan.withAlpha(
-                            (55 + 90 * _glowAnim.value).round()),
+                        color: AppColors.fingerCyan
+                            .withAlpha((55 + 90 * _glowAnim.value).round()),
                         size: 60,
                       ),
                     ),
@@ -183,8 +184,8 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
                       builder: (_, __) => Text(
                         l10n.placeFingers,
                         style: TextStyle(
-                          color: AppColors.fingerCyan.withAlpha(
-                              (100 + 80 * _glowAnim.value).round()),
+                          color: AppColors.fingerCyan
+                              .withAlpha((100 + 80 * _glowAnim.value).round()),
                           fontSize: 22,
                           letterSpacing: 5,
                           fontWeight: FontWeight.w300,
@@ -206,8 +207,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
             ),
 
           // ─── 只有 1 根手指时的提示 ────────────────────────────────
-          if (state.fingers.length == 1 &&
-              state.phase == PickerPhase.waiting)
+          if (state.fingers.length == 1 && state.phase == PickerPhase.waiting)
             Positioned(
               bottom: 90,
               left: 0,
@@ -239,8 +239,8 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
                     builder: (_, __) => Text(
                       l10n.locked,
                       style: TextStyle(
-                        color: AppColors.fingerCyan.withAlpha(
-                            (100 + 80 * _glowAnim.value).round()),
+                        color: AppColors.fingerCyan
+                            .withAlpha((100 + 80 * _glowAnim.value).round()),
                         fontSize: 15,
                         letterSpacing: 3,
                       ),
@@ -390,8 +390,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
           // ─── 顶部工具栏（SafeArea）────────────────────────────────
           SafeArea(
             child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
               child: Row(
                 children: [
                   // 返回按钮（仅在可安全返回的阶段显示）
@@ -431,6 +430,15 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
                         ),
                       ),
                     ),
+                  if (_showHelpButton)
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: GameHelpButton(
+                        onTap: _showGameHelp,
+                        iconColor: AppColors.textSecondary,
+                        borderColor: AppColors.textDim,
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -456,6 +464,29 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
 
   // ──────────────────── 弹窗 ─────────────────────────────────────
 
+  void _initGameHelp() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
+      await GameHelpService.ensureFirstTimeShown(
+        context: context,
+        gameId: 'finger_picker',
+        gameTitle: l10n.fingerPicker,
+        helpBody: l10n.t('helpFingerPickerBody'),
+      );
+      if (mounted) setState(() => _showHelpButton = true);
+    });
+  }
+
+  void _showGameHelp() {
+    final l10n = AppLocalizations.of(context);
+    GameHelpService.showGameHelpDialog(
+      context,
+      gameTitle: l10n.fingerPicker,
+      helpBody: l10n.t('helpFingerPickerBody'),
+    );
+  }
+
   void _showEscapeDialog() {
     if (!mounted) return;
     final l10n = AppLocalizations.of(context);
@@ -468,7 +499,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
           borderRadius: BorderRadius.circular(20),
           side: BorderSide(color: AppColors.bombRed.withAlpha(100)),
         ),
-          title: Text(
+        title: Text(
           l10n.someoneEscaped,
           style: const TextStyle(
             color: Colors.white,
@@ -587,9 +618,8 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: selected
-                          ? AppColors.fingerCyan
-                          : AppColors.textDim,
+                      color:
+                          selected ? AppColors.fingerCyan : AppColors.textDim,
                       width: selected ? 2 : 1,
                     ),
                     color: selected
@@ -641,8 +671,7 @@ class _ResultOverlayContent extends StatelessWidget {
         builder: (_, v, child) => Transform.scale(scale: v, child: child),
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 48),
-          padding:
-              const EdgeInsets.symmetric(horizontal: 28, vertical: 18),
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 18),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             color: Colors.black.withAlpha(200),
@@ -660,10 +689,10 @@ class _ResultOverlayContent extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-                    Text(
-                      winners.length == 1
-                      ? '🎉  ${l10n.victor}'
-                      : '🎉  ${l10n.victorsCount(winners.length)}',
+              Text(
+                winners.length == 1
+                    ? '🎉  ${l10n.victor}'
+                    : '🎉  ${l10n.victorsCount(winners.length)}',
                 style: TextStyle(
                   color: accentColor.withAlpha(220),
                   fontSize: 11,
