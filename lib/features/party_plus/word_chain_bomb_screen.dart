@@ -6,6 +6,11 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/help/game_help_service.dart';
 import '../../core/haptics/haptic_service.dart';
+import '../../features/penalty_plugin/application/penalty_resolver.dart';
+import '../../features/penalty_plugin/application/penalty_runtime.dart';
+import '../../features/penalty_plugin/domain/penalty_models.dart';
+import '../../features/penalty_plugin/domain/penalty_policy.dart';
+import '../../features/penalty_plugin/presentation/penalty_picker_sheet.dart';
 import '../../features/settings/providers/settings_provider.dart';
 import '../../l10n/app_localizations.dart';
 import 'logic/timed_round_logic.dart';
@@ -65,6 +70,8 @@ class _WordChainBombScreenState extends ConsumerState<WordChainBombScreen> {
   bool _exploded = false;
   String _starterWord = '';
   String _penalty = '';
+  PenaltyResolution? _penaltyResolution;
+  PenaltyItem? _selectedPenalty;
   bool _showHelpButton = false;
 
   @override
@@ -92,16 +99,37 @@ class _WordChainBombScreenState extends ConsumerState<WordChainBombScreen> {
       random: _random,
     );
 
+    PenaltyResolution? resolution;
+    PenaltyItem? selected;
+    String penaltyText;
+    try {
+      resolution = defaultPenaltyResolver.resolve(
+        policy: penaltyPolicyFromSettings(settings),
+        context: const PenaltyContext(
+          gameId: 'word_bomb',
+          loserCount: 1,
+          round: 1,
+        ),
+        random: _random,
+      );
+      selected = resolution.selected;
+      penaltyText = l10n.t(selected.textKey);
+    } catch (_) {
+      penaltyText = PartyPlusStrings.randomPenalty(
+        context,
+        _random,
+        alcoholPenaltyEnabled: settings.alcoholPenaltyEnabled,
+      );
+    }
+
     setState(() {
       _roundSeconds = round.durationSeconds;
       _remainingMs = round.durationSeconds * 1000;
       _holderIndex = round.holderIndex;
       _starterWord = pickRandomWord(starters, _random);
-      _penalty = PartyPlusStrings.randomPenalty(
-        context,
-        _random,
-        alcoholPenaltyEnabled: settings.alcoholPenaltyEnabled,
-      );
+      _penalty = penaltyText;
+      _penaltyResolution = resolution;
+      _selectedPenalty = selected;
       _running = true;
       _exploded = false;
     });
@@ -127,6 +155,22 @@ class _WordChainBombScreenState extends ConsumerState<WordChainBombScreen> {
     if (!_running) return;
     setState(() => _holderIndex = (_holderIndex + 1) % _playerCount);
     HapticService.selectionClick();
+  }
+
+  Future<void> _openPenaltyPicker() async {
+    if (_penaltyResolution == null || _selectedPenalty == null) return;
+    final l10n = AppLocalizations.of(context);
+    final selected = await showPenaltyPickerSheet(
+      context,
+      candidates: _penaltyResolution!.candidates,
+      selected: _selectedPenalty!,
+      labelBuilder: (item) => l10n.t(item.textKey),
+    );
+    if (selected == null || !mounted) return;
+    setState(() {
+      _selectedPenalty = selected;
+      _penalty = l10n.t(selected.textKey);
+    });
   }
 
   @override
@@ -270,6 +314,25 @@ class _WordChainBombScreenState extends ConsumerState<WordChainBombScreen> {
                       ),
                     ),
                   ),
+                  if (_exploded &&
+                      _penaltyResolution != null &&
+                      _selectedPenalty != null)
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: OutlinedButton(
+                        key: const Key('open-penalty-picker'),
+                        onPressed: _openPenaltyPicker,
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(
+                            color: AppColors.fingerCyan.withAlpha(180),
+                          ),
+                        ),
+                        child: Text(
+                          l10n.t('penaltyChoose'),
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
                   Row(
                     children: [
                       Expanded(

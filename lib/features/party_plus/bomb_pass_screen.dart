@@ -6,6 +6,11 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/help/game_help_service.dart';
 import '../../core/haptics/haptic_service.dart';
+import '../../features/penalty_plugin/application/penalty_resolver.dart';
+import '../../features/penalty_plugin/application/penalty_runtime.dart';
+import '../../features/penalty_plugin/domain/penalty_models.dart';
+import '../../features/penalty_plugin/domain/penalty_policy.dart';
+import '../../features/penalty_plugin/presentation/penalty_picker_sheet.dart';
 import '../../features/settings/providers/settings_provider.dart';
 import '../../l10n/app_localizations.dart';
 import 'logic/timed_round_logic.dart';
@@ -34,6 +39,8 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen>
   bool _running = false;
   bool _exploded = false;
   String _penalty = '';
+  PenaltyResolution? _penaltyResolution;
+  PenaltyItem? _selectedPenalty;
   bool _showHelpButton = false;
 
   @override
@@ -65,6 +72,7 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen>
   void _startRound() {
     _timer?.cancel();
     _hapticTimer?.cancel();
+    final l10n = AppLocalizations.of(context);
     final settings = ref.read(settingsProvider).value ?? const AppSettings();
     final round = createTimedHolderRound(
       playerCount: _playerCount,
@@ -73,15 +81,36 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen>
       random: _random,
     );
 
-    setState(() {
-      _roundSeconds = round.durationSeconds;
-      _remainingMs = round.durationSeconds * 1000;
-      _holderIndex = round.holderIndex;
-      _penalty = PartyPlusStrings.randomPenalty(
+    PenaltyResolution? resolution;
+    PenaltyItem? selected;
+    String penaltyText;
+    try {
+      resolution = defaultPenaltyResolver.resolve(
+        policy: penaltyPolicyFromSettings(settings),
+        context: const PenaltyContext(
+          gameId: 'pass_bomb',
+          loserCount: 1,
+          round: 1,
+        ),
+        random: _random,
+      );
+      selected = resolution.selected;
+      penaltyText = l10n.t(selected.textKey);
+    } catch (_) {
+      penaltyText = PartyPlusStrings.randomPenalty(
         context,
         _random,
         alcoholPenaltyEnabled: settings.alcoholPenaltyEnabled,
       );
+    }
+
+    setState(() {
+      _roundSeconds = round.durationSeconds;
+      _remainingMs = round.durationSeconds * 1000;
+      _holderIndex = round.holderIndex;
+      _penalty = penaltyText;
+      _penaltyResolution = resolution;
+      _selectedPenalty = selected;
       _running = true;
       _exploded = false;
     });
@@ -131,6 +160,22 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen>
     HapticService.selectionClick();
     setState(() {
       _holderIndex = (_holderIndex + 1) % _playerCount;
+    });
+  }
+
+  Future<void> _openPenaltyPicker() async {
+    if (_penaltyResolution == null || _selectedPenalty == null) return;
+    final l10n = AppLocalizations.of(context);
+    final selected = await showPenaltyPickerSheet(
+      context,
+      candidates: _penaltyResolution!.candidates,
+      selected: _selectedPenalty!,
+      labelBuilder: (item) => l10n.t(item.textKey),
+    );
+    if (selected == null || !mounted) return;
+    setState(() {
+      _selectedPenalty = selected;
+      _penalty = l10n.t(selected.textKey);
     });
   }
 
@@ -295,15 +340,34 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen>
                         border:
                             Border.all(color: AppColors.bombRed.withAlpha(160)),
                       ),
-                      child: Text(
-                        l10n.t('penaltyResult', {
-                          'player':
-                              PartyPlusStrings.player(context, _holderIndex),
-                          'penalty': _penalty,
-                        }),
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 14),
-                        textAlign: TextAlign.center,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            l10n.t('penaltyResult', {
+                              'player': PartyPlusStrings.player(
+                                  context, _holderIndex),
+                              'penalty': _penalty,
+                            }),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          if (_penaltyResolution != null &&
+                              _selectedPenalty != null) ...[
+                            const SizedBox(height: 10),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: OutlinedButton(
+                                key: const Key('open-penalty-picker'),
+                                onPressed: _openPenaltyPicker,
+                                child: Text(l10n.t('penaltyChoose')),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                   SizedBox(
