@@ -35,6 +35,9 @@ void main() {
     final settingsRect =
         tester.getRect(find.byKey(const Key('hub-settings-button')));
     expect(settingsRect.top, lessThan(120));
+
+    expect(find.text('Word Bomb'), findsNothing);
+    expect(find.text('Challenge Auction'), findsNothing);
   });
 }
 
@@ -43,10 +46,10 @@ class _TestApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: const HubScreen(),
-      supportedLocales: const [Locale('zh'), Locale('en')],
-      localizationsDelegates: const [
+    return const MaterialApp(
+      home: HubScreen(),
+      supportedLocales: [Locale('zh'), Locale('en')],
+      localizationsDelegates: [
         AppLocalizationsDelegate(),
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
