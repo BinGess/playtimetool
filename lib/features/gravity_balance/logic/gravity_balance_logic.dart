@@ -39,8 +39,9 @@ VerletBallState simulateVerletStep({
       externalAcceleration;
 
   final dampedVelocity = state.velocity * dampingFactor;
-  final nextPosition =
-      state.position + dampedVelocity + acceleration * (deltaSeconds * deltaSeconds);
+  final nextPosition = state.position +
+      dampedVelocity +
+      acceleration * (deltaSeconds * deltaSeconds);
 
   return VerletBallState(
     position: nextPosition,
@@ -72,7 +73,8 @@ class GravityBalancePathGenerator {
     final anchorCount = 5 + random.nextInt(4);
     final topPadding = max(ballDiameter * 1.2, 24.0);
     final bottomPadding = max(ballDiameter * 1.2, 24.0);
-    final verticalSpan = max(1.0, arenaSize.height - topPadding - bottomPadding);
+    final verticalSpan =
+        max(1.0, arenaSize.height - topPadding - bottomPadding);
 
     final centerX = arenaSize.width / 2;
     final horizontalSpread = max(ballDiameter, arenaSize.width * 0.32);
@@ -85,7 +87,8 @@ class GravityBalancePathGenerator {
         anchors.add(Offset(centerX, y));
       } else {
         final noise = (random.nextDouble() * 2 - 1) * horizontalSpread;
-        final x = (centerX + noise).clamp(ballDiameter, arenaSize.width - ballDiameter);
+        final x = (centerX + noise)
+            .clamp(ballDiameter, arenaSize.width - ballDiameter);
         anchors.add(Offset(x, y));
       }
     }
@@ -144,8 +147,8 @@ class ShockScheduler {
     required this.random,
     this.minIntervalSeconds = 3,
     this.maxIntervalSeconds = 7,
-  }) : _nextTriggerSeconds =
-            minIntervalSeconds + random.nextDouble() * (maxIntervalSeconds - minIntervalSeconds);
+  }) : _nextTriggerSeconds = minIntervalSeconds +
+            random.nextDouble() * (maxIntervalSeconds - minIntervalSeconds);
 
   final Random random;
   final double minIntervalSeconds;
@@ -159,8 +162,8 @@ class ShockScheduler {
     if (elapsedSeconds < _nextTriggerSeconds) {
       return false;
     }
-    final nextInterval =
-        minIntervalSeconds + random.nextDouble() * (maxIntervalSeconds - minIntervalSeconds);
+    final nextInterval = minIntervalSeconds +
+        random.nextDouble() * (maxIntervalSeconds - minIntervalSeconds);
     _nextTriggerSeconds = elapsedSeconds + nextInterval;
     return true;
   }
@@ -255,7 +258,8 @@ List<Offset> applyPathSway({
       return baseCenterline[index];
     }
 
-    final influence = ((progress - startProgress) / (1 - startProgress)).clamp(0.0, 1.0);
+    final influence =
+        ((progress - startProgress) / (1 - startProgress)).clamp(0.0, 1.0);
     return baseCenterline[index].translate(waveOffset * influence, 0);
   });
 }
@@ -320,7 +324,9 @@ PolylineProjection projectPointToPolyline(Offset point, List<Offset> polyline) {
     traversed += segmentLengths[i];
   }
 
-  final progress = totalLength <= 0 ? 0.0 : (bestProgressDistance / totalLength).clamp(0.0, 1.0);
+  final progress = totalLength <= 0
+      ? 0.0
+      : (bestProgressDistance / totalLength).clamp(0.0, 1.0);
 
   return PolylineProjection(
     distance: bestDistance,

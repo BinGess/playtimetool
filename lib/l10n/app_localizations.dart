@@ -55,6 +55,15 @@ class AppLocalizations {
       'truthRaise': '真话或加码',
       'truthRaiseSub': 'TRUTH OR RAISE',
       'truthRaiseDesc': '跳过会不断加码',
+      'bioDetector': '生物检测器',
+      'bioDetectorSub': 'BIO-DETECTOR',
+      'bioDetectorDesc': '心理欺骗扫描',
+      'decibelBomb': '分贝炸弹',
+      'decibelBombSub': 'DECIBEL BOMB',
+      'decibelBombDesc': '按住说话累积能量，噪声突刺瞬间爆炸',
+      'gravityBalance': '平衡边缘',
+      'gravityBalanceSub': 'GRAVITY BALANCE',
+      'gravityBalanceDesc': '倾斜控球，顶住摆动与震荡',
       'iapPriceFallback': '¥1',
       'iapPurchaseTitle': '解锁游戏',
       'iapPurchaseBody': '{game} 需要购买后才能游玩，价格 {price}，购买后可长期使用。',
@@ -194,6 +203,27 @@ class AppLocalizations {
       'passBombSecondsLeft': '剩余 {seconds} 秒',
       'passBombPassButton': '传递炸弹',
       'passBombDanger': '随时可能爆炸...',
+      'decibelBombRequestingPermission': '正在申请麦克风权限...',
+      'decibelBombPermissionDenied': '麦克风权限未开启',
+      'decibelBombPermissionPermanentlyDenied': '权限被系统拒绝，请前往系统设置开启麦克风',
+      'decibelBombPermissionRestricted': '当前设备受系统限制，无法使用麦克风权限',
+      'decibelBombCalibrating': '环境音校准中（2秒）',
+      'decibelBombSpeaking': '采集中，继续说话',
+      'decibelBombExploded': '炸弹已爆炸',
+      'decibelBombReadyHint': '按住 Speak 说话，点击“下一位”接力',
+      'decibelBombSpeakHold': '按住 Speak',
+      'decibelBombCurrentDb': '当前分贝',
+      'decibelBombBaseline': '环境底噪',
+      'decibelBombSensitivity': '敏感度 S',
+      'decibelBombEnergy': '能量桶',
+      'decibelBombExplosionReason': '爆炸原因',
+      'decibelBombHandoffPenalty': '接力后 0.5 秒检测到突刺噪音',
+      'decibelBombLoudPenalty': '持续音量过高，能量桶溢出',
+      'decibelBombExplodedByHandoff': '{player} 接力瞬间触发噪音突刺爆炸',
+      'decibelBombExplodedByEnergy': '{player} 说话累计能量溢出爆炸',
+      'decibelBombRecalibrate': '重新校准开局',
+      'decibelBombGrantPermission': '重新请求权限',
+      'decibelBombOpenSettings': '去系统设置',
 
       // Gesture Duel
       'gestureModeMinority': '模式：少数受罚',
@@ -230,6 +260,17 @@ class AppLocalizations {
       'leftRightWaitingSwipe': '等待滑动...',
       'leftRightBeginReaction': '开始反应',
       'leftRightFinalPenalties': '最终罚分',
+      'gravityBalanceRule': '将液态球保持在轨迹内，到达终点即获胜。\n进度过半后轨迹摆动，随机地震会强行冲击。',
+      'gravityBalanceQuake': '⚠ 地震冲击！立刻反向倾斜',
+      'gravityBalanceCompleted': '完美通关',
+      'gravityBalanceExploded': '轨迹失守，球体炸裂',
+      'gravityBalanceRetry': '重开一局',
+      'bioDetectorHoldStart': '长按开始检测',
+      'bioDetectorSamplingHint1': '读取毛细血管收缩压...',
+      'bioDetectorSamplingHint2': '分析皮电反应...',
+      'bioDetectorWarnBreath': '[WARN] 呼吸频率异常',
+      'bioDetectorWarnCortex': '[WARN] 逻辑皮层活跃度增高',
+      'bioDetectorRetry': '再测一次',
 
       // Word Bomb
       'wordBombCategory': '词库分类',
@@ -343,6 +384,12 @@ class AppLocalizations {
           '每位玩家先为挑战出价。\n最低价中标并执行挑战。\n成功/失败按当前模式结算。\n酒精惩罚关闭后自动改为纯净积分规则。',
       'helpTruthRaiseBody':
           '轮到你时可“回答”或“跳过+加码”。\n回答会重置加码。\n跳过会提高本轮加码并累积罚分。\n回合结束后按总罚分结算。',
+      'helpBioDetectorBody':
+          '长按指纹区域启动伪生物检测。\n采样阶段会显示红色脉搏波与滚动分析提示。\n高压阶段震动会从 60bpm 提升至 120bpm，并随机出现告警。\n角落隐藏热区可操纵真/假结果。',
+      'helpDecibelBombBody':
+          '进入游戏会立即申请麦克风权限。\n先静默 2 秒自动校准环境底噪。\n按住 Speak 时才累计能量，越吵越危险。\n点击“下一位”后的 0.5 秒若出现突刺噪音会直接爆炸。',
+      'helpGravityBalanceBody':
+          '通过手机倾斜控制液态球，始终停留在贝塞尔轨迹内。\n若出界会触发 0.3 秒红色缓冲，未回正就会炸裂。\n进度达到 50% 后轨迹将以 0.5Hz 左右摆动。\n随机地震会触发重冲击，必须反向大幅倾斜抵消。',
     },
     'en': {
       'appTitle': 'Finger Party',
@@ -387,6 +434,15 @@ class AppLocalizations {
       'truthRaise': 'Truth or Raise',
       'truthRaiseSub': 'TRUTH OR RAISE',
       'truthRaiseDesc': 'Skip keeps raising stakes',
+      'bioDetector': 'Bio-Detector',
+      'bioDetectorSub': 'BIO-DETECTOR',
+      'bioDetectorDesc': 'Psychological deception scan',
+      'decibelBomb': 'Decibel Bomb',
+      'decibelBombSub': 'DECIBEL BOMB',
+      'decibelBombDesc': 'Hold to speak, charge energy, spike noise to explode',
+      'gravityBalance': 'Gravity Balance',
+      'gravityBalanceSub': 'GRAVITY BALANCE',
+      'gravityBalanceDesc': 'Tilt to steer through sway and quakes',
       'iapPriceFallback': '\$1',
       'iapPurchaseTitle': 'Unlock game',
       'iapPurchaseBody':
@@ -524,6 +580,31 @@ class AppLocalizations {
       'passBombSecondsLeft': '{seconds}s left',
       'passBombPassButton': 'Pass bomb',
       'passBombDanger': 'Could explode any moment...',
+      'decibelBombRequestingPermission': 'Requesting microphone permission...',
+      'decibelBombPermissionDenied': 'Microphone permission is required',
+      'decibelBombPermissionPermanentlyDenied':
+          'Permission blocked by system, open Settings to enable microphone',
+      'decibelBombPermissionRestricted':
+          'Microphone permission is restricted on this device',
+      'decibelBombCalibrating': 'Calibrating ambient noise (2s)',
+      'decibelBombSpeaking': 'Collecting voice, keep talking',
+      'decibelBombExploded': 'Bomb exploded',
+      'decibelBombReadyHint': 'Hold Speak to talk, tap "Next" to pass',
+      'decibelBombSpeakHold': 'Hold Speak',
+      'decibelBombCurrentDb': 'Current dB',
+      'decibelBombBaseline': 'Ambient baseline',
+      'decibelBombSensitivity': 'Sensitivity S',
+      'decibelBombEnergy': 'Energy bucket',
+      'decibelBombExplosionReason': 'Explosion reason',
+      'decibelBombHandoffPenalty': 'Noise spike in 0.5s handoff window',
+      'decibelBombLoudPenalty': 'Continuous loudness overflowed bucket',
+      'decibelBombExplodedByHandoff':
+          '{player} triggered a handoff spike explosion',
+      'decibelBombExplodedByEnergy':
+          '{player} overflowed the energy bucket by speaking',
+      'decibelBombRecalibrate': 'Recalibrate round',
+      'decibelBombGrantPermission': 'Request permission again',
+      'decibelBombOpenSettings': 'Open settings',
 
       // Gesture Duel
       'gestureModeMinority': 'Mode: minority loses',
@@ -564,6 +645,18 @@ class AppLocalizations {
       'leftRightWaitingSwipe': 'Waiting swipe...',
       'leftRightBeginReaction': 'Begin reaction',
       'leftRightFinalPenalties': 'Final penalties',
+      'gravityBalanceRule':
+          'Keep the liquid ball inside the lane until the finish.\nAfter 50% progress, the track starts swaying and quake shocks may knock you out.',
+      'gravityBalanceQuake': '⚠ QUAKE SHOCK! Counter-tilt now',
+      'gravityBalanceCompleted': 'Level cleared',
+      'gravityBalanceExploded': 'Track lost, ball shattered',
+      'gravityBalanceRetry': 'Retry',
+      'bioDetectorHoldStart': 'Hold to begin scan',
+      'bioDetectorSamplingHint1': 'Reading capillary constriction...',
+      'bioDetectorSamplingHint2': 'Analyzing galvanic response...',
+      'bioDetectorWarnBreath': '[WARN] Respiration anomaly',
+      'bioDetectorWarnCortex': '[WARN] Cortex activity elevated',
+      'bioDetectorRetry': 'Run again',
 
       // Word Bomb
       'wordBombCategory': 'Category',
@@ -691,6 +784,12 @@ class AppLocalizations {
           'All players bid to take the challenge.\nLowest bid wins and must perform it.\nSuccess/fail follows current rule mode.\nIf alcohol mode is off, it switches to pure point rules.',
       'helpTruthRaiseBody':
           'On your turn, choose “Answer” or “Skip + Raise”.\nAnswer resets raise level.\nSkip increases raise and accumulates penalties.\nEnd of rounds is settled by total penalties.',
+      'helpBioDetectorBody':
+          'Long-press the fingerprint zone to start fake bio-analysis.\nSampling stage shows a red pulse wave and rolling readouts.\nPressure stage ramps haptics from 60bpm to 120bpm with random warnings.\nHidden corner hotspots can force truth/lie outcome.',
+      'helpDecibelBombBody':
+          'The game requests microphone access on entry.\nStay quiet for 2 seconds to calibrate ambient baseline.\nEnergy only increases while holding Speak.\nAfter tapping Next, any >20dB spike in 0.5s explodes immediately.',
+      'helpGravityBalanceBody':
+          'Tilt your phone to move the liquid ball with gravity.\nStay inside the Bezier lane or a 0.3s red warning buffer starts.\nAfter 50% progress, the path sways left-right at 0.5Hz.\nRandom heavy quake shocks require strong counter-tilt to survive.',
     },
   };
 

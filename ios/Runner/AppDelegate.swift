@@ -6,6 +6,7 @@ import CoreMotion
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private let deviceMotionStreamHandler = DeviceMotionStreamHandler()
+  private var deviceMotionChannel: FlutterEventChannel?
 
   override func application(
     _ application: UIApplication,
@@ -23,19 +24,20 @@ import CoreMotion
       print("AVAudioSession setup error: \(error)")
     }
 
-    if let controller = window?.rootViewController as? FlutterViewController {
-      let deviceMotionChannel = FlutterEventChannel(
-        name: "playtimetool/device_motion",
-        binaryMessenger: controller.binaryMessenger
-      )
-      deviceMotionChannel.setStreamHandler(deviceMotionStreamHandler)
-    }
-
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+
+    // With implicit engines, bind channels to the engine registrar messenger
+    // instead of window/rootViewController.
+    let motionChannel = FlutterEventChannel(
+      name: "playtimetool/device_motion",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+    motionChannel.setStreamHandler(deviceMotionStreamHandler)
+    deviceMotionChannel = motionChannel
   }
 }
 

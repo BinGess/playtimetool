@@ -62,9 +62,9 @@ void main() {
   });
 
   test('verlet integrator keeps 2% damping per frame without acceleration', () {
-    final state = VerletBallState(
-      position: const Offset(100, 100),
-      previousPosition: const Offset(90, 100),
+    const state = VerletBallState(
+      position: Offset(100, 100),
+      previousPosition: Offset(90, 100),
     );
 
     final next = simulateVerletStep(

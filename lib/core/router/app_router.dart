@@ -10,6 +10,9 @@ import '../../features/party_plus/bomb_pass_screen.dart';
 import '../../features/party_plus/gesture_duel_screen.dart';
 import '../../features/party_plus/left_right_react_screen.dart';
 import '../../features/party_plus/truth_or_raise_screen.dart';
+import '../../features/party_plus/bio_detector_screen.dart';
+import '../../features/gravity_balance/gravity_balance_screen.dart';
+import '../../features/decibel_bomb/decibel_bomb_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -71,6 +74,30 @@ final appRouter = GoRouter(
       pageBuilder: (_, state) => CustomTransitionPage(
         key: state.pageKey,
         child: const TruthOrRaiseScreen(),
+        transitionsBuilder: _fadeSlideTransition,
+      ),
+    ),
+    GoRoute(
+      path: '/games/bio-detector',
+      pageBuilder: (_, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const BioDetectorScreen(),
+        transitionsBuilder: _fadeSlideTransition,
+      ),
+    ),
+    GoRoute(
+      path: '/games/gravity-balance',
+      pageBuilder: (_, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const GravityBalanceScreen(),
+        transitionsBuilder: _fadeSlideTransition,
+      ),
+    ),
+    GoRoute(
+      path: '/games/decibel-bomb',
+      pageBuilder: (_, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const DecibelBombScreen(),
         transitionsBuilder: _fadeSlideTransition,
       ),
     ),

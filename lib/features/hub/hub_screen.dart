@@ -349,6 +349,30 @@ class _HubScreenState extends ConsumerState<HubScreen> {
         icon: Icons.question_answer,
         purchaseProductId: PurchaseCatalog.truthRaiseUnlock,
       ),
+      _HubGameItem(
+        title: l10n.t('bioDetector'),
+        subtitle: l10n.t('bioDetectorSub'),
+        description: l10n.t('bioDetectorDesc'),
+        accentColor: const Color(0xFF42F57E),
+        route: '/games/bio-detector',
+        icon: Icons.monitor_heart,
+      ),
+      _HubGameItem(
+        title: l10n.t('decibelBomb'),
+        subtitle: l10n.t('decibelBombSub'),
+        description: l10n.t('decibelBombDesc'),
+        accentColor: const Color(0xFF00D6FF),
+        route: '/games/decibel-bomb',
+        icon: Icons.graphic_eq,
+      ),
+      _HubGameItem(
+        title: l10n.t('gravityBalance'),
+        subtitle: l10n.t('gravityBalanceSub'),
+        description: l10n.t('gravityBalanceDesc'),
+        accentColor: const Color(0xFF4DFFD8),
+        route: '/games/gravity-balance',
+        icon: Icons.timeline,
+      ),
     ];
   }
 }

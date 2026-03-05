@@ -11,6 +11,7 @@ import 'package:sensors_plus/sensors_plus.dart';
 void main() {
   testWidgets('Hub shows top-right settings icon and cover on each game card',
       (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 2200));
     final testGyro = Stream<GyroscopeEvent>.value(
       GyroscopeEvent(0, 0, 0),
     );
@@ -38,6 +39,15 @@ void main() {
 
     expect(find.text('Word Bomb'), findsNothing);
     expect(find.text('Challenge Auction'), findsNothing);
+    await tester.scrollUntilVisible(
+      find.text('Decibel Bomb'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Decibel Bomb'), findsOneWidget);
+    expect(find.text('Bio-Detector'), findsOneWidget);
+    await tester.binding.setSurfaceSize(null);
   });
 }
 
@@ -47,6 +57,7 @@ class _TestApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const MaterialApp(
+      locale: Locale('en'),
       home: HubScreen(),
       supportedLocales: [Locale('zh'), Locale('en')],
       localizationsDelegates: [
