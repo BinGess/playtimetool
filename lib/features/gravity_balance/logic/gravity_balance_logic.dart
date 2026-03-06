@@ -1,6 +1,109 @@
 import 'dart:math';
 import 'dart:ui';
 
+enum GravityBalanceDifficulty { easy, medium, hard }
+
+class GravityBalanceSessionResult {
+  const GravityBalanceSessionResult({
+    required this.playerIndex,
+    required this.success,
+    required this.elapsedSeconds,
+  });
+
+  final int playerIndex;
+  final bool success;
+  final double elapsedSeconds;
+}
+
+class GravityBalanceDifficultyConfig {
+  const GravityBalanceDifficultyConfig({
+    required this.minAnchors,
+    required this.maxAnchors,
+    required this.horizontalSpreadFactor,
+    required this.swayAmplitudeMultiplier,
+    required this.swayStartProgress,
+  });
+
+  final int minAnchors;
+  final int maxAnchors;
+  final double horizontalSpreadFactor;
+  final double swayAmplitudeMultiplier;
+  final double swayStartProgress;
+}
+
+GravityBalanceDifficulty parseGravityBalanceDifficulty(String? raw) {
+  return switch (raw) {
+    'easy' => GravityBalanceDifficulty.easy,
+    'hard' => GravityBalanceDifficulty.hard,
+    _ => GravityBalanceDifficulty.medium,
+  };
+}
+
+int parseGravityBalanceParticipantCount(
+  String? raw, {
+  int min = 1,
+  int max = 8,
+  int fallback = 2,
+}) {
+  final parsed = int.tryParse(raw ?? '');
+  if (parsed == null) {
+    return fallback;
+  }
+  return parsed.clamp(min, max).toInt();
+}
+
+String gravityBalanceDifficultyId(GravityBalanceDifficulty difficulty) {
+  return switch (difficulty) {
+    GravityBalanceDifficulty.easy => 'easy',
+    GravityBalanceDifficulty.medium => 'medium',
+    GravityBalanceDifficulty.hard => 'hard',
+  };
+}
+
+GravityBalanceSessionResult? gravityBalanceChampion(
+  List<GravityBalanceSessionResult> results,
+) {
+  if (results.isEmpty || results.any((result) => !result.success)) {
+    return null;
+  }
+
+  var champion = results.first;
+  for (final result in results.skip(1)) {
+    if (result.elapsedSeconds < champion.elapsedSeconds) {
+      champion = result;
+    }
+  }
+  return champion;
+}
+
+GravityBalanceDifficultyConfig gravityBalanceDifficultyConfig(
+  GravityBalanceDifficulty difficulty,
+) {
+  return switch (difficulty) {
+    GravityBalanceDifficulty.easy => const GravityBalanceDifficultyConfig(
+        minAnchors: 4,
+        maxAnchors: 5,
+        horizontalSpreadFactor: 0.14,
+        swayAmplitudeMultiplier: 0.45,
+        swayStartProgress: 0.65,
+      ),
+    GravityBalanceDifficulty.medium => const GravityBalanceDifficultyConfig(
+        minAnchors: 5,
+        maxAnchors: 7,
+        horizontalSpreadFactor: 0.28,
+        swayAmplitudeMultiplier: 0.9,
+        swayStartProgress: 0.5,
+      ),
+    GravityBalanceDifficulty.hard => const GravityBalanceDifficultyConfig(
+        minAnchors: 7,
+        maxAnchors: 9,
+        horizontalSpreadFactor: 0.4,
+        swayAmplitudeMultiplier: 1.3,
+        swayStartProgress: 0.38,
+      ),
+  };
+}
+
 class DeviceTilt {
   const DeviceTilt({
     required this.pitch,
@@ -69,15 +172,21 @@ class GravityBalancePathGenerator {
     required Random random,
     required Size arenaSize,
     required double ballDiameter,
+    GravityBalanceDifficulty difficulty = GravityBalanceDifficulty.medium,
   }) {
-    final anchorCount = 5 + random.nextInt(4);
+    final config = gravityBalanceDifficultyConfig(difficulty);
+    final anchorCount = config.minAnchors +
+        random.nextInt(config.maxAnchors - config.minAnchors + 1);
     final topPadding = max(ballDiameter * 1.2, 24.0);
     final bottomPadding = max(ballDiameter * 1.2, 24.0);
     final verticalSpan =
         max(1.0, arenaSize.height - topPadding - bottomPadding);
 
     final centerX = arenaSize.width / 2;
-    final horizontalSpread = max(ballDiameter, arenaSize.width * 0.32);
+    final horizontalSpread = max(
+      ballDiameter * 0.45,
+      arenaSize.width * config.horizontalSpreadFactor,
+    );
 
     final anchors = <Offset>[];
     for (int i = 0; i < anchorCount; i++) {

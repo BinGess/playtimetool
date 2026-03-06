@@ -12,6 +12,8 @@ import '../../features/party_plus/left_right_react_screen.dart';
 import '../../features/party_plus/truth_or_raise_screen.dart';
 import '../../features/party_plus/bio_detector_screen.dart';
 import '../../features/gravity_balance/gravity_balance_screen.dart';
+import '../../features/gravity_balance/gravity_balance_prep_screen.dart';
+import '../../features/gravity_balance/logic/gravity_balance_logic.dart';
 import '../../features/decibel_bomb/decibel_bomb_screen.dart';
 
 final appRouter = GoRouter(
@@ -89,9 +91,28 @@ final appRouter = GoRouter(
       path: '/games/gravity-balance',
       pageBuilder: (_, state) => CustomTransitionPage(
         key: state.pageKey,
-        child: const GravityBalanceScreen(),
+        child: const GravityBalancePrepScreen(),
         transitionsBuilder: _fadeSlideTransition,
       ),
+    ),
+    GoRoute(
+      path: '/games/gravity-balance/play',
+      pageBuilder: (_, state) {
+        final difficulty = parseGravityBalanceDifficulty(
+          state.uri.queryParameters['difficulty'],
+        );
+        final participantCount = parseGravityBalanceParticipantCount(
+          state.uri.queryParameters['players'],
+        );
+        return CustomTransitionPage(
+          key: state.pageKey,
+          child: GravityBalanceScreen(
+            difficulty: difficulty,
+            participantCount: participantCount,
+          ),
+          transitionsBuilder: _fadeSlideTransition,
+        );
+      },
     ),
     GoRoute(
       path: '/games/decibel-bomb',

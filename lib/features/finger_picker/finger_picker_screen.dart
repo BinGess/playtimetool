@@ -6,6 +6,7 @@ import '../../core/help/game_help_service.dart';
 import '../../core/constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/services/penalty_service.dart';
+import '../../shared/styles/game_ui_style.dart';
 import '../../shared/widgets/game_result_action_bar.dart';
 import '../../shared/widgets/game_result_template_card.dart';
 import '../../shared/widgets/web3_game_background.dart';
@@ -425,9 +426,8 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
                                 const SizedBox(width: 5),
                                 Text(
                                   l10n.selectWinnersCount(state.maxWinners),
-                                  style: const TextStyle(
+                                  style: GameUiText.caption.copyWith(
                                     color: AppColors.textDim,
-                                    fontSize: 12,
                                     letterSpacing: 1,
                                   ),
                                 ),
@@ -508,19 +508,15 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
         ),
         title: Text(
           l10n.someoneEscaped,
-          style: const TextStyle(
-            color: Colors.white,
+          style: GameUiText.sectionTitle.copyWith(
             fontSize: 22,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
           ),
           textAlign: TextAlign.center,
         ),
         content: Text(
           l10n.escapeHint,
-          style: const TextStyle(
-            color: AppColors.textSecondary,
-            height: 1.6,
-          ),
+          style: GameUiText.body,
           textAlign: TextAlign.center,
         ),
         actions: [
@@ -531,7 +527,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
             },
             child: Text(
               l10n.okRetry,
-              style: const TextStyle(
+              style: GameUiText.bodyStrong.copyWith(
                 color: AppColors.fingerCyan,
                 fontSize: 15,
               ),
@@ -556,19 +552,15 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
         ),
         title: Text(
           l10n.overflowTitle,
-          style: const TextStyle(
-            color: Colors.white,
+          style: GameUiText.sectionTitle.copyWith(
             fontSize: 22,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
           ),
           textAlign: TextAlign.center,
         ),
         content: Text(
           l10n.overflowHint,
-          style: const TextStyle(
-            color: AppColors.textSecondary,
-            height: 1.6,
-          ),
+          style: GameUiText.body,
           textAlign: TextAlign.center,
         ),
         actions: [
@@ -579,7 +571,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
             },
             child: Text(
               l10n.ok,
-              style: const TextStyle(
+              style: GameUiText.bodyStrong.copyWith(
                 color: AppColors.fingerCyan,
                 fontSize: 15,
               ),
@@ -605,7 +597,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
           ),
           title: Text(
             l10n.selectWinners,
-            style: const TextStyle(color: Colors.white),
+            style: GameUiText.bodyStrong,
             textAlign: TextAlign.center,
           ),
           content: Row(

@@ -25,6 +25,7 @@ void main() {
 
     expect(find.text('平衡边缘'), findsOneWidget);
     expect(find.textContaining('液态球'), findsOneWidget);
+    expect(find.text('当前玩家 1/2'), findsOneWidget);
     expect(find.byType(CustomPaint), findsWidgets);
   });
 }

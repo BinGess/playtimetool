@@ -7,9 +7,10 @@ import 'package:go_router/go_router.dart';
 import '../../core/help/game_help_service.dart';
 import '../../core/haptics/haptic_service.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/styles/game_ui_style.dart';
 import 'logic/bio_detector_logic.dart';
 
-enum _BioDetectorViewState { idle, running, result }
+enum _BioDetectorViewState { setup, idle, running, roundResult, finalResult }
 
 class BioDetectorScreen extends StatefulWidget {
   const BioDetectorScreen({super.key});
@@ -29,14 +30,19 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
   Timer? _tickTimer;
   Timer? _warnHideTimer;
   DateTime? _startedAt;
+  DateTime? _lastWaveTickAt;
+  double _heartbeatTurns = 0;
 
-  _BioDetectorViewState _viewState = _BioDetectorViewState.idle;
+  _BioDetectorViewState _viewState = _BioDetectorViewState.setup;
   Duration _elapsed = Duration.zero;
   int _messageIndex = 0;
   String? _warningKey;
   int _nextPulseMs = 0;
   int _nextWarnMs = 0;
   bool _showHelpButton = false;
+  int _round = 1;
+  int _totalRounds = 3;
+  final List<BioDetectorResult> _roundResults = [];
 
   BioDetectorCheatOverride _cheatOverride = BioDetectorCheatOverride.none;
   BioDetectorResult? _result;
@@ -96,8 +102,9 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
   }
 
   void _startDetection() {
-    if (_viewState == _BioDetectorViewState.running) return;
+    if (_viewState != _BioDetectorViewState.idle) return;
 
+    final now = DateTime.now();
     _tickTimer?.cancel();
     _warnHideTimer?.cancel();
     _truthPulseController.stop();
@@ -107,7 +114,9 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
 
     setState(() {
       _viewState = _BioDetectorViewState.running;
-      _startedAt = DateTime.now();
+      _startedAt = now;
+      _lastWaveTickAt = now;
+      _heartbeatTurns = 0;
       _elapsed = Duration.zero;
       _messageIndex = 0;
       _warningKey = null;
@@ -124,7 +133,7 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
       }
     });
 
-    _tickTimer = Timer.periodic(const Duration(milliseconds: 50), (_) {
+    _tickTimer = Timer.periodic(const Duration(milliseconds: 33), (_) {
       _tick();
     });
   }
@@ -133,8 +142,10 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
     final startedAt = _startedAt;
     if (startedAt == null || !mounted) return;
 
-    final elapsed = DateTime.now().difference(startedAt);
+    final now = DateTime.now();
+    final elapsed = now.difference(startedAt);
     final phase = flowPhaseForElapsed(elapsed);
+    _advanceHeartbeatClock(now, phase);
 
     if (phase == BioDetectorFlowPhase.result) {
       _tickTimer?.cancel();
@@ -158,7 +169,10 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
         _warningKey = null;
         _result = result;
         _resultConfidencePercent = confidencePercent;
-        _viewState = _BioDetectorViewState.result;
+        _roundResults.add(result);
+        _viewState = _round >= _totalRounds
+            ? _BioDetectorViewState.finalResult
+            : _BioDetectorViewState.roundResult;
       });
       return;
     }
@@ -225,7 +239,40 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
     });
   }
 
+  void _advanceHeartbeatClock(DateTime now, BioDetectorFlowPhase phase) {
+    final lastTickAt = _lastWaveTickAt;
+    _lastWaveTickAt = now;
+    if (lastTickAt == null) return;
+    final dtSeconds = now.difference(lastTickAt).inMicroseconds / 1000000.0;
+    if (dtSeconds <= 0) return;
+    final bpm = _waveBpmForPhase(phase);
+    _heartbeatTurns += dtSeconds * (bpm / 60.0);
+  }
+
   void _reset() {
+    _tickTimer?.cancel();
+    _warnHideTimer?.cancel();
+    _truthPulseController.stop();
+    _lieBlinkController.stop();
+    _truthPulseController.value = 0;
+    _lieBlinkController.value = 0;
+    setState(() {
+      _viewState = _BioDetectorViewState.setup;
+      _startedAt = null;
+      _lastWaveTickAt = null;
+      _heartbeatTurns = 0;
+      _elapsed = Duration.zero;
+      _messageIndex = 0;
+      _warningKey = null;
+      _result = null;
+      _resultConfidencePercent = null;
+      _cheatOverride = BioDetectorCheatOverride.none;
+      _round = 1;
+      _roundResults.clear();
+    });
+  }
+
+  void _startSession() {
     _tickTimer?.cancel();
     _warnHideTimer?.cancel();
     _truthPulseController.stop();
@@ -235,12 +282,38 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
     setState(() {
       _viewState = _BioDetectorViewState.idle;
       _startedAt = null;
+      _lastWaveTickAt = null;
+      _heartbeatTurns = 0;
       _elapsed = Duration.zero;
       _messageIndex = 0;
       _warningKey = null;
       _result = null;
       _resultConfidencePercent = null;
+      _round = 1;
+      _roundResults.clear();
       _cheatOverride = BioDetectorCheatOverride.none;
+    });
+  }
+
+  void _nextRound() {
+    if (_viewState != _BioDetectorViewState.roundResult) return;
+    _tickTimer?.cancel();
+    _warnHideTimer?.cancel();
+    _truthPulseController.stop();
+    _lieBlinkController.stop();
+    _truthPulseController.value = 0;
+    _lieBlinkController.value = 0;
+    setState(() {
+      _viewState = _BioDetectorViewState.idle;
+      _startedAt = null;
+      _lastWaveTickAt = null;
+      _heartbeatTurns = 0;
+      _elapsed = Duration.zero;
+      _messageIndex = 0;
+      _warningKey = null;
+      _result = null;
+      _resultConfidencePercent = null;
+      _round += 1;
     });
   }
 
@@ -251,6 +324,23 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
   }
 
   String _statusLine(AppLocalizations l10n) {
+    if (_viewState == _BioDetectorViewState.setup) {
+      return l10n.t('bioDetectorSetupHint');
+    }
+    if (_viewState == _BioDetectorViewState.roundResult && _result != null) {
+      return _result == BioDetectorResult.truth
+          ? l10n.t('bioDetectorRoundTruth')
+          : l10n.t('bioDetectorRoundLie');
+    }
+    if (_viewState == _BioDetectorViewState.finalResult) {
+      final truthCount =
+          _roundResults.where((v) => v == BioDetectorResult.truth).length;
+      final lieCount = _roundResults.length - truthCount;
+      return l10n.t('bioDetectorFinalSummary', {
+        'truth': '$truthCount',
+        'lie': '$lieCount',
+      });
+    }
     final phase = flowPhaseForElapsed(_elapsed);
     if (_viewState == _BioDetectorViewState.idle) {
       return l10n.t('bioDetectorHoldStart');
@@ -265,6 +355,7 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final phase = flowPhaseForElapsed(_elapsed);
+    final inSetup = _viewState == _BioDetectorViewState.setup;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0D),
@@ -297,7 +388,7 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
           ),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              padding: GameUiSpacing.screenPadding,
               child: Column(
                 children: [
                   Row(
@@ -311,12 +402,7 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
                         child: Text(
                           l10n.t('bioDetector'),
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.8,
-                          ),
+                          style: GameUiText.navTitle,
                         ),
                       ),
                       _showHelpButton
@@ -330,76 +416,11 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
                           : const SizedBox(width: 32, height: 32),
                     ],
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: GameUiSpacing.sectionGap),
                   Expanded(
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: Center(
-                            child: _buildDetectorZone(phase),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Text(
-                          _statusLine(l10n),
-                          style: const TextStyle(
-                            color: Color(0xFFC6C6C6),
-                            fontSize: 14,
-                            letterSpacing: 0.3,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 6),
-                        SizedBox(
-                          height: 24,
-                          child: _warningKey == null
-                              ? const SizedBox.shrink()
-                              : Text(
-                                  l10n.t(_warningKey!),
-                                  key: const Key('bio-detector-warning'),
-                                  style: const TextStyle(
-                                    color: Color(0xFFFFE082),
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.6,
-                                  ),
-                                ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          height: 120,
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withAlpha(120),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0x33FF5252)),
-                          ),
-                          child: CustomPaint(
-                            painter: _PulseWavePainter(
-                              timeSeconds: _elapsed.inMilliseconds / 1000,
-                              bpm: _waveBpmForPhase(phase),
-                            ),
-                            size: Size.infinite,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        if (_viewState == _BioDetectorViewState.result)
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: _reset,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF1A1A1A),
-                                foregroundColor: Colors.white,
-                              ),
-                              child: Text(l10n.t('bioDetectorRetry')),
-                            ),
-                          )
-                        else
-                          const SizedBox(height: 40),
-                      ],
-                    ),
+                    child: inSetup
+                        ? _buildSetupView(l10n)
+                        : _buildRoundView(l10n, phase),
                   ),
                 ],
               ),
@@ -411,7 +432,9 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
   }
 
   Widget _buildDetectorZone(BioDetectorFlowPhase phase) {
-    if (_viewState == _BioDetectorViewState.result && _result != null) {
+    if ((_viewState == _BioDetectorViewState.roundResult ||
+            _viewState == _BioDetectorViewState.finalResult) &&
+        _result != null) {
       return _buildResultZone(_result!);
     }
 
@@ -573,11 +596,154 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
     if (phase == BioDetectorFlowPhase.sampling) {
       return 60;
     }
-    if (_viewState == _BioDetectorViewState.result &&
+    if ((_viewState == _BioDetectorViewState.roundResult ||
+            _viewState == _BioDetectorViewState.finalResult) &&
         _result == BioDetectorResult.lie) {
       return 108;
     }
     return 72;
+  }
+
+  Widget _buildSetupView(AppLocalizations l10n) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.black.withAlpha(120),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0x33FF5252)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.t('bioDetectorSetupTitle'),
+                style: GameUiText.sectionTitle,
+              ),
+              const SizedBox(height: 14),
+              Text(
+                l10n.t('bioDetectorRoundsSetting', {'count': '$_totalRounds'}),
+                style: GameUiText.body,
+              ),
+              Slider(
+                key: const Key('bio-detector-rounds-slider'),
+                value: _totalRounds.toDouble(),
+                min: 1,
+                max: 10,
+                divisions: 9,
+                activeColor: const Color(0xFFFF6B6B),
+                onChanged: (v) => setState(() => _totalRounds = v.round()),
+              ),
+              Text(
+                l10n.t('bioDetectorSetupHint'),
+                style: GameUiText.body,
+              ),
+            ],
+          ),
+        ),
+        const Spacer(),
+        ElevatedButton(
+          key: const Key('bio-detector-start-session'),
+          onPressed: _startSession,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFFF4D4D),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            textStyle: GameUiText.buttonLabel,
+          ),
+          child: Text(l10n.startGame),
+        ),
+        const SizedBox(height: 18),
+      ],
+    );
+  }
+
+  Widget _buildRoundView(AppLocalizations l10n, BioDetectorFlowPhase phase) {
+    return Column(
+      children: [
+        Expanded(
+          child: Center(
+            child: _buildDetectorZone(phase),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Text(
+          l10n.roundProgress(_round, _totalRounds),
+          style: GameUiText.body.copyWith(letterSpacing: 0.3),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          _statusLine(l10n),
+          style: GameUiText.body.copyWith(color: const Color(0xFFC6C6C6)),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 6),
+        SizedBox(
+          height: 24,
+          child: _warningKey == null
+              ? const SizedBox.shrink()
+              : Text(
+                  l10n.t(_warningKey!),
+                  key: const Key('bio-detector-warning'),
+                  style: const TextStyle(
+                    color: Color(0xFFFFE082),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          height: 120,
+          width: double.infinity,
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.black.withAlpha(120),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0x33FF5252)),
+          ),
+          child: CustomPaint(
+            painter: _PulseWavePainter(
+              runtimeSeconds: _elapsed.inMilliseconds / 1000,
+              heartbeatTurns: _heartbeatTurns,
+              bpm: _waveBpmForPhase(phase),
+            ),
+            size: Size.infinite,
+          ),
+        ),
+        const SizedBox(height: 14),
+        if (_viewState == _BioDetectorViewState.roundResult)
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _nextRound,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1A1A1A),
+                foregroundColor: Colors.white,
+              ),
+              child: Text(l10n.t('nextRound')),
+            ),
+          )
+        else if (_viewState == _BioDetectorViewState.finalResult)
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _reset,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1A1A1A),
+                foregroundColor: Colors.white,
+              ),
+              child: Text(l10n.againRound),
+            ),
+          )
+        else
+          const SizedBox(height: 40),
+      ],
+    );
   }
 }
 
@@ -604,24 +770,37 @@ class _BioGridPainter extends CustomPainter {
 
 class _PulseWavePainter extends CustomPainter {
   _PulseWavePainter({
-    required this.timeSeconds,
+    required this.runtimeSeconds,
+    required this.heartbeatTurns,
     required this.bpm,
   });
 
-  final double timeSeconds;
+  final double runtimeSeconds;
+  final double heartbeatTurns;
   final double bpm;
 
   @override
   void paint(Canvas canvas, Size size) {
+    final beatSpeed = bpm / 60.0;
+    final midY = size.height * 0.56;
+    final amplitude = size.height * 0.26;
+    const dx = 1.4;
+    const pixelsPerSecond = 145.0;
     final path = Path();
-    final midY = size.height / 2;
-    const dx = 2.0;
-    const pixelsPerSecond = 130.0;
-    final amplitude = size.height * 0.33;
+
+    final baseline = Paint()
+      ..color = const Color(0x22FF6B6B)
+      ..strokeWidth = 1;
+    canvas.drawLine(
+        Offset.zero.translate(0, midY), Offset(size.width, midY), baseline);
+
     bool first = true;
     for (double x = 0; x <= size.width; x += dx) {
-      final sampleTime = timeSeconds + (x / pixelsPerSecond);
-      final wave = _ecgSample(sampleTime, bpm);
+      final ageSeconds = (size.width - x) / pixelsPerSecond;
+      final sampleTurns = heartbeatTurns - (ageSeconds * beatSpeed);
+      final beatPhase = _fractional(sampleTurns);
+      final sampleTime = runtimeSeconds - ageSeconds;
+      final wave = _ecgSample(beatPhase, sampleTime);
       final y = midY - (wave * amplitude);
       if (first) {
         path.moveTo(x, y);
@@ -632,42 +811,83 @@ class _PulseWavePainter extends CustomPainter {
     }
 
     final glow = Paint()
-      ..color = const Color(0x66FF3B3B)
+      ..color = const Color(0x44FF3B3B)
       ..strokeWidth = 6
       ..style = PaintingStyle.stroke
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+      ..strokeCap = StrokeCap.round
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.5);
     final line = Paint()
-      ..color = const Color(0xFFFF4D4D)
+      ..shader = const LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [
+          Color(0x44FF4D4D),
+          Color(0xAAFF5E5E),
+          Color(0xFFFF7777),
+        ],
+      ).createShader(Offset.zero & size)
       ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
 
     canvas.drawPath(path, glow);
     canvas.drawPath(path, line);
+
+    final currentPhase = _fractional(heartbeatTurns);
+    final headWave = _ecgSample(currentPhase, runtimeSeconds);
+    final headY = midY - (headWave * amplitude);
+    final headGlow = Paint()
+      ..color = const Color(0x88FF8A8A)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+    final headDot = Paint()..color = const Color(0xFFFF9A9A);
+    canvas.drawCircle(Offset(size.width, headY), 4.8, headGlow);
+    canvas.drawCircle(Offset(size.width, headY), 2.5, headDot);
   }
 
   @override
   bool shouldRepaint(covariant _PulseWavePainter oldDelegate) {
-    return oldDelegate.timeSeconds != timeSeconds || oldDelegate.bpm != bpm;
+    return oldDelegate.runtimeSeconds != runtimeSeconds ||
+        oldDelegate.heartbeatTurns != heartbeatTurns ||
+        oldDelegate.bpm != bpm;
   }
 
-  double _ecgSample(double time, double bpm) {
-    final periodSeconds = 60 / max(1, bpm);
-    final beatPhase = ((time % periodSeconds) / periodSeconds)
-        .clamp(0.0, 1.0)
-        .toDouble();
+  double _fractional(double value) {
+    return value - value.floorToDouble();
+  }
 
+  double _ecgSample(double beatPhase, double timeSeconds) {
     double gaussian(double x, double center, double width) {
       final z = (x - center) / width;
       return exp(-(z * z) * 0.5);
     }
 
-    final pWave = 0.12 * gaussian(beatPhase, 0.18, 0.038);
-    final qWave = -0.20 * gaussian(beatPhase, 0.37, 0.014);
-    final rWave = 1.05 * gaussian(beatPhase, 0.40, 0.007);
-    final sWave = -0.33 * gaussian(beatPhase, 0.43, 0.013);
-    final tWave = 0.28 * gaussian(beatPhase, 0.66, 0.058);
-    final noise = (sin(time * 21) * 0.015) + (sin(time * 47) * 0.008);
+    double smoothStep(double x) => 1 / (1 + exp(-x));
+    double plateau(double x, double start, double end, double softness) {
+      return smoothStep((x - start) / softness) -
+          smoothStep((x - end) / softness);
+    }
 
-    return pWave + qWave + rWave + sWave + tWave + noise;
+    final rScale = 1 + (0.06 * sin(2 * pi * 0.08 * timeSeconds));
+    final pWave = 0.11 * gaussian(beatPhase, 0.18, 0.028);
+    final qWave = -0.14 * gaussian(beatPhase, 0.357, 0.009);
+    final rWave = 1.08 * rScale * gaussian(beatPhase, 0.382, 0.0055);
+    final sWave = -0.28 * gaussian(beatPhase, 0.404, 0.01);
+    final stWave = 0.018 * plateau(beatPhase, 0.44, 0.56, 0.012);
+    final tWave = 0.30 * gaussian(beatPhase, 0.64, 0.065);
+    final uWave = 0.035 * gaussian(beatPhase, 0.79, 0.03);
+    final baselineWander = 0.018 * sin(2 * pi * 0.28 * timeSeconds);
+    final microNoise = (0.004 * sin(2 * pi * 29 * timeSeconds)) +
+        (0.0025 * sin((2 * pi * 53 * timeSeconds) + 1.1));
+
+    return pWave +
+        qWave +
+        rWave +
+        sWave +
+        stWave +
+        tWave +
+        uWave +
+        baselineWander +
+        microNoise;
   }
 }

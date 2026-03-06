@@ -14,7 +14,7 @@ void main() {
     });
 
     test('energy accumulates only while speaking', () {
-      final state = DecibelBombState(
+      const state = DecibelBombState(
         maxEnergy: 2000,
         baselineDb: 40,
       );
@@ -61,7 +61,7 @@ void main() {
     });
 
     test('energy overflow explodes when bucket reaches maxEnergy', () {
-      final state = const DecibelBombState(maxEnergy: 3, baselineDb: 40);
+      const state = DecibelBombState(maxEnergy: 3, baselineDb: 40);
       final exploded = DecibelBombRules.applySample(
         state,
         currentDb: 80,

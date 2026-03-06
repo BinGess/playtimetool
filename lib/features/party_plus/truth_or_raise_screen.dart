@@ -6,7 +6,9 @@ import '../../core/help/game_help_service.dart';
 import '../../core/haptics/haptic_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/game_result_action_bar.dart';
+import '../../shared/widgets/difficulty_option_card.dart';
 import '../../shared/widgets/game_result_template_card.dart';
+import '../../shared/styles/game_ui_style.dart';
 import '../../shared/widgets/web3_game_background.dart';
 import '../../shared/services/penalty_service.dart';
 import 'logic/truth_raise_logic.dart';
@@ -26,6 +28,7 @@ class _TruthOrRaiseScreenState extends State<TruthOrRaiseScreen> {
   final Set<int> _usedQuestions = {};
 
   int _playerCount = 4;
+  int _selectedRounds = 8;
   TruthRaiseScaleLevel _selectedScale = TruthRaiseScaleLevel.standard;
   int _currentPlayer = 0;
   int _round = 1;
@@ -59,13 +62,22 @@ class _TruthOrRaiseScreenState extends State<TruthOrRaiseScreen> {
     }
   }
 
+  Color _scaleAccentColor(TruthRaiseScaleLevel scale) {
+    return switch (scale) {
+      TruthRaiseScaleLevel.gentle => const Color(0xFF5CE08A),
+      TruthRaiseScaleLevel.standard => AppColors.bombRed,
+      TruthRaiseScaleLevel.spicy => const Color(0xFFFF8A4C),
+      TruthRaiseScaleLevel.extreme => const Color(0xFFFF4D6D),
+    };
+  }
+
   void _startGame() {
     _usedQuestions.clear();
     setState(() {
       _phase = _TruthPhase.playing;
       _currentPlayer = 0;
       _round = 1;
-      _totalRounds = _playerCount * 2;
+      _totalRounds = _selectedRounds;
       _raiseLevel = 0;
       _lastAction = '';
       _penalties = List<int>.filled(_playerCount, 0);
@@ -180,7 +192,6 @@ class _TruthOrRaiseScreenState extends State<TruthOrRaiseScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final scaleConfig = _scaleConfig;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -192,7 +203,7 @@ class _TruthOrRaiseScreenState extends State<TruthOrRaiseScreen> {
           ),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding: GameUiSpacing.screenPadding,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -206,32 +217,23 @@ class _TruthOrRaiseScreenState extends State<TruthOrRaiseScreen> {
                       const Spacer(),
                       Text(
                         l10n.t('truthRaise'),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.8,
-                        ),
+                        style: GameUiText.navTitle,
                       ),
                       const Spacer(),
                       const SizedBox(width: 20),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: GameUiSpacing.topGap),
                   const SizedBox(height: 22),
                   if (_phase == _TruthPhase.setup) ...[
                     Text(
                       l10n.t('truthRaiseSetupTitle'),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: GameUiText.sectionTitle,
                     ),
                     const SizedBox(height: 14),
                     Text(
                       l10n.playersCount(_playerCount),
-                      style: const TextStyle(color: AppColors.textSecondary),
+                      style: GameUiText.body,
                     ),
                     Slider(
                       value: _playerCount.toDouble(),
@@ -244,48 +246,42 @@ class _TruthOrRaiseScreenState extends State<TruthOrRaiseScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      l10n.t('truthRaiseScaleTitle'),
-                      style: const TextStyle(color: AppColors.textSecondary),
+                      l10n.t('truthRaiseRoundsSetting', {
+                        'count': '$_selectedRounds',
+                      }),
+                      style: GameUiText.body,
+                    ),
+                    Slider(
+                      value: _selectedRounds.toDouble(),
+                      min: 4,
+                      max: 12,
+                      divisions: 8,
+                      activeColor: AppColors.bombRed,
+                      onChanged: (v) =>
+                          setState(() => _selectedRounds = v.round()),
                     ),
                     const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: TruthRaiseScaleLevel.values.map((scale) {
-                        final isSelected = scale == _selectedScale;
-                        return ChoiceChip(
-                          label: Text(_scaleTitle(l10n, scale)),
-                          selected: isSelected,
-                          onSelected: (_) =>
-                              setState(() => _selectedScale = scale),
-                          selectedColor: AppColors.bombRed,
-                          backgroundColor: AppColors.surfaceVariant,
-                          labelStyle: TextStyle(
-                            color: isSelected
-                                ? Colors.white
-                                : AppColors.textSecondary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          side: BorderSide(
-                            color: isSelected
-                                ? AppColors.bombRed
-                                : AppColors.textSecondary.withAlpha(100),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 10),
                     Text(
-                      l10n.t('truthRaiseScaleHint', {
-                        'step': '${scaleConfig.step}',
-                        'max': '${scaleConfig.maxRaise}',
-                      }),
-                      style: const TextStyle(color: AppColors.textSecondary),
+                      l10n.t('truthRaiseScaleTitle'),
+                      style: GameUiText.body,
                     ),
+                    const SizedBox(height: 8),
+                    ...TruthRaiseScaleLevel.values.map((scale) {
+                      final isSelected = scale == _selectedScale;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: DifficultyOptionCard(
+                          title: _scaleTitle(l10n, scale),
+                          selected: isSelected,
+                          accentColor: _scaleAccentColor(scale),
+                          onTap: () => setState(() => _selectedScale = scale),
+                        ),
+                      );
+                    }),
                     const SizedBox(height: 8),
                     Text(
                       l10n.t('truthRaiseRule'),
-                      style: const TextStyle(color: AppColors.textSecondary),
+                      style: GameUiText.body,
                     ),
                     const Spacer(),
                     ElevatedButton(
@@ -294,6 +290,7 @@ class _TruthOrRaiseScreenState extends State<TruthOrRaiseScreen> {
                         backgroundColor: AppColors.bombRed,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
+                        textStyle: GameUiText.buttonLabel,
                       ),
                       child: Text(l10n.start),
                     ),
@@ -301,7 +298,7 @@ class _TruthOrRaiseScreenState extends State<TruthOrRaiseScreen> {
                     Text(
                       l10n.roundProgress(_round, _totalRounds),
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: AppColors.textSecondary),
+                      style: GameUiText.body,
                     ),
                     const SizedBox(height: 10),
                     Text(
@@ -324,8 +321,7 @@ class _TruthOrRaiseScreenState extends State<TruthOrRaiseScreen> {
                       ),
                       child: Text(
                         _question,
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 16),
+                        style: GameUiText.bodyStrong,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -339,7 +335,7 @@ class _TruthOrRaiseScreenState extends State<TruthOrRaiseScreen> {
                       l10n.t('truthRaiseScaleCurrent', {
                         'level': _scaleTitle(l10n, _selectedScale),
                       }),
-                      style: const TextStyle(color: AppColors.textSecondary),
+                      style: GameUiText.body,
                       textAlign: TextAlign.center,
                     ),
                     if (_lastAction.isNotEmpty) ...[
@@ -347,7 +343,7 @@ class _TruthOrRaiseScreenState extends State<TruthOrRaiseScreen> {
                       Text(
                         _lastAction,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: AppColors.textSecondary),
+                        style: GameUiText.body,
                       ),
                     ],
                     const Spacer(),
@@ -362,11 +358,7 @@ class _TruthOrRaiseScreenState extends State<TruthOrRaiseScreen> {
                     Text(
                       l10n.t('truthRaiseSettlement'),
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: GameUiText.sectionTitle.copyWith(fontSize: 22),
                     ),
                     const SizedBox(height: 16),
                     ...List.generate(_penalties.length, (i) {

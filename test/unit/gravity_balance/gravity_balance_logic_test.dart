@@ -5,16 +5,120 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:playtimetool/features/gravity_balance/logic/gravity_balance_logic.dart';
 
 void main() {
-  test('path generator creates 5-8 anchors and 1.5x track width', () {
+  test('path generator creates medium anchors and 1.5x track width', () {
     final path = GravityBalancePathGenerator.generate(
       random: Random(42),
       arenaSize: const Size(360, 640),
       ballDiameter: 40,
     );
 
-    expect(path.anchors.length, inInclusiveRange(5, 8));
+    expect(path.anchors.length, inInclusiveRange(5, 7));
     expect(path.trackWidth, closeTo(60, 0.0001));
     expect(path.sampledCenterline.length, greaterThan(80));
+  });
+
+  test('hard difficulty produces more lateral path complexity than easy', () {
+    const arenaSize = Size(360, 640);
+    final centerX = arenaSize.width / 2;
+
+    final easyPath = GravityBalancePathGenerator.generate(
+      random: Random(11),
+      arenaSize: arenaSize,
+      ballDiameter: 40,
+      difficulty: GravityBalanceDifficulty.easy,
+    );
+    final hardPath = GravityBalancePathGenerator.generate(
+      random: Random(11),
+      arenaSize: arenaSize,
+      ballDiameter: 40,
+      difficulty: GravityBalanceDifficulty.hard,
+    );
+
+    final easyDeviation = easyPath.anchors
+            .skip(1)
+            .take(easyPath.anchors.length - 2)
+            .fold<double>(0, (sum, p) => sum + (p.dx - centerX).abs()) /
+        (easyPath.anchors.length - 2);
+    final hardDeviation = hardPath.anchors
+            .skip(1)
+            .take(hardPath.anchors.length - 2)
+            .fold<double>(0, (sum, p) => sum + (p.dx - centerX).abs()) /
+        (hardPath.anchors.length - 2);
+
+    expect(easyPath.anchors.length, inInclusiveRange(4, 5));
+    expect(hardPath.anchors.length, inInclusiveRange(7, 9));
+    expect(hardDeviation, greaterThan(easyDeviation));
+  });
+
+  test('difficulty parser supports easy/medium/hard ids', () {
+    expect(
+      parseGravityBalanceDifficulty('easy'),
+      GravityBalanceDifficulty.easy,
+    );
+    expect(
+      parseGravityBalanceDifficulty('medium'),
+      GravityBalanceDifficulty.medium,
+    );
+    expect(
+      parseGravityBalanceDifficulty('hard'),
+      GravityBalanceDifficulty.hard,
+    );
+    expect(
+      parseGravityBalanceDifficulty('unknown'),
+      GravityBalanceDifficulty.medium,
+    );
+
+    expect(gravityBalanceDifficultyId(GravityBalanceDifficulty.easy), 'easy');
+    expect(
+      gravityBalanceDifficultyId(GravityBalanceDifficulty.medium),
+      'medium',
+    );
+    expect(gravityBalanceDifficultyId(GravityBalanceDifficulty.hard), 'hard');
+  });
+
+  test('participant count parser supports fallback and clamping', () {
+    expect(parseGravityBalanceParticipantCount(null), 2);
+    expect(parseGravityBalanceParticipantCount('abc'), 2);
+    expect(parseGravityBalanceParticipantCount('0'), 1);
+    expect(parseGravityBalanceParticipantCount('3'), 3);
+    expect(parseGravityBalanceParticipantCount('99'), 8);
+  });
+
+  test('champion exists only when everyone succeeds', () {
+    final noChampion = gravityBalanceChampion(const [
+      GravityBalanceSessionResult(
+        playerIndex: 0,
+        success: true,
+        elapsedSeconds: 12.4,
+      ),
+      GravityBalanceSessionResult(
+        playerIndex: 1,
+        success: false,
+        elapsedSeconds: 15.8,
+      ),
+    ]);
+    expect(noChampion, isNull);
+
+    final champion = gravityBalanceChampion(const [
+      GravityBalanceSessionResult(
+        playerIndex: 0,
+        success: true,
+        elapsedSeconds: 12.4,
+      ),
+      GravityBalanceSessionResult(
+        playerIndex: 1,
+        success: true,
+        elapsedSeconds: 10.1,
+      ),
+      GravityBalanceSessionResult(
+        playerIndex: 2,
+        success: true,
+        elapsedSeconds: 11.3,
+      ),
+    ]);
+    expect(champion, isNotNull);
+    expect(champion!.playerIndex, 1);
+    expect(champion.elapsedSeconds, 10.1);
   });
 
   test('shock scheduler triggers and reschedules within 3-7 seconds', () {

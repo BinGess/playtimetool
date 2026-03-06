@@ -13,6 +13,7 @@ import '../../core/constants/app_sounds.dart';
 import '../../core/haptics/haptic_service.dart';
 import '../../core/help/game_help_service.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/styles/game_ui_style.dart';
 import '../../shared/widgets/game_result_action_bar.dart';
 import '../../shared/widgets/game_result_template_card.dart';
 import '../../shared/widgets/web3_game_background.dart';
@@ -319,7 +320,7 @@ class _DecibelBombScreenState extends State<DecibelBombScreen>
           ),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+              padding: GameUiSpacing.screenPadding,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -336,30 +337,22 @@ class _DecibelBombScreenState extends State<DecibelBombScreen>
                       const Spacer(),
                       Text(
                         l10n.t('decibelBomb'),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.8,
-                        ),
+                        style: GameUiText.navTitle,
                       ),
                       const Spacer(),
                       const SizedBox(width: 20),
                     ],
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: GameUiSpacing.blockGap),
                   Text(
                     _statusLine(l10n),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      letterSpacing: 1.0,
-                    ),
+                    style: GameUiText.body.copyWith(letterSpacing: 0.6),
                   ),
                   const SizedBox(height: 12),
                   Text(
                     l10n.playersCount(_playerCount),
-                    style: const TextStyle(color: AppColors.textSecondary),
+                    style: GameUiText.body,
                   ),
                   Slider(
                     value: _playerCount.toDouble(),
@@ -585,15 +578,12 @@ class _MetricLine extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(color: AppColors.textSecondary),
+            style: GameUiText.body,
           ),
           const Spacer(),
           Text(
             value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
+            style: GameUiText.bodyStrong,
           ),
         ],
       ),

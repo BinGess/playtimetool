@@ -10,6 +10,7 @@ import '../../l10n/app_localizations.dart';
 import '../../shared/services/penalty_service.dart';
 import '../../shared/widgets/game_result_action_bar.dart';
 import '../../shared/widgets/game_result_template_card.dart';
+import '../../shared/styles/game_ui_style.dart';
 import '../../shared/widgets/web3_game_background.dart';
 import 'models/bomb_state.dart';
 import 'providers/number_bomb_provider.dart';
@@ -242,7 +243,7 @@ class _SetupViewState extends State<_SetupView> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
+      padding: GameUiSpacing.screenPadding,
       child: Column(
         children: [
           const SizedBox(height: 32),
@@ -258,32 +259,22 @@ class _SetupViewState extends State<_SetupView> {
           const Spacer(flex: 2),
           Text(
             widget.l10n.numberBombTitle,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 36,
-              fontWeight: FontWeight.w300,
-              letterSpacing: 4,
+            style: GameUiText.sectionTitle.copyWith(
+              fontSize: 24,
+              letterSpacing: 1.2,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             widget.l10n.numberBombSubtitle,
-            style: const TextStyle(
-              color: AppColors.textDim,
-              fontSize: 11,
-              letterSpacing: 4,
-            ),
+            style: GameUiText.caption.copyWith(letterSpacing: 1.2),
           ),
           const Spacer(flex: 2),
 
           // Range picker
           Text(
             widget.l10n.selectRange,
-            style: const TextStyle(
-              color: AppColors.textDim,
-              fontSize: 12,
-              letterSpacing: 2,
-            ),
+            style: GameUiText.body,
           ),
           const SizedBox(height: 16),
           Row(
@@ -379,10 +370,9 @@ class _SetupViewState extends State<_SetupView> {
               ),
               child: Text(
                 widget.l10n.startGame,
-                style: const TextStyle(
+                style: GameUiText.buttonLabel.copyWith(
                   color: AppColors.bombRed,
-                  fontSize: 18,
-                  letterSpacing: 4,
+                  letterSpacing: 1.0,
                 ),
               ),
             ),
@@ -484,11 +474,7 @@ class _PlayingView extends StatelessWidget {
                 onTap: () => notifier.reset(),
                 child: Text(
                   l10n.reset,
-                  style: const TextStyle(
-                    color: AppColors.textDim,
-                    fontSize: 12,
-                    letterSpacing: 1,
-                  ),
+                  style: GameUiText.caption.copyWith(letterSpacing: 0.8),
                 ),
               ),
             ],
@@ -521,11 +507,7 @@ class _PlayingView extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           l10n.safeRange,
-          style: const TextStyle(
-            color: AppColors.textDim,
-            fontSize: 11,
-            letterSpacing: 3,
-          ),
+          style: GameUiText.caption.copyWith(letterSpacing: 1.2),
         ),
         const Spacer(),
 
