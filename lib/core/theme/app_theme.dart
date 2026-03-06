@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../constants/app_colors.dart';
+import '../../shared/styles/game_ui_style.dart';
 
 ThemeData buildDarkTheme() {
   return ThemeData(
@@ -67,5 +68,23 @@ ThemeData buildDarkTheme() {
     ),
     splashFactory: NoSplash.splashFactory,
     highlightColor: Colors.transparent,
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        minimumSize: const Size.fromHeight(GameUiSpacing.buttonHeight),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+        textStyle: GameUiText.buttonLabel,
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size.fromHeight(GameUiSpacing.buttonHeight),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+        textStyle: GameUiText.buttonLabel,
+      ),
+    ),
   );
 }

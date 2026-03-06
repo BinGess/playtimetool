@@ -67,18 +67,18 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/wakelock_plus/ios"
 
 SPEC CHECKSUMS:
-  audio_streamer: 2e472b9f81cec5e381c4cf7667afa3055dcb45a4
-  audioplayers_darwin: 835ced6edd4c9fc8ebb0a7cc9e294a91d99917d5
+  audio_streamer: af49e73eb66f71c4eeabb4bbcb05f122d03a6709
+  audioplayers_darwin: f15e209a3e856d1a7edcf98dc029f484fead2242
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
-  image_gallery_saver_plus: e597bf65a7846979417a3eae0763b71b6dfec6c3
-  in_app_purchase_storekit: 22cca7d08eebca9babdf4d07d0baccb73325d3c8
-  package_info_plus: af8e2ca6888548050f16fa2f1938db7b5a5df499
-  permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
-  sensors_plus: 1c5f0a01ce21c609a4df404c4e6879d62bce287f
-  share_plus: 011d6fb4f9d2576b83179a3a5c5e323202cdabcf
-  shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
-  url_launcher_ios: 7a95fa5b60cc718a708b8f2966718e93db0cef1b
-  wakelock_plus: e29112ab3ef0b318e58cfa5c32326458be66b556
+  image_gallery_saver_plus: 782ade975fe6a4600b53e7c1983e3a2979d1e9e5
+  in_app_purchase_storekit: 2342c0a5da86593124d08dd13d920f39a52b273a
+  package_info_plus: c0502532a26c7662a62a356cebe2692ec5fe4ec4
+  permission_handler_apple: 9878588469a2b0d0fc1e048d9f43605f92e6cec2
+  sensors_plus: 42b9de1b8237675fa8d8121e4bb93be0f79fa61d
+  share_plus: 8875f4f2500512ea181eef553c3e27dba5135aad
+  shared_preferences_foundation: 5086985c1d43c5ba4d5e69a4e8083a389e2909e6
+  url_launcher_ios: bb13df5870e8c4234ca12609d04010a21be43dfa
+  wakelock_plus: 76957ab028e12bfa4e66813c99e46637f367fc7e
 
 PODFILE CHECKSUM: ab487f3131900ef2f97266ab20a0dfb41fe91294
 

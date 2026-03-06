@@ -272,6 +272,7 @@ class AppLocalizations {
       'gestureModeMinority': '模式：少数受罚',
       'gestureModeMajority': '模式：多数受罚',
       'gestureStartDuel': '开始对决',
+      'gestureRoundsSetting': '轮次：{count}',
       'gestureRoundOf': '第 {current} / {total} 轮',
       'gestureFinalResult': '最终得分',
       'gestureRoundScore': '{players} 本轮 +1 分',
@@ -286,7 +287,7 @@ class AppLocalizations {
       'gesturePenaltyResult': '{players} 受罚：{penalty}',
 
       // Left Right
-      'leftRightRule': '每位玩家两次机会，含反转回合，错误或超时记罚分',
+      'leftRightRule': '每轮每位玩家各 1 次，含反转回合，错误或超时记罚分',
       'leftRightDifficultyTitle': '难度模式',
       'leftRightDifficultyEasy': '简单',
       'leftRightDifficultyMedium': '中等',
@@ -294,6 +295,7 @@ class AppLocalizations {
       'leftRightDifficultyEasyHint': '反转概率 20%，只会出现左右方向',
       'leftRightDifficultyMediumHint': '反转概率 50%，只会出现左右方向',
       'leftRightDifficultyHardHint': '反转概率 75%，会出现上下左右四方向',
+      'leftRightRoundsSetting': '轮次：{count}',
       'leftRightSwipeTo': '请向 {direction} 方向滑动',
       'leftRightReverseSwipeTo': '⚡ 反转！请向 {direction} 的反方向滑动',
       'leftRightReversed': '反向操作！+2 罚分',
@@ -303,6 +305,11 @@ class AppLocalizations {
       'leftRightWaitingSwipe': '等待滑动...',
       'leftRightBeginReaction': '开始反应',
       'leftRightFinalPenalties': '最终罚分',
+      'gravityBalancePrepTitle': '准备挑战',
+      'gravityBalancePrepHint': '先选难度再开局。难度越高，路径弯曲和摆动越明显。',
+      'gravityBalancePlayersSetting': '参与人数：{count}',
+      'gravityBalanceStartChallenge': '开始挑战',
+      'gravityBalanceCurrentPlayer': '当前玩家 {current}/{total}',
       'gravityBalanceRule': '将液态球保持在轨迹内，到达终点即获胜。\n进度过半后轨迹摆动，随机地震会强行冲击。',
       'gravityBalanceDifficultyEasyHint': '轨道更宽，摆动更轻，地震间隔更长，适合热身局。',
       'gravityBalanceDifficultyMediumHint': '默认挑战，摆动与地震频率保持均衡。',
@@ -310,6 +317,18 @@ class AppLocalizations {
       'gravityBalanceQuake': '⚠ 地震冲击！立刻反向倾斜',
       'gravityBalanceCompleted': '完美通关',
       'gravityBalanceExploded': '轨迹失守，球体炸裂',
+      'gravityBalanceFailed': '错过洞口，挑战失败',
+      'gravityBalanceRoundResultTitle': '{player} 结果',
+      'gravityBalanceResultStatus': '是否成功：{status}',
+      'gravityBalanceResultTime': '完成时间：{time}',
+      'gravityBalanceResultSuccessYes': '成功',
+      'gravityBalanceResultSuccessNo': '失败',
+      'gravityBalanceTimeUnavailable': '--',
+      'gravityBalanceSeconds': '{seconds} 秒',
+      'gravityBalanceViewSummary': '查看总成绩',
+      'gravityBalanceSummaryTitle': '总成绩',
+      'gravityBalanceNoChampion': '未决出速度冠军（需全员成功）',
+      'gravityBalanceChampion': '冠军：{player}（{time}）',
       'gravityBalanceRetry': '重开一局',
       'bioDetectorHoldStart': '长按开始检测',
       'bioDetectorSamplingHint1': '读取毛细血管收缩压...',
@@ -317,6 +336,12 @@ class AppLocalizations {
       'bioDetectorWarnBreath': '[WARN] 呼吸频率异常',
       'bioDetectorWarnCortex': '[WARN] 逻辑皮层活跃度增高',
       'bioDetectorRetry': '再测一次',
+      'bioDetectorSetupTitle': '开局设置',
+      'bioDetectorRoundsSetting': '轮次：{count}',
+      'bioDetectorSetupHint': '设置轮次后开始。每轮长按指纹区触发检测。',
+      'bioDetectorRoundTruth': '本轮判定：真话',
+      'bioDetectorRoundLie': '本轮判定：谎言',
+      'bioDetectorFinalSummary': '检测完成：真话 {truth} / 谎言 {lie}',
 
       // Word Bomb
       'wordBombCategory': '词库分类',
@@ -374,6 +399,7 @@ class AppLocalizations {
 
       // Truth or Raise
       'truthRaiseSetupTitle': '开局设置',
+      'truthRaiseRoundsSetting': '轮次：{count}',
       'truthRaiseScaleTitle': '尺度等级',
       'truthRaiseScaleHint': '跳过每次 +{step} 码，最高 {max} 码',
       'truthRaiseScaleCurrent': '当前尺度：{level}',
@@ -423,13 +449,13 @@ class AppLocalizations {
           '开始后会随机倒计时。\n当前持有者点击“传递炸弹”把手机传下去。\n倒计时归零时，持有者受罚。\n适合快节奏热场。',
       'helpGestureDuelBody':
           '每位玩家依次选择手势。\n可切换“少数受罚/多数受罚”模式。\n系统按本轮分布判定受罚玩家。\n平局时直接重开一轮。',
-      'helpLeftRightBody': '按提示方向快速滑动。\n方向错误或超时会加罚分。\n每位玩家轮流进行两次。\n最后按总罚分结算。',
+      'helpLeftRightBody': '按提示方向快速滑动。\n方向错误或超时会加罚分。\n每轮每位玩家轮流进行一次。\n最后按总罚分结算。',
       'helpWordBombBody':
           '选择词库后开始倒计时。\n按顺序说同类词并传给下一位。\n卡壳、重复或超时导致爆炸受罚。\n起始词会在每轮开始时随机给出。',
       'helpChallengeAuctionBody':
           '每位玩家先为挑战出价。\n最低价中标并执行挑战。\n成功/失败按当前模式结算。\n酒精惩罚关闭后自动改为纯净积分规则。',
       'helpTruthRaiseBody':
-          '轮到你时可“回答”或“跳过+加码”。\n回答会重置加码。\n跳过会提高本轮加码并累积罚分。\n回合结束后按总罚分结算。',
+          '轮到你时可“回答”或“跳过+加码”。\n尺度等级会决定每次跳过增加的码数与上限。\n回答会重置加码。\n跳过会提高本轮加码并累积罚分。\n回合结束后按总罚分结算。',
       'helpBioDetectorBody':
           '长按指纹区域启动伪生物检测。\n采样阶段会显示红色脉搏波与滚动分析提示。\n高压阶段震动会从 60bpm 提升至 120bpm，并随机出现告警。\n角落隐藏热区可操纵真/假结果。',
       'helpDecibelBombBody':
@@ -726,6 +752,7 @@ class AppLocalizations {
       'gestureModeMinority': 'Mode: minority loses',
       'gestureModeMajority': 'Mode: majority loses',
       'gestureStartDuel': 'Start duel',
+      'gestureRoundsSetting': 'Rounds: {count}',
       'gestureRoundOf': 'Round {current} / {total}',
       'gestureFinalResult': 'Final scores',
       'gestureRoundScore': '{players} +1 this round',
@@ -741,7 +768,7 @@ class AppLocalizations {
 
       // Left Right
       'leftRightRule':
-          'Two attempts each. Includes reverse rounds! Wrong/timeout adds penalty',
+          'One turn per player each round. Includes reverse rounds; wrong/timeout adds penalty',
       'leftRightDifficultyTitle': 'Difficulty',
       'leftRightDifficultyEasy': 'Easy',
       'leftRightDifficultyMedium': 'Medium',
@@ -752,6 +779,7 @@ class AppLocalizations {
           '50% reverse chance, horizontal directions only',
       'leftRightDifficultyHardHint':
           '75% reverse chance, all four directions enabled',
+      'leftRightRoundsSetting': 'Rounds: {count}',
       'leftRightSwipeTo': 'Swipe {direction}',
       'leftRightReverseSwipeTo': '⚡ REVERSE! Swipe OPPOSITE of {direction}',
       'leftRightReversed': 'Reversed! +2 penalty',
@@ -761,6 +789,12 @@ class AppLocalizations {
       'leftRightWaitingSwipe': 'Waiting swipe...',
       'leftRightBeginReaction': 'Begin reaction',
       'leftRightFinalPenalties': 'Final penalties',
+      'gravityBalancePrepTitle': 'Choose difficulty',
+      'gravityBalancePrepHint':
+          'Pick a mode before starting. Higher difficulty means a curvier and more dynamic path.',
+      'gravityBalancePlayersSetting': 'Players: {count}',
+      'gravityBalanceStartChallenge': 'Start challenge',
+      'gravityBalanceCurrentPlayer': 'Player {current}/{total}',
       'gravityBalanceRule':
           'Keep the liquid ball inside the lane until the finish.\nAfter 50% progress, the track starts swaying and quake shocks may knock you out.',
       'gravityBalanceDifficultyEasyHint':
@@ -772,6 +806,18 @@ class AppLocalizations {
       'gravityBalanceQuake': '⚠ QUAKE SHOCK! Counter-tilt now',
       'gravityBalanceCompleted': 'Level cleared',
       'gravityBalanceExploded': 'Track lost, ball shattered',
+      'gravityBalanceFailed': 'Missed the hole, challenge failed',
+      'gravityBalanceRoundResultTitle': '{player} result',
+      'gravityBalanceResultStatus': 'Success: {status}',
+      'gravityBalanceResultTime': 'Completion time: {time}',
+      'gravityBalanceResultSuccessYes': 'Yes',
+      'gravityBalanceResultSuccessNo': 'No',
+      'gravityBalanceTimeUnavailable': '--',
+      'gravityBalanceSeconds': '{seconds}s',
+      'gravityBalanceViewSummary': 'View summary',
+      'gravityBalanceSummaryTitle': 'Final standings',
+      'gravityBalanceNoChampion': 'No speed winner (everyone must clear)',
+      'gravityBalanceChampion': 'Winner: {player} ({time})',
       'gravityBalanceRetry': 'Retry',
       'bioDetectorHoldStart': 'Hold to begin scan',
       'bioDetectorSamplingHint1': 'Reading capillary constriction...',
@@ -779,6 +825,13 @@ class AppLocalizations {
       'bioDetectorWarnBreath': '[WARN] Respiration anomaly',
       'bioDetectorWarnCortex': '[WARN] Cortex activity elevated',
       'bioDetectorRetry': 'Run again',
+      'bioDetectorSetupTitle': 'Game setup',
+      'bioDetectorRoundsSetting': 'Rounds: {count}',
+      'bioDetectorSetupHint':
+          'Set rounds, then start. Hold the fingerprint zone each round to scan.',
+      'bioDetectorRoundTruth': 'Round result: TRUTH',
+      'bioDetectorRoundLie': 'Round result: LIE',
+      'bioDetectorFinalSummary': 'Scan complete: Truth {truth} / Lie {lie}',
 
       // Word Bomb
       'wordBombCategory': 'Category',
@@ -847,6 +900,7 @@ class AppLocalizations {
 
       // Truth or Raise
       'truthRaiseSetupTitle': 'Game setup',
+      'truthRaiseRoundsSetting': 'Rounds: {count}',
       'truthRaiseScaleTitle': 'Intensity level',
       'truthRaiseScaleHint': 'Skip adds +{step}; capped at {max}',
       'truthRaiseScaleCurrent': 'Current level: {level}',
@@ -899,13 +953,13 @@ class AppLocalizations {
       'helpGestureDuelBody':
           'Each player picks a gesture in turn.\nSwitch between “minority loses” and “majority loses”.\nSystem decides losers by distribution.\nDraws restart the round.',
       'helpLeftRightBody':
-          'Swipe in the prompted direction as fast as possible.\nWrong direction or timeout adds penalty points.\nEach player gets two turns.\nFinal result is based on total penalties.',
+          'Swipe in the prompted direction as fast as possible.\nWrong direction or timeout adds penalty points.\nEach round gives one turn to each player.\nFinal result is based on total penalties.',
       'helpWordBombBody':
           'Choose a category and start countdown.\nSpeak a valid word then pass to next player.\nStuck/repeat/timeout causes explosion and penalty.\nA starter word is generated each round.',
       'helpChallengeAuctionBody':
           'All players bid to take the challenge.\nLowest bid wins and must perform it.\nSuccess/fail follows current rule mode.\nIf alcohol mode is off, it switches to pure point rules.',
       'helpTruthRaiseBody':
-          'On your turn, choose “Answer” or “Skip + Raise”.\nAnswer resets raise level.\nSkip increases raise and accumulates penalties.\nEnd of rounds is settled by total penalties.',
+          'On your turn, choose “Answer” or “Skip + Raise”.\nIntensity level controls skip step size and cap.\nAnswer resets raise level.\nSkip increases raise and accumulates penalties.\nEnd of rounds is settled by total penalties.',
       'helpBioDetectorBody':
           'Long-press the fingerprint zone to start fake bio-analysis.\nSampling stage shows a red pulse wave and rolling readouts.\nPressure stage ramps haptics from 60bpm to 120bpm with random warnings.\nHidden corner hotspots can force truth/lie outcome.',
       'helpDecibelBombBody':

@@ -12,6 +12,7 @@ import '../../shared/widgets/penalty_blind_box_overlay.dart';
 import '../../shared/widgets/penalty_preset_card.dart';
 import '../../shared/widgets/game_result_action_bar.dart';
 import '../../shared/widgets/game_result_template_card.dart';
+import '../../shared/styles/game_ui_style.dart';
 import '../../shared/widgets/web3_game_background.dart';
 import 'logic/gesture_duel_logic.dart';
 import 'party_plus_strings.dart';
@@ -54,7 +55,6 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
 
   void _startGame() {
     setState(() {
-      _totalRounds = _playerCount;
       _round = 0;
       _scores = List<int>.filled(_playerCount, 0);
       _blindBoxResult = null;
@@ -226,7 +226,7 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
           ),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding: GameUiSpacing.screenPadding,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -240,23 +240,18 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
                       const Spacer(),
                       Text(
                         l10n.t('gestureDuel'),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.8,
-                        ),
+                        style: GameUiText.navTitle,
                       ),
                       const Spacer(),
                       const SizedBox(width: 20),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: GameUiSpacing.topGap),
+                  const SizedBox(height: GameUiSpacing.sectionGap),
                   if (_phase == _DuelPhase.setup) ...[
                     Text(
                       l10n.playersCount(_playerCount),
-                      style: const TextStyle(color: AppColors.textSecondary),
+                      style: GameUiText.body,
                     ),
                     Slider(
                       value: _playerCount.toDouble(),
@@ -264,18 +259,24 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
                       max: 6,
                       divisions: 3,
                       activeColor: AppColors.fingerCyan,
-                      onChanged: (v) => setState(() {
-                        _playerCount = v.round();
-                        _totalRounds = _playerCount;
-                      }),
+                      onChanged: (v) =>
+                          setState(() => _playerCount = v.round()),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      l10n.t('gestureRoundOf', {
-                        'current': '$_playerCount',
-                        'total': '$_playerCount',
+                      l10n.t('gestureRoundsSetting', {
+                        'count': '$_totalRounds',
                       }),
-                      style: const TextStyle(color: AppColors.textSecondary),
+                      style: GameUiText.body,
+                    ),
+                    Slider(
+                      value: _totalRounds.toDouble(),
+                      min: 1,
+                      max: 12,
+                      divisions: 11,
+                      activeColor: AppColors.fingerCyan,
+                      onChanged: (v) =>
+                          setState(() => _totalRounds = v.round()),
                     ),
                     const SizedBox(height: 8),
                     SwitchListTile(
@@ -283,7 +284,7 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
                         _minorityLoses
                             ? l10n.t('gestureModeMinority')
                             : l10n.t('gestureModeMajority'),
-                        style: const TextStyle(color: Colors.white),
+                        style: GameUiText.bodyStrong,
                       ),
                       value: _minorityLoses,
                       onChanged: (v) => setState(() => _minorityLoses = v),
@@ -305,6 +306,7 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
                         backgroundColor: AppColors.fingerCyan,
                         foregroundColor: Colors.black,
                         padding: const EdgeInsets.symmetric(vertical: 14),
+                        textStyle: GameUiText.buttonLabel,
                       ),
                       child: Text(l10n.t('gestureStartDuel')),
                     ),
@@ -334,8 +336,7 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
                           'player':
                               PartyPlusStrings.player(context, _currentPlayer),
                         }),
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 16),
+                        style: GameUiText.bodyStrong,
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -372,7 +373,7 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
                               _label(g, context),
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 17,
+                                fontSize: 16,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -384,7 +385,7 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
                     Text(
                       l10n.doneProgress(_currentPlayer, _playerCount),
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: AppColors.textSecondary),
+                      style: GameUiText.body,
                     ),
                   ] else if (_phase == _DuelPhase.roundResult) ...[
                     Text(
@@ -403,11 +404,7 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
                     Text(
                       l10n.t('gestureRoundResult'),
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: GameUiText.sectionTitle,
                     ),
                     const SizedBox(height: 16),
                     ...List.generate(_picks.length, (i) {
@@ -459,7 +456,7 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
                     Text(
                       _resultText,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white, fontSize: 15),
+                      style: GameUiText.bodyStrong.copyWith(fontSize: 15),
                     ),
                     const Spacer(),
                     GameResultActionBar(
@@ -474,11 +471,7 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
                     Text(
                       l10n.t('gestureFinalResult'),
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: GameUiText.sectionTitle,
                     ),
                     const SizedBox(height: 16),
                     ...List.generate(_playerCount, (i) {

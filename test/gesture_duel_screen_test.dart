@@ -8,6 +8,33 @@ import 'package:playtimetool/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  testWidgets('round count can be configured in setup phase',
+      (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues(const {
+      'game_help_seen_gesture_duel': true,
+    });
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: _GestureDuelTestApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('轮次：4'), findsOneWidget);
+
+    final roundSlider = tester.widget<Slider>(find.byType(Slider).at(1));
+    roundSlider.onChanged?.call(7);
+    await tester.pump();
+
+    expect(find.text('轮次：7'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(ElevatedButton, '开始对决'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('第 1 / 7 轮'), findsOneWidget);
+  });
+
   testWidgets('gesture options are large full-width bars in picking phase',
       (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues(const {

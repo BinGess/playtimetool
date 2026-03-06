@@ -10,6 +10,7 @@ import '../../core/haptics/haptic_service.dart';
 import '../../core/audio/audio_service.dart';
 import '../../core/constants/app_sounds.dart';
 import '../../shared/services/penalty_service.dart';
+import '../../shared/styles/game_ui_style.dart';
 import '../../shared/widgets/game_result_action_bar.dart';
 import '../../shared/widgets/game_result_template_card.dart';
 import '../../shared/widgets/web3_game_background.dart';
@@ -137,7 +138,8 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
                 const SizedBox(height: 16),
                 // Top bar
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  padding:
+                      GameUiSpacing.screenPadding.copyWith(top: 0, bottom: 0),
                   child: Row(
                     children: [
                       GestureDetector(
@@ -167,10 +169,7 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
                               const SizedBox(width: 6),
                               Text(
                                 l10n.edit,
-                                style: const TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 12,
-                                ),
+                                style: GameUiText.caption,
                               ),
                             ],
                           ),
@@ -445,12 +444,7 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
                 children: [
                   Text(
                     l10n.editWheel,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.8,
-                    ),
+                    style: GameUiText.navTitle,
                   ),
                   const Spacer(),
                   GestureDetector(
@@ -469,9 +463,8 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
                       ),
                       child: Text(
                         l10n.add,
-                        style: const TextStyle(
+                        style: GameUiText.body.copyWith(
                           color: AppColors.wheelOrange,
-                          fontSize: 13,
                         ),
                       ),
                     ),
@@ -573,11 +566,10 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
             ),
           ),
           title: Text(title,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  letterSpacing: 0.5,
-                  fontWeight: FontWeight.w600)),
+              style: GameUiText.bodyStrong.copyWith(
+                fontSize: 18,
+                letterSpacing: 0.5,
+              )),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -607,10 +599,10 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
               ),
               const SizedBox(height: 20),
               Text(colorLabel,
-                  style: const TextStyle(
-                      color: AppColors.textDim,
-                      fontSize: 13,
-                      letterSpacing: 0.5)),
+                  style: GameUiText.body.copyWith(
+                    color: AppColors.textDim,
+                    letterSpacing: 0.5,
+                  )),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 12,
@@ -708,11 +700,8 @@ class _SegmentTile extends StatelessWidget {
         ),
         title: Text(
           segment.label,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
+          style: GameUiText.bodyStrong.copyWith(
             letterSpacing: 0.6,
-            height: 1.4,
           ),
         ),
         trailing: Row(
@@ -771,7 +760,7 @@ class _ModeToggle extends StatelessWidget {
           isPrank ? l10n.prank : l10n.fair,
           style: TextStyle(
             color: isPrank ? AppColors.bombRed : AppColors.textSecondary,
-            fontSize: 12,
+            fontSize: GameUiText.caption.fontSize,
           ),
         ),
       ),

@@ -21,14 +21,12 @@ void main() {
         child: _GravityBalanceTestApp(),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 50));
 
     expect(find.text('平衡边缘'), findsOneWidget);
-    expect(find.text('惩罚预设 Penalty Preset'), findsOneWidget);
-    expect(find.text('简单'), findsOneWidget);
-    expect(find.text('中等'), findsOneWidget);
-    expect(find.text('困难'), findsOneWidget);
-    expect(find.text('开  始'), findsOneWidget);
+    expect(find.textContaining('液态球'), findsOneWidget);
+    expect(find.text('当前玩家 1/2'), findsOneWidget);
+    expect(find.byType(CustomPaint), findsWidgets);
   });
 }
 

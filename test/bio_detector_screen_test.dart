@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   testWidgets(
-      'shows hold-to-start prompt and enters initializing on long press',
+      'shows setup rounds slider then enters initializing after starting and long press',
       (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues(const {
       'game_help_seen_bio_detector': true,
@@ -28,7 +28,12 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 200));
 
+    expect(find.text('开局设置'), findsOneWidget);
     expect(find.text('惩罚预设 Penalty Preset'), findsOneWidget);
+    expect(find.byKey(const Key('bio-detector-rounds-slider')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('bio-detector-start-session')));
+    await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('长按开始检测'), findsOneWidget);
 
     await tester.longPress(find.byKey(const Key('bio-detector-fingerprint')));

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
+import '../styles/game_ui_style.dart';
 
 enum GameStage { prepare, playing, result }
 
@@ -48,7 +49,7 @@ class GameStageStepper extends StatelessWidget {
               labels[i],
               style: TextStyle(
                 color: active ? Colors.white : AppColors.textSecondary,
-                fontSize: 11,
+                fontSize: GameUiText.caption.fontSize,
                 letterSpacing: 1.1,
                 fontWeight: active ? FontWeight.w700 : FontWeight.w500,
               ),

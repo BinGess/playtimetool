@@ -53,6 +53,46 @@ class PenaltyPreset {
   }
 }
 
+PenaltyScene parsePenaltyScene(String? raw) {
+  return switch (raw) {
+    'bar' => PenaltyScene.bar,
+    _ => PenaltyScene.home,
+  };
+}
+
+PenaltyIntensity parsePenaltyIntensity(String? raw) {
+  return switch (raw) {
+    'wild' => PenaltyIntensity.wild,
+    'xtreme' => PenaltyIntensity.xtreme,
+    _ => PenaltyIntensity.mild,
+  };
+}
+
+PenaltyPreset parsePenaltyPreset({
+  String? scene,
+  String? intensity,
+}) {
+  return PenaltyPreset(
+    scene: parsePenaltyScene(scene),
+    intensity: parsePenaltyIntensity(intensity),
+  );
+}
+
+String penaltySceneId(PenaltyScene scene) {
+  return switch (scene) {
+    PenaltyScene.home => 'home',
+    PenaltyScene.bar => 'bar',
+  };
+}
+
+String penaltyIntensityId(PenaltyIntensity intensity) {
+  return switch (intensity) {
+    PenaltyIntensity.mild => 'mild',
+    PenaltyIntensity.wild => 'wild',
+    PenaltyIntensity.xtreme => 'xtreme',
+  };
+}
+
 class PenaltyEntry {
   const PenaltyEntry({
     required this.id,

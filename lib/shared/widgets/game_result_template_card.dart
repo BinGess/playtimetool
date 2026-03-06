@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
+import '../styles/game_ui_style.dart';
 import 'glass_container.dart';
 
 class GameResultTemplateCard extends StatelessWidget {
@@ -40,12 +41,7 @@ class GameResultTemplateCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             resultText,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              height: 1.45,
-            ),
+            style: GameUiText.bodyStrong,
           ),
           const SizedBox(height: 14),
           Divider(color: AppColors.glassBorder.withAlpha(180), height: 1),
@@ -62,11 +58,7 @@ class GameResultTemplateCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             penaltyText,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 15,
-              height: 1.5,
-            ),
+            style: GameUiText.body.copyWith(color: AppColors.textPrimary),
           ),
         ],
       ),

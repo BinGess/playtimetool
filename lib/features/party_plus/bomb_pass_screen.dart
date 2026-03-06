@@ -12,6 +12,7 @@ import '../../shared/widgets/game_result_action_bar.dart';
 import '../../shared/widgets/game_result_template_card.dart';
 import '../../shared/widgets/penalty_blind_box_overlay.dart';
 import '../../shared/widgets/penalty_preset_card.dart';
+import '../../shared/styles/game_ui_style.dart';
 import '../../shared/widgets/web3_game_background.dart';
 import 'logic/timed_round_logic.dart';
 import 'party_plus_strings.dart';
@@ -172,7 +173,7 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen>
           ),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding: GameUiSpacing.screenPadding,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -186,22 +187,17 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen>
                       const Spacer(),
                       Text(
                         l10n.t('passBomb'),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.8,
-                        ),
+                        style: GameUiText.navTitle,
                       ),
                       const Spacer(),
                       const SizedBox(width: 20),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: GameUiSpacing.topGap),
                   const SizedBox(height: 18),
                   Text(
                     l10n.playersCount(_playerCount),
-                    style: const TextStyle(color: AppColors.textSecondary),
+                    style: GameUiText.body,
                   ),
                   Slider(
                     value: _playerCount.toDouble(),
@@ -291,6 +287,7 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen>
                                     fontWeight: _exploded
                                         ? FontWeight.w700
                                         : FontWeight.normal,
+                                    height: 1.4,
                                   ),
                                 ),
                                 const SizedBox(height: 10),

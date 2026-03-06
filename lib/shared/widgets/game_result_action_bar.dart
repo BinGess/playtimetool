@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../styles/game_ui_style.dart';
 
 class GameResultActionBar extends StatelessWidget {
   const GameResultActionBar({
@@ -24,7 +25,7 @@ class GameResultActionBar extends StatelessWidget {
         if (secondaryLabel != null && onSecondaryTap != null) ...[
           SizedBox(
             width: double.infinity,
-            height: 52,
+            height: GameUiSpacing.buttonHeight,
             child: OutlinedButton(
               onPressed: onSecondaryTap,
               style: OutlinedButton.styleFrom(
@@ -35,12 +36,7 @@ class GameResultActionBar extends StatelessWidget {
               ),
               child: Text(
                 secondaryLabel!,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
-                ),
+                style: GameUiText.bodyStrong,
               ),
             ),
           ),
@@ -48,7 +44,7 @@ class GameResultActionBar extends StatelessWidget {
         ],
         SizedBox(
           width: double.infinity,
-          height: 56,
+          height: GameUiSpacing.buttonHeight + 4,
           child: ElevatedButton(
             onPressed: onPrimaryTap,
             style: ElevatedButton.styleFrom(
@@ -59,9 +55,9 @@ class GameResultActionBar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
               ),
               textStyle: const TextStyle(
-                fontSize: 17,
+                fontSize: 16,
                 fontWeight: FontWeight.w700,
-                letterSpacing: 0.6,
+                letterSpacing: 0.4,
               ),
             ),
             child: Text(primaryLabel),
