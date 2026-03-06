@@ -25,6 +25,49 @@ class AppLocalizations {
       'penaltyMethodScore': '积分结算',
       'penaltyMethodRule': '规则结算',
       'penaltyMethodGuide': '玩法引导',
+      'penaltyPresetTitle': '惩罚预设 Penalty Preset',
+      'penaltyPresetHint': '先约好场景和尺度，结算时自动生成 3 张命运卡。',
+      'penaltySceneTitle': '场景选择',
+      'penaltySceneHome': '居家模式',
+      'penaltySceneBar': '酒吧模式',
+      'penaltyIntensityTitle': '尺度强度',
+      'penaltyIntensityMild': '热身',
+      'penaltyIntensityWild': '进阶',
+      'penaltyIntensityXtreme': '极限',
+      'penaltyBlindBoxTitle': '命运抉择',
+      'penaltyBlindBoxLosers': '{players} 接受命运抉择',
+      'penaltyBlindBoxHint': '点击一张卡片，翻开本局惩罚',
+      'penaltyBlindBoxRevealed': '其余两张会告诉你错过了什么',
+      'penaltyCurrentPlayerLabel': '当前玩家',
+
+      // Penalty blind box library
+      'blindBoxBarLevel1DeepBomb': '深水炸弹：自选两种饮料/酒类混合，一口闷。',
+      'blindBoxBarLevel1CheersMessenger': '碰杯使者：与全场每个人碰杯并说一句“合作愉快”。',
+      'blindBoxBarLevel1SongPrivilege': '点歌特权：为赢家点一首最难听的歌，并听完整首。',
+      'blindBoxBarLevel1SingleEar': '单边耳环：用左手摸着右耳朵保持 2 分钟。',
+      'blindBoxBarLevel2DarkDrink': '特调大师：由赢家调制一杯暗黑饮品，输家喝掉。',
+      'blindBoxBarLevel2TruthBody': '真心话：现场选一位异性，评价对方最吸引你的一个部位。',
+      'blindBoxBarLevel2ShoutHero': '摇摆时刻：站起来大喊“我是今晚最靓的仔！”。',
+      'blindBoxBarLevel2RecentCalls': '交换人生：让左手边朋友查看你的最近通话记录。',
+      'blindBoxBarLevel3SinglePost': '微信冒险：朋友圈发布“我单身，有人要带走吗？”，5 分钟后可删除。',
+      'blindBoxBarLevel3StrangerTissue': '陌生人任务：去隔壁桌要一张纸巾，并夸赞对方长相。',
+      'blindBoxBarLevel3VoiceConfession': '酒后吐真言：给微信置顶的第一个人发语音“其实我一直想告诉你...”。',
+      'blindBoxBarLevel3BlindFeed': '盲目跟随：蒙住眼睛，由赢家喂你吃下三样桌上的食物。',
+      'blindBoxHomeLevel1BalanceMaster': '平衡大师：单脚站稳，闭上眼睛数 30 秒。',
+      'blindBoxHomeLevel1WallSquat': '壁虎漫步：靠墙做 10 个深蹲，不能扶墙。',
+      'blindBoxHomeLevel1EmojiCopy': '表情包模仿：模仿热门表情包，由大家打分，不及格重做。',
+      'blindBoxHomeLevel1SilentGold': '沉默是金：接下来 3 分钟内禁止说话，违反者惩罚翻倍。',
+      'blindBoxHomeLevel2SecretStory': '秘密揭晓：讲述一件从未告诉在场任何人的糗事。',
+      'blindBoxHomeLevel2PhotoExplain': '手机黑洞：展示你相册里倒数第 10 张图片，并解释原因。',
+      'blindBoxHomeLevel2SiriConfession': '智能助手：对着手机语音助手深情表白 30 秒。',
+      'blindBoxHomeLevel2ChoresToday': '家务承包：今天的餐后洗碗/倒垃圾/整理桌面由你承包。',
+      'blindBoxHomeLevel3GroupBlast': '群组轰炸：在家亲戚群里发一句“其实我不想结婚/谈恋爱，你们别催了。”',
+      'blindBoxHomeLevel3AvatarSwap': '换头大师：把社交软件头像换成赢家的照片，保持 24 小时。',
+      'blindBoxHomeLevel3LiveShow': '直播挑战：开启朋友圈直播或群视频，进行 1 分钟无实物表演。',
+      'blindBoxHomeLevel3RolePlay': '角色互换：模仿在场某一个人，直到大家猜出来是谁。',
+      'blindBoxFallbackQuickSquat': '通用惩罚：立即做 10 个深蹲。',
+      'blindBoxFallbackQuickTruth': '通用惩罚：回答一个大家指定的真心话问题。',
+      'blindBoxFallbackQuickSong': '通用惩罚：唱 20 秒副歌，直到全场满意。',
 
       // Hub
       'hubSubtitle': 'PARTY GAMES',
@@ -261,6 +304,9 @@ class AppLocalizations {
       'leftRightBeginReaction': '开始反应',
       'leftRightFinalPenalties': '最终罚分',
       'gravityBalanceRule': '将液态球保持在轨迹内，到达终点即获胜。\n进度过半后轨迹摆动，随机地震会强行冲击。',
+      'gravityBalanceDifficultyEasyHint': '轨道更宽，摆动更轻，地震间隔更长，适合热身局。',
+      'gravityBalanceDifficultyMediumHint': '默认挑战，摆动与地震频率保持均衡。',
+      'gravityBalanceDifficultyHardHint': '轨道更窄，摆动更强，地震更频繁，适合高压对决。',
       'gravityBalanceQuake': '⚠ 地震冲击！立刻反向倾斜',
       'gravityBalanceCompleted': '完美通关',
       'gravityBalanceExploded': '轨迹失守，球体炸裂',
@@ -405,6 +451,76 @@ class AppLocalizations {
       'penaltyMethodScore': 'Score Rule',
       'penaltyMethodRule': 'Rule Result',
       'penaltyMethodGuide': 'Gameplay Guide',
+      'penaltyPresetTitle': 'Penalty Preset',
+      'penaltyPresetHint':
+          'Choose scene and intensity first, then reveal 3 fate cards at result time.',
+      'penaltySceneTitle': 'Scene',
+      'penaltySceneHome': 'Home',
+      'penaltySceneBar': 'Bar',
+      'penaltyIntensityTitle': 'Intensity',
+      'penaltyIntensityMild': 'Mild',
+      'penaltyIntensityWild': 'Wild',
+      'penaltyIntensityXtreme': 'Xtreme',
+      'penaltyBlindBoxTitle': 'Fate Choice',
+      'penaltyBlindBoxLosers': '{players} must face the fate cards',
+      'penaltyBlindBoxHint': 'Tap one card to reveal the penalty',
+      'penaltyBlindBoxRevealed': 'The other two show what you narrowly escaped',
+      'penaltyCurrentPlayerLabel': 'Current player',
+
+      // Penalty blind box library
+      'blindBoxBarLevel1DeepBomb':
+          'Depth charge: mix two drinks and finish it in one shot.',
+      'blindBoxBarLevel1CheersMessenger':
+          'Cheers messenger: clink glasses with everyone and say “good game”.',
+      'blindBoxBarLevel1SongPrivilege':
+          'Song privilege: queue the worst song for the winner and listen to all of it.',
+      'blindBoxBarLevel1SingleEar':
+          'Single earring: hold your right ear with your left hand for 2 minutes.',
+      'blindBoxBarLevel2DarkDrink':
+          'Dark mixologist: let the winner mix a cursed drink and finish it.',
+      'blindBoxBarLevel2TruthBody':
+          'Truth: name the most attractive feature of someone here.',
+      'blindBoxBarLevel2ShoutHero':
+          'Spotlight moment: stand up and shout “I am the hottest one tonight!”.',
+      'blindBoxBarLevel2RecentCalls':
+          'Life swap: let the player on your left inspect your recent calls.',
+      'blindBoxBarLevel3SinglePost':
+          'Social gamble: post “I am single, who wants me?” for 5 minutes.',
+      'blindBoxBarLevel3StrangerTissue':
+          'Stranger task: ask the next table for a tissue and compliment them.',
+      'blindBoxBarLevel3VoiceConfession':
+          'Voice confession: send “I always wanted to tell you...” to your top chat.',
+      'blindBoxBarLevel3BlindFeed':
+          'Blind follow: wear a blindfold and let the winner feed you three things.',
+      'blindBoxHomeLevel1BalanceMaster':
+          'Balance master: stand on one leg with eyes closed for 30 seconds.',
+      'blindBoxHomeLevel1WallSquat':
+          'Wall crawl: do 10 squats against the wall without support.',
+      'blindBoxHomeLevel1EmojiCopy':
+          'Meme copy: imitate a popular emoji until the room passes it.',
+      'blindBoxHomeLevel1SilentGold':
+          'Silence is gold: no talking for 3 minutes or the punishment doubles.',
+      'blindBoxHomeLevel2SecretStory':
+          'Secret drop: tell an embarrassing story no one here knows.',
+      'blindBoxHomeLevel2PhotoExplain':
+          'Photo void: show the 10th photo from the end of your gallery and explain it.',
+      'blindBoxHomeLevel2SiriConfession':
+          'Smart assistant: confess your love to Siri for 30 seconds.',
+      'blindBoxHomeLevel2ChoresToday':
+          'Chore duty: own tonight’s cleanup job by yourself.',
+      'blindBoxHomeLevel3GroupBlast':
+          'Family blast: send “stop rushing me into marriage or dating” to the family group.',
+      'blindBoxHomeLevel3AvatarSwap':
+          'Avatar swap: use the winner’s photo as your avatar for 24 hours.',
+      'blindBoxHomeLevel3LiveShow':
+          'Live challenge: do a 1-minute mime in a live story or group video.',
+      'blindBoxHomeLevel3RolePlay':
+          'Role switch: imitate someone here until everyone guesses who.',
+      'blindBoxFallbackQuickSquat': 'Fallback: do 10 squats immediately.',
+      'blindBoxFallbackQuickTruth':
+          'Fallback: answer one truth question picked by the group.',
+      'blindBoxFallbackQuickSong':
+          'Fallback: sing 20 seconds of a chorus until everyone approves.',
 
       'hubSubtitle': 'PARTY GAMES',
       'fingerPicker': 'Finger Picker',
@@ -647,6 +763,12 @@ class AppLocalizations {
       'leftRightFinalPenalties': 'Final penalties',
       'gravityBalanceRule':
           'Keep the liquid ball inside the lane until the finish.\nAfter 50% progress, the track starts swaying and quake shocks may knock you out.',
+      'gravityBalanceDifficultyEasyHint':
+          'Wider lane, gentler sway, slower quakes. Good for warm-up rounds.',
+      'gravityBalanceDifficultyMediumHint':
+          'Default balance with steady sway and quake pressure.',
+      'gravityBalanceDifficultyHardHint':
+          'Narrower lane, stronger sway, more frequent quakes for high-pressure rounds.',
       'gravityBalanceQuake': '⚠ QUAKE SHOCK! Counter-tilt now',
       'gravityBalanceCompleted': 'Level cleared',
       'gravityBalanceExploded': 'Track lost, ball shattered',

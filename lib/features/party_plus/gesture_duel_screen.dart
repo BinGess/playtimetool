@@ -8,6 +8,8 @@ import '../../core/haptics/haptic_service.dart';
 import '../../features/settings/providers/settings_provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/services/penalty_service.dart';
+import '../../shared/widgets/penalty_blind_box_overlay.dart';
+import '../../shared/widgets/penalty_preset_card.dart';
 import '../../shared/widgets/game_result_action_bar.dart';
 import '../../shared/widgets/game_result_template_card.dart';
 import '../../shared/widgets/web3_game_background.dart';
@@ -41,6 +43,8 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
   bool _showHelpButton = false;
   bool _isPickFeedbackActive = false;
   DuelGesture? _tappedGesture;
+  PenaltyPreset _penaltyPreset = PenaltyPreset.defaults;
+  PenaltyBlindBoxResult? _blindBoxResult;
 
   @override
   void initState() {
@@ -53,6 +57,7 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
       _totalRounds = _playerCount;
       _round = 0;
       _scores = List<int>.filled(_playerCount, 0);
+      _blindBoxResult = null;
     });
     _startRound();
   }
@@ -154,12 +159,19 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
     _losers = losers;
 
     if (losers.isEmpty) {
+      _blindBoxResult = null;
       _resultText = PenaltyService.guidancePlan(
         l10n: l10n,
         guide: PenaltyGuideType.defaultGuide,
       ).text;
     } else {
       final names = losers.map((i) => PartyPlusStrings.player(context, i));
+      _blindBoxResult = PenaltyService.resolveBlindBox(
+        l10n: l10n,
+        random: _random,
+        preset: _penaltyPreset,
+        losers: names.toList(),
+      );
       final penalty = PartyPlusStrings.randomPenalty(
         context,
         _random,
@@ -277,6 +289,14 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
                       onChanged: (v) => setState(() => _minorityLoses = v),
                       activeTrackColor: AppColors.fingerCyan,
                       thumbColor: WidgetStateProperty.all(AppColors.fingerCyan),
+                    ),
+                    const SizedBox(height: 12),
+                    PenaltyPresetCard(
+                      preset: _penaltyPreset,
+                      accentColor: AppColors.fingerCyan,
+                      onChanged: (preset) {
+                        setState(() => _penaltyPreset = preset);
+                      },
                     ),
                     const Spacer(),
                     ElevatedButton(
@@ -500,13 +520,16 @@ class _GestureDuelScreenState extends ConsumerState<GestureDuelScreen> {
                       );
                     }),
                     const SizedBox(height: 10),
-                    GameResultTemplateCard(
-                      accentColor: AppColors.fingerCyan,
-                      resultTitle: l10n.t('resultSummary'),
-                      resultText: l10n.t('gestureFinalResult'),
-                      penaltyTitle: l10n.punishment,
-                      penaltyText: _resultText,
-                    ),
+                    if (_blindBoxResult == null)
+                      GameResultTemplateCard(
+                        accentColor: AppColors.fingerCyan,
+                        resultTitle: l10n.t('resultSummary'),
+                        resultText: l10n.t('gestureFinalResult'),
+                        penaltyTitle: l10n.punishment,
+                        penaltyText: _resultText,
+                      )
+                    else
+                      PenaltyBlindBoxOverlay(result: _blindBoxResult!),
                     const Spacer(),
                     GameResultActionBar(
                       accentColor: AppColors.fingerCyan,

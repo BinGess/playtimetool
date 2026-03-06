@@ -28,6 +28,7 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 200));
 
+    expect(find.text('惩罚预设 Penalty Preset'), findsOneWidget);
     expect(find.text('长按开始检测'), findsOneWidget);
 
     await tester.longPress(find.byKey(const Key('bio-detector-fingerprint')));

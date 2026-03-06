@@ -27,6 +27,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('惩罚预设 Penalty Preset'), findsOneWidget);
     expect(find.text('简单'), findsOneWidget);
     expect(find.text('中等'), findsOneWidget);
     expect(find.text('困难'), findsOneWidget);

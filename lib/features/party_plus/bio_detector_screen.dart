@@ -7,6 +7,9 @@ import 'package:go_router/go_router.dart';
 import '../../core/help/game_help_service.dart';
 import '../../core/haptics/haptic_service.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/services/penalty_service.dart';
+import '../../shared/widgets/penalty_blind_box_overlay.dart';
+import '../../shared/widgets/penalty_preset_card.dart';
 import 'logic/bio_detector_logic.dart';
 
 enum _BioDetectorViewState { idle, running, result }
@@ -41,6 +44,8 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
   BioDetectorCheatOverride _cheatOverride = BioDetectorCheatOverride.none;
   BioDetectorResult? _result;
   int? _resultConfidencePercent;
+  PenaltyPreset _penaltyPreset = PenaltyPreset.defaults;
+  PenaltyBlindBoxResult? _blindBoxResult;
 
   static const List<String> _samplingMessageKeys = [
     'bioDetectorSamplingHint1',
@@ -159,6 +164,16 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
         _result = result;
         _resultConfidencePercent = confidencePercent;
         _viewState = _BioDetectorViewState.result;
+        _blindBoxResult = result == BioDetectorResult.lie
+            ? PenaltyService.resolveBlindBox(
+                l10n: AppLocalizations.of(context),
+                random: _random,
+                preset: _penaltyPreset,
+                losers: <String>[
+                  AppLocalizations.of(context).t('penaltyCurrentPlayerLabel'),
+                ],
+              )
+            : null;
       });
       return;
     }
@@ -241,6 +256,7 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
       _result = null;
       _resultConfidencePercent = null;
       _cheatOverride = BioDetectorCheatOverride.none;
+      _blindBoxResult = null;
     });
   }
 
@@ -331,6 +347,16 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
                     ],
                   ),
                   const SizedBox(height: 24),
+                  if (_viewState == _BioDetectorViewState.idle) ...[
+                    PenaltyPresetCard(
+                      preset: _penaltyPreset,
+                      accentColor: const Color(0xFFFF5454),
+                      onChanged: (preset) {
+                        setState(() => _penaltyPreset = preset);
+                      },
+                    ),
+                    const SizedBox(height: 18),
+                  ],
                   Expanded(
                     child: Column(
                       children: [
@@ -384,6 +410,11 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
                           ),
                         ),
                         const SizedBox(height: 14),
+                        if (_viewState == _BioDetectorViewState.result &&
+                            _blindBoxResult != null) ...[
+                          PenaltyBlindBoxOverlay(result: _blindBoxResult!),
+                          const SizedBox(height: 14),
+                        ],
                         if (_viewState == _BioDetectorViewState.result)
                           SizedBox(
                             width: double.infinity,

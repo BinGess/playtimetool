@@ -8,7 +8,7 @@ import 'package:playtimetool/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  testWidgets('gravity balance screen renders title and track canvas',
+  testWidgets('gravity balance screen shows setup controls before game starts',
       (WidgetTester tester) async {
     HapticService.setEnabled(false);
     addTearDown(() => HapticService.setEnabled(true));
@@ -21,11 +21,14 @@ void main() {
         child: _GravityBalanceTestApp(),
       ),
     );
-    await tester.pump(const Duration(milliseconds: 50));
+    await tester.pumpAndSettle();
 
     expect(find.text('平衡边缘'), findsOneWidget);
-    expect(find.textContaining('液态球'), findsOneWidget);
-    expect(find.byType(CustomPaint), findsWidgets);
+    expect(find.text('惩罚预设 Penalty Preset'), findsOneWidget);
+    expect(find.text('简单'), findsOneWidget);
+    expect(find.text('中等'), findsOneWidget);
+    expect(find.text('困难'), findsOneWidget);
+    expect(find.text('开  始'), findsOneWidget);
   });
 }
 

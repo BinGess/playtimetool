@@ -6,11 +6,12 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/help/game_help_service.dart';
 import '../../core/haptics/haptic_service.dart';
-import '../../features/settings/providers/settings_provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/services/penalty_service.dart';
 import '../../shared/widgets/game_result_action_bar.dart';
 import '../../shared/widgets/game_result_template_card.dart';
+import '../../shared/widgets/penalty_blind_box_overlay.dart';
+import '../../shared/widgets/penalty_preset_card.dart';
 import '../../shared/widgets/web3_game_background.dart';
 import 'logic/timed_round_logic.dart';
 import 'party_plus_strings.dart';
@@ -37,8 +38,9 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen>
   int _remainingMs = 0;
   bool _running = false;
   bool _exploded = false;
-  String _penalty = '';
   bool _showHelpButton = false;
+  PenaltyPreset _penaltyPreset = PenaltyPreset.defaults;
+  PenaltyBlindBoxResult? _blindBoxResult;
 
   @override
   void initState() {
@@ -69,7 +71,6 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen>
   void _startRound() {
     _timer?.cancel();
     _hapticTimer?.cancel();
-    final settings = ref.read(settingsProvider).value ?? const AppSettings();
     final round = createTimedHolderRound(
       playerCount: _playerCount,
       minDuration: 6,
@@ -81,13 +82,9 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen>
       _roundSeconds = round.durationSeconds;
       _remainingMs = round.durationSeconds * 1000;
       _holderIndex = round.holderIndex;
-      _penalty = PartyPlusStrings.randomPenalty(
-        context,
-        _random,
-        alcoholPenaltyEnabled: settings.alcoholPenaltyEnabled,
-      );
       _running = true;
       _exploded = false;
+      _blindBoxResult = null;
     });
 
     // Pulse speed increases as timer nears end
@@ -101,10 +98,18 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen>
         timer.cancel();
         _hapticTimer?.cancel();
         HapticService.tripleHeavyImpact();
+        final loser = PartyPlusStrings.player(context, _holderIndex);
+        final l10n = AppLocalizations.of(context);
         setState(() {
           _remainingMs = 0;
           _running = false;
           _exploded = true;
+          _blindBoxResult = PenaltyService.resolveBlindBox(
+            l10n: l10n,
+            random: _random,
+            preset: _penaltyPreset,
+            losers: <String>[loser],
+          );
         });
       } else {
         // Escalate haptic feedback as danger increases
@@ -209,6 +214,16 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen>
                         ? null
                         : (v) => setState(() => _playerCount = v.round()),
                   ),
+                  if (!_running && !_exploded) ...[
+                    const SizedBox(height: 12),
+                    PenaltyPresetCard(
+                      preset: _penaltyPreset,
+                      accentColor: AppColors.bombRed,
+                      onChanged: (preset) {
+                        setState(() => _penaltyPreset = preset);
+                      },
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   // Hidden timer: only show a danger hint, no exact time
                   if (_running)
@@ -304,14 +319,13 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen>
                         resultText:
                             '${PartyPlusStrings.player(context, _holderIndex)} ${l10n.t('passBombBoom')}',
                         penaltyTitle: l10n.punishment,
-                        penaltyText: PenaltyService.actionPlan(
-                          l10n: l10n,
-                          players: [
-                            PartyPlusStrings.player(context, _holderIndex),
-                          ],
-                          actionText: _penalty,
-                        ).text,
+                        penaltyText: l10n.t('penaltyBlindBoxTitle'),
                       ),
+                    ),
+                  if (_exploded && _blindBoxResult != null)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: PenaltyBlindBoxOverlay(result: _blindBoxResult!),
                     ),
                   if (_exploded)
                     GameResultActionBar(

@@ -13,8 +13,11 @@ import '../../core/constants/app_sounds.dart';
 import '../../core/haptics/haptic_service.dart';
 import '../../core/help/game_help_service.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/services/penalty_service.dart';
 import '../../shared/widgets/game_result_action_bar.dart';
 import '../../shared/widgets/game_result_template_card.dart';
+import '../../shared/widgets/penalty_blind_box_overlay.dart';
+import '../../shared/widgets/penalty_preset_card.dart';
 import '../../shared/widgets/web3_game_background.dart';
 import 'logic/decibel_bomb_logic.dart';
 import 'logic/decibel_bomb_permission_logic.dart';
@@ -59,6 +62,8 @@ class _DecibelBombScreenState extends State<DecibelBombScreen>
   int _holderIndex = 0;
   bool _isHoldingSpeak = false;
   PermissionStatus? _permissionStatus;
+  PenaltyPreset _penaltyPreset = PenaltyPreset.defaults;
+  PenaltyBlindBoxResult? _blindBoxResult;
 
   double _currentDb = 0;
   final List<double> _calibrationSamples = [];
@@ -165,6 +170,7 @@ class _DecibelBombScreenState extends State<DecibelBombScreen>
         baselineDb: _bombState.baselineDb,
       );
       _explosionController.reset();
+      _blindBoxResult = null;
     });
 
     _calibrationTimer = Timer(_calibrationDuration, _finishCalibration);
@@ -235,6 +241,12 @@ class _DecibelBombScreenState extends State<DecibelBombScreen>
     _isHoldingSpeak = false;
     _showFlash = true;
     _phase = _DecibelBombPhase.exploded;
+    _blindBoxResult = PenaltyService.resolveBlindBox(
+      l10n: AppLocalizations.of(context),
+      random: _random,
+      preset: _penaltyPreset,
+      losers: <String>[AppLocalizations.of(context).playerLabel(_holderIndex + 1)],
+    );
 
     _explosionController
       ..reset()
@@ -375,7 +387,17 @@ class _DecibelBombScreenState extends State<DecibelBombScreen>
                             })
                         : null,
                   ),
-                  const SizedBox(height: 10),
+                  if (_phase != _DecibelBombPhase.exploded) ...[
+                    const SizedBox(height: 8),
+                    PenaltyPresetCard(
+                      preset: _penaltyPreset,
+                      accentColor: AppColors.fingerCyan,
+                      onChanged: (preset) {
+                        setState(() => _penaltyPreset = preset);
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                  ],
                   Expanded(
                     child: Center(
                       child: AnimatedBuilder(
@@ -422,12 +444,15 @@ class _DecibelBombScreenState extends State<DecibelBombScreen>
                         accentColor: AppColors.bombRed,
                         resultTitle: l10n.t('resultSummary'),
                         resultText: _explosionSummary(l10n),
-                        penaltyTitle: l10n.t('decibelBombExplosionReason'),
-                        penaltyText: _bombState.explosionReason ==
-                                ExplosionReason.handoffSpike
-                            ? l10n.t('decibelBombHandoffPenalty')
-                            : l10n.t('decibelBombLoudPenalty'),
+                        penaltyTitle: l10n.punishment,
+                        penaltyText: l10n.t('penaltyBlindBoxTitle'),
                       ),
+                    ),
+                  if (_phase == _DecibelBombPhase.exploded &&
+                      _blindBoxResult != null)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: PenaltyBlindBoxOverlay(result: _blindBoxResult!),
                     ),
                   if (_phase == _DecibelBombPhase.exploded)
                     GameResultActionBar(

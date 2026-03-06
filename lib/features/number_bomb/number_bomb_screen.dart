@@ -5,11 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/help/game_help_service.dart';
 import '../../core/haptics/haptic_service.dart';
-import '../../features/settings/providers/settings_provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/services/penalty_service.dart';
 import '../../shared/widgets/game_result_action_bar.dart';
 import '../../shared/widgets/game_result_template_card.dart';
+import '../../shared/widgets/penalty_blind_box_overlay.dart';
+import '../../shared/widgets/penalty_preset_card.dart';
 import '../../shared/widgets/web3_game_background.dart';
 import 'models/bomb_state.dart';
 import 'providers/number_bomb_provider.dart';
@@ -29,6 +30,8 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
   late Animation<double> _bombPulse;
   late Animation<double> _explosionAnim;
   bool _showHelpButton = false;
+  PenaltyPreset _penaltyPreset = PenaltyPreset.defaults;
+  PenaltyBlindBoxResult? _blindBoxResult;
 
   @override
   void initState() {
@@ -80,16 +83,14 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
       }
       if (next.phase == BombPhase.explosion &&
           prev?.phase != BombPhase.explosion) {
-        final settings =
-            ref.read(settingsProvider).value ?? const AppSettings();
-        final penaltyPlan = PenaltyService.randomPlan(
+        _blindBoxResult = PenaltyService.resolveBlindBox(
           l10n: AppLocalizations.of(context),
           random: _penaltyRandom,
-          alcoholPenaltyEnabled: settings.alcoholPenaltyEnabled,
+          preset: _penaltyPreset,
+          losers: <String>[
+            AppLocalizations.of(context).t('penaltyCurrentPlayerLabel'),
+          ],
         );
-        ref
-            .read(numberBombProvider.notifier)
-            .setPunishmentText(penaltyPlan.text);
         _explosionController.reset();
         _explosionController.forward();
       }
@@ -133,6 +134,10 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
                   ? _SetupView(
                       onStart: notifier.startGame,
                       l10n: AppLocalizations.of(context),
+                      penaltyPreset: _penaltyPreset,
+                      onPenaltyPresetChanged: (preset) {
+                        setState(() => _penaltyPreset = preset);
+                      },
                     )
                   : state.phase == BombPhase.playing
                       ? _PlayingView(
@@ -148,7 +153,7 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
             if (state.phase == BombPhase.explosion)
               _ExplosionOverlay(
                 anim: _explosionAnim,
-                punishmentText: state.punishmentText,
+                blindBoxResult: _blindBoxResult,
                 onReset: notifier.reset,
                 l10n: AppLocalizations.of(context),
               ),
@@ -210,10 +215,14 @@ class _SetupView extends StatefulWidget {
   const _SetupView({
     required this.onStart,
     required this.l10n,
+    required this.penaltyPreset,
+    required this.onPenaltyPresetChanged,
   });
 
   final void Function({int min, int max}) onStart;
   final AppLocalizations l10n;
+  final PenaltyPreset penaltyPreset;
+  final ValueChanged<PenaltyPreset> onPenaltyPresetChanged;
 
   @override
   State<_SetupView> createState() => _SetupViewState();
@@ -275,6 +284,12 @@ class _SetupViewState extends State<_SetupView> {
             ),
           ),
           const Spacer(flex: 2),
+          PenaltyPresetCard(
+            preset: widget.penaltyPreset,
+            accentColor: AppColors.bombRed,
+            onChanged: widget.onPenaltyPresetChanged,
+          ),
+          const SizedBox(height: 20),
 
           // Range picker
           Text(
@@ -714,13 +729,13 @@ class _KeyButtonState extends State<_KeyButton>
 class _ExplosionOverlay extends StatelessWidget {
   const _ExplosionOverlay({
     required this.anim,
-    required this.punishmentText,
+    required this.blindBoxResult,
     required this.onReset,
     required this.l10n,
   });
 
   final Animation<double> anim;
-  final String punishmentText;
+  final PenaltyBlindBoxResult? blindBoxResult;
   final VoidCallback onReset;
   final AppLocalizations l10n;
 
@@ -761,8 +776,12 @@ class _ExplosionOverlay extends StatelessWidget {
                           resultTitle: l10n.t('resultSummary'),
                           resultText: l10n.numberBombTitle,
                           penaltyTitle: l10n.punishment,
-                          penaltyText: punishmentText,
+                          penaltyText: l10n.t('penaltyBlindBoxTitle'),
                         ),
+                        if (blindBoxResult != null) ...[
+                          const SizedBox(height: 12),
+                          PenaltyBlindBoxOverlay(result: blindBoxResult!),
+                        ],
                         const SizedBox(height: 16),
                         GameResultActionBar(
                           accentColor: AppColors.bombRed,

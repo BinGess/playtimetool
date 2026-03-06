@@ -10,10 +10,31 @@ import '../../core/haptics/haptic_service.dart';
 import '../../core/help/game_help_service.dart';
 import '../../core/sensors/device_motion_service.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/services/penalty_service.dart';
+import '../../shared/widgets/penalty_blind_box_overlay.dart';
+import '../../shared/widgets/penalty_preset_card.dart';
 import '../../shared/widgets/web3_game_background.dart';
 import 'logic/gravity_balance_logic.dart';
 
-enum _GravityBalanceState { playing, exploded, completed }
+enum _GravityBalanceState { setup, playing, exploded, completed }
+
+enum _GravityBalanceDifficulty { easy, medium, hard }
+
+class _GravityDifficultyConfig {
+  const _GravityDifficultyConfig({
+    required this.trackWidthMultiplier,
+    required this.swayAmplitudeMultiplier,
+    required this.quakeForce,
+    required this.minShockInterval,
+    required this.maxShockInterval,
+  });
+
+  final double trackWidthMultiplier;
+  final double swayAmplitudeMultiplier;
+  final double quakeForce;
+  final double minShockInterval;
+  final double maxShockInterval;
+}
 
 class GravityBalanceScreen extends ConsumerStatefulWidget {
   const GravityBalanceScreen({super.key});
@@ -47,7 +68,38 @@ class _GravityBalanceScreenState extends ConsumerState<GravityBalanceScreen>
 
   bool _showHelpButton = false;
   bool _arenaInitScheduled = false;
-  _GravityBalanceState _state = _GravityBalanceState.playing;
+  _GravityBalanceState _state = _GravityBalanceState.setup;
+  int _playerCount = 4;
+  int _currentPlayer = 0;
+  _GravityBalanceDifficulty _difficulty = _GravityBalanceDifficulty.medium;
+  PenaltyPreset _penaltyPreset = PenaltyPreset.defaults;
+  PenaltyBlindBoxResult? _blindBoxResult;
+
+  _GravityDifficultyConfig get _difficultyConfig {
+    return switch (_difficulty) {
+      _GravityBalanceDifficulty.easy => const _GravityDifficultyConfig(
+          trackWidthMultiplier: 1.18,
+          swayAmplitudeMultiplier: 0.75,
+          quakeForce: 2200,
+          minShockInterval: 4.5,
+          maxShockInterval: 7.5,
+        ),
+      _GravityBalanceDifficulty.medium => const _GravityDifficultyConfig(
+          trackWidthMultiplier: 1.0,
+          swayAmplitudeMultiplier: 1.0,
+          quakeForce: 2800,
+          minShockInterval: 3.0,
+          maxShockInterval: 7.0,
+        ),
+      _GravityBalanceDifficulty.hard => const _GravityDifficultyConfig(
+          trackWidthMultiplier: 0.84,
+          swayAmplitudeMultiplier: 1.35,
+          quakeForce: 3400,
+          minShockInterval: 2.3,
+          maxShockInterval: 5.2,
+        ),
+    };
+  }
 
   @override
   void initState() {
@@ -101,7 +153,9 @@ class _GravityBalanceScreenState extends ConsumerState<GravityBalanceScreen>
         return;
       }
       _arenaSize = size;
-      _resetGame();
+      if (_state != _GravityBalanceState.setup) {
+        _resetGame();
+      }
     });
   }
 
@@ -117,15 +171,24 @@ class _GravityBalanceScreenState extends ConsumerState<GravityBalanceScreen>
       ballDiameter: _ballDiameter,
     );
 
-    _path = path;
+    _path = GravityBalancePath(
+      anchors: path.anchors,
+      sampledCenterline: path.sampledCenterline,
+      trackWidth: path.trackWidth * _difficultyConfig.trackWidthMultiplier,
+    );
     _activeCenterline = path.sampledCenterline;
     _ballState = VerletBallState(
       position: path.start,
       previousPosition: path.start,
     );
-    _shockScheduler = ShockScheduler(random: _random);
+    _shockScheduler = ShockScheduler(
+      random: _random,
+      minIntervalSeconds: _difficultyConfig.minShockInterval,
+      maxIntervalSeconds: _difficultyConfig.maxShockInterval,
+    );
 
     _state = _GravityBalanceState.playing;
+    _blindBoxResult = null;
     _outOfBoundsJudge.reset();
     _lastElapsed = Duration.zero;
     _elapsedSeconds = 0;
@@ -138,6 +201,19 @@ class _GravityBalanceScreenState extends ConsumerState<GravityBalanceScreen>
     }
 
     setState(() {});
+  }
+
+  void _startGame() {
+    if (_arenaSize == null) {
+      setState(() => _state = _GravityBalanceState.playing);
+      return;
+    }
+    _resetGame();
+  }
+
+  void _startNextAttempt() {
+    _currentPlayer = (_currentPlayer + 1) % _playerCount;
+    _resetGame();
   }
 
   void _tick(Duration elapsed) {
@@ -198,7 +274,7 @@ class _GravityBalanceScreenState extends ConsumerState<GravityBalanceScreen>
       baseCenterline: path.sampledCenterline,
       elapsedSeconds: _elapsedSeconds,
       frequencyHz: 0.5,
-      amplitude: _ballDiameter * 0.9,
+      amplitude: _ballDiameter * 0.9 * _difficultyConfig.swayAmplitudeMultiplier,
       startProgress: 0.5,
     );
 
@@ -217,11 +293,18 @@ class _GravityBalanceScreenState extends ConsumerState<GravityBalanceScreen>
       _state = _GravityBalanceState.exploded;
       _ticker.stop();
       HapticService.tripleHeavyImpact();
+      _blindBoxResult = PenaltyService.resolveBlindBox(
+        l10n: AppLocalizations.of(context),
+        random: _random,
+        preset: _penaltyPreset,
+        losers: <String>[AppLocalizations.of(context).playerLabel(_currentPlayer + 1)],
+      );
     } else if (_progress >= 0.995 &&
         projection.distance <= path.trackWidth * 0.35) {
       _state = _GravityBalanceState.completed;
       _ticker.stop();
       HapticService.notificationSuccess();
+      _blindBoxResult = null;
     }
 
     setState(() {});
@@ -253,7 +336,7 @@ class _GravityBalanceScreenState extends ConsumerState<GravityBalanceScreen>
     final direction = _random.nextBool() ? 1.0 : -1.0;
 
     _earthquakeRemainingSeconds = 0.95;
-    _earthquakeForceX = 2800 * direction;
+    _earthquakeForceX = _difficultyConfig.quakeForce * direction;
     HapticService.heavyImpact();
 
     final ball = _ballState;
@@ -321,94 +404,223 @@ class _GravityBalanceScreenState extends ConsumerState<GravityBalanceScreen>
                     ],
                   ),
                   const SizedBox(height: 10),
-                  Text(
-                    l10n.t('gravityBalanceRule'),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  _ProgressIndicator(progress: _progress),
-                  const SizedBox(height: 10),
-                  Expanded(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        _ensureArena(constraints.biggest);
-                        final path = _path;
-                        final ball = _ballState;
-
-                        if (path == null || ball == null) {
-                          return const SizedBox.expand();
-                        }
-
-                        return Stack(
-                          fit: StackFit.expand,
+                  if (_state == _GravityBalanceState.setup) ...[
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Column(
                           children: [
-                            RepaintBoundary(
-                              child: CustomPaint(
-                                painter: _GravityBalancePainter(
-                                  centerline: _activeCenterline,
-                                  ballState: ball,
-                                  trackWidth: path.trackWidth,
-                                  ballRadius: _ballDiameter / 2,
-                                  exploded:
-                                      _state == _GravityBalanceState.exploded,
+                            Text(
+                              l10n.t('gravityBalanceRule'),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 12,
+                                height: 1.4,
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                            Text(
+                              l10n.playersCount(_playerCount),
+                              style:
+                                  const TextStyle(color: AppColors.textSecondary),
+                            ),
+                            Slider(
+                              value: _playerCount.toDouble(),
+                              min: 2,
+                              max: 8,
+                              divisions: 6,
+                              activeColor: const Color(0xFF4DFFD8),
+                              onChanged: (v) => setState(() {
+                                _playerCount = v.round();
+                                _currentPlayer = _currentPlayer % _playerCount;
+                              }),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              l10n.t('leftRightDifficultyTitle'),
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children:
+                                  _GravityBalanceDifficulty.values.map((level) {
+                                final selected = _difficulty == level;
+                                final label = switch (level) {
+                                  _GravityBalanceDifficulty.easy =>
+                                    l10n.t('leftRightDifficultyEasy'),
+                                  _GravityBalanceDifficulty.medium =>
+                                    l10n.t('leftRightDifficultyMedium'),
+                                  _GravityBalanceDifficulty.hard =>
+                                    l10n.t('leftRightDifficultyHard'),
+                                };
+                                return ChoiceChip(
+                                  label: Text(label),
+                                  selected: selected,
+                                  onSelected: (_) =>
+                                      setState(() => _difficulty = level),
+                                  selectedColor: const Color(0xFF4DFFD8),
+                                  backgroundColor: AppColors.surfaceVariant,
+                                  labelStyle: TextStyle(
+                                    color: selected
+                                        ? Colors.black
+                                        : AppColors.textSecondary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  side: BorderSide(
+                                    color: selected
+                                        ? const Color(0xFF4DFFD8)
+                                        : AppColors.textDim.withAlpha(120),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 12),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                color: AppColors.surfaceVariant,
+                                border: Border.all(color: AppColors.glassBorder),
+                              ),
+                              child: Text(
+                                switch (_difficulty) {
+                                  _GravityBalanceDifficulty.easy =>
+                                    l10n.t('gravityBalanceDifficultyEasyHint'),
+                                  _GravityBalanceDifficulty.medium =>
+                                    l10n.t('gravityBalanceDifficultyMediumHint'),
+                                  _GravityBalanceDifficulty.hard =>
+                                    l10n.t('gravityBalanceDifficultyHardHint'),
+                                },
+                                style: const TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 12,
+                                  height: 1.4,
                                 ),
                               ),
                             ),
-                            IgnorePointer(
-                              child: AnimatedOpacity(
-                                duration: const Duration(milliseconds: 80),
-                                opacity: _state == _GravityBalanceState.playing
-                                    ? flashOpacity * 0.75
-                                    : 0,
-                                child: Container(
-                                  color: const Color(0x55FF1A1A),
-                                ),
-                              ),
+                            const SizedBox(height: 12),
+                            PenaltyPresetCard(
+                              preset: _penaltyPreset,
+                              accentColor: const Color(0xFF4DFFD8),
+                              onChanged: (preset) {
+                                setState(() => _penaltyPreset = preset);
+                              },
                             ),
-                            if (_earthquakeRemainingSeconds > 0 &&
-                                _state == _GravityBalanceState.playing)
-                              Align(
-                                alignment: const Alignment(0, -0.72),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 10,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xCC1A0000),
-                                    borderRadius: BorderRadius.circular(999),
-                                    border: Border.all(
-                                      color: const Color(0xFFFF6B6B),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    l10n.t('gravityBalanceQuake'),
-                                    style: const TextStyle(
-                                      color: Color(0xFFFF9B9B),
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 0.4,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            if (_state != _GravityBalanceState.playing)
-                              _ResultOverlay(
-                                title: _state == _GravityBalanceState.completed
-                                    ? l10n.t('gravityBalanceCompleted')
-                                    : l10n.t('gravityBalanceExploded'),
-                                onRetry: _resetGame,
-                                retryLabel: l10n.t('gravityBalanceRetry'),
-                              ),
+                            const SizedBox(height: 16),
                           ],
-                        );
-                      },
+                        ),
+                      ),
                     ),
-                  ),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _startGame,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF4DFFD8),
+                          foregroundColor: Colors.black,
+                        ),
+                        child: Text(l10n.start),
+                      ),
+                    ),
+                  ] else ...[
+                    Text(
+                      '${l10n.playerLabel(_currentPlayer + 1)} · ${switch (_difficulty) {
+                        _GravityBalanceDifficulty.easy => l10n.t('leftRightDifficultyEasy'),
+                        _GravityBalanceDifficulty.medium => l10n.t('leftRightDifficultyMedium'),
+                        _GravityBalanceDifficulty.hard => l10n.t('leftRightDifficultyHard'),
+                      }}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _ProgressIndicator(progress: _progress),
+                    const SizedBox(height: 10),
+                    Expanded(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          _ensureArena(constraints.biggest);
+                          final path = _path;
+                          final ball = _ballState;
+
+                          if (path == null || ball == null) {
+                            return const SizedBox.expand();
+                          }
+
+                          return Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              RepaintBoundary(
+                                child: CustomPaint(
+                                  painter: _GravityBalancePainter(
+                                    centerline: _activeCenterline,
+                                    ballState: ball,
+                                    trackWidth: path.trackWidth,
+                                    ballRadius: _ballDiameter / 2,
+                                    exploded:
+                                        _state == _GravityBalanceState.exploded,
+                                  ),
+                                ),
+                              ),
+                              IgnorePointer(
+                                child: AnimatedOpacity(
+                                  duration: const Duration(milliseconds: 80),
+                                  opacity: _state == _GravityBalanceState.playing
+                                      ? flashOpacity * 0.75
+                                      : 0,
+                                  child: Container(
+                                    color: const Color(0x55FF1A1A),
+                                  ),
+                                ),
+                              ),
+                              if (_earthquakeRemainingSeconds > 0 &&
+                                  _state == _GravityBalanceState.playing)
+                                Align(
+                                  alignment: const Alignment(0, -0.72),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 10,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xCC1A0000),
+                                      borderRadius: BorderRadius.circular(999),
+                                      border: Border.all(
+                                        color: const Color(0xFFFF6B6B),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      l10n.t('gravityBalanceQuake'),
+                                      style: const TextStyle(
+                                        color: Color(0xFFFF9B9B),
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.4,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              if (_state != _GravityBalanceState.playing)
+                                _ResultOverlay(
+                                  title: _state == _GravityBalanceState.completed
+                                      ? l10n.t('gravityBalanceCompleted')
+                                      : l10n.t('gravityBalanceExploded'),
+                                  playerLabel:
+                                      l10n.playerLabel(_currentPlayer + 1),
+                                  blindBoxResult: _blindBoxResult,
+                                  onRetry: _startNextAttempt,
+                                  retryLabel: l10n.t('gravityBalanceRetry'),
+                                ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -453,11 +665,15 @@ class _ProgressIndicator extends StatelessWidget {
 class _ResultOverlay extends StatelessWidget {
   const _ResultOverlay({
     required this.title,
+    required this.playerLabel,
+    required this.blindBoxResult,
     required this.onRetry,
     required this.retryLabel,
   });
 
   final String title;
+  final String playerLabel;
+  final PenaltyBlindBoxResult? blindBoxResult;
   final VoidCallback onRetry;
   final String retryLabel;
 
@@ -465,7 +681,7 @@ class _ResultOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        width: 260,
+        constraints: const BoxConstraints(maxWidth: 520),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
@@ -484,6 +700,18 @@ class _ResultOverlay extends StatelessWidget {
                 fontWeight: FontWeight.w700,
               ),
             ),
+            const SizedBox(height: 8),
+            Text(
+              playerLabel,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+              ),
+            ),
+            if (blindBoxResult != null) ...[
+              const SizedBox(height: 14),
+              PenaltyBlindBoxOverlay(result: blindBoxResult!),
+            ],
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,

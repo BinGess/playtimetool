@@ -57,4 +57,59 @@ void main() {
       expect(plan.text, l10n.t('penaltyGuideWheel'));
     });
   });
+
+  group('PenaltyService.resolveBlindBox', () {
+    test('draws three unique home cards for preset', () {
+      final l10n = AppLocalizations(const Locale('zh'));
+      final result = PenaltyService.resolveBlindBox(
+        l10n: l10n,
+        random: Random(1),
+        preset: const PenaltyPreset(
+          scene: PenaltyScene.home,
+          intensity: PenaltyIntensity.wild,
+        ),
+        losers: const ['玩家1'],
+      );
+
+      expect(result.cards, hasLength(3));
+      expect(result.cards.map((card) => card.entry.id).toSet().length, 3);
+      expect(result.losers, const ['玩家1']);
+    });
+
+    test('mild preset only draws level1 cards', () {
+      final l10n = AppLocalizations(const Locale('zh'));
+      final result = PenaltyService.resolveBlindBox(
+        l10n: l10n,
+        random: Random(2),
+        preset: const PenaltyPreset(
+          scene: PenaltyScene.bar,
+          intensity: PenaltyIntensity.mild,
+        ),
+        losers: const ['玩家1'],
+      );
+
+      expect(
+        result.cards.every((card) => card.entry.level == PenaltyLevel.level1),
+        isTrue,
+      );
+    });
+
+    test('prefers different categories when generating three cards', () {
+      final l10n = AppLocalizations(const Locale('zh'));
+      final result = PenaltyService.resolveBlindBox(
+        l10n: l10n,
+        random: Random(3),
+        preset: const PenaltyPreset(
+          scene: PenaltyScene.home,
+          intensity: PenaltyIntensity.xtreme,
+        ),
+        losers: const ['玩家1', '玩家2'],
+      );
+
+      expect(
+        result.cards.map((card) => card.entry.category).toSet().length,
+        greaterThanOrEqualTo(2),
+      );
+    });
+  });
 }

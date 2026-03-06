@@ -8,6 +8,8 @@ import '../../core/haptics/haptic_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/game_result_action_bar.dart';
 import '../../shared/widgets/game_result_template_card.dart';
+import '../../shared/widgets/penalty_blind_box_overlay.dart';
+import '../../shared/widgets/penalty_preset_card.dart';
 import '../../shared/widgets/web3_game_background.dart';
 import '../../shared/services/penalty_service.dart';
 import 'logic/left_right_logic.dart';
@@ -52,6 +54,8 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
   _ReactPhase _phase = _ReactPhase.setup;
   _LeftRightDifficulty _difficulty = _LeftRightDifficulty.medium;
   bool _showHelpButton = false;
+  PenaltyPreset _penaltyPreset = PenaltyPreset.defaults;
+  PenaltyBlindBoxResult? _blindBoxResult;
 
   _LeftRightDifficultyConfig get _difficultyConfig {
     return switch (_difficulty) {
@@ -105,6 +109,7 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
       _awaitingSwipe = false;
       _isReverse = false;
       _status = '';
+      _blindBoxResult = null;
     });
     _prepareRound();
   }
@@ -180,6 +185,8 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
 
   void _nextTurn() {
     if (_round >= _totalRounds) {
+      final l10n = AppLocalizations.of(context);
+      _blindBoxResult = _resolveBlindBoxResult(l10n);
       setState(() => _phase = _ReactPhase.result);
       return;
     }
@@ -256,6 +263,27 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
     ).text;
   }
 
+  PenaltyBlindBoxResult? _resolveBlindBoxResult(AppLocalizations l10n) {
+    final maxPenalty =
+        _penalties.isEmpty ? 0 : _penalties.reduce((a, b) => a > b ? a : b);
+    if (maxPenalty <= 0) {
+      return null;
+    }
+
+    final losers = <String>[];
+    for (int i = 0; i < _penalties.length; i++) {
+      if (_penalties[i] == maxPenalty) {
+        losers.add(PartyPlusStrings.player(context, i));
+      }
+    }
+    return PenaltyService.resolveBlindBox(
+      l10n: l10n,
+      random: _random,
+      preset: _penaltyPreset,
+      losers: losers,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -325,6 +353,14 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
                     Text(
                       l10n.t('leftRightRule'),
                       style: const TextStyle(color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 12),
+                    PenaltyPresetCard(
+                      preset: _penaltyPreset,
+                      accentColor: AppColors.wheelOrange,
+                      onChanged: (preset) {
+                        setState(() => _penaltyPreset = preset);
+                      },
                     ),
                     const SizedBox(height: 14),
                     Text(
@@ -516,12 +552,22 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
                       );
                     }),
                     const SizedBox(height: 10),
-                    GameResultTemplateCard(
-                      accentColor: AppColors.wheelOrange,
-                      resultTitle: l10n.t('resultSummary'),
-                      resultText: l10n.t('leftRightFinalPenalties'),
-                      penaltyTitle: l10n.punishment,
-                      penaltyText: _resultPenaltyText(l10n),
+                    Builder(
+                      builder: (context) {
+                        final penaltyText = _resultPenaltyText(l10n);
+                        if (_blindBoxResult == null) {
+                          return GameResultTemplateCard(
+                            accentColor: AppColors.wheelOrange,
+                            resultTitle: l10n.t('resultSummary'),
+                            resultText: l10n.t('leftRightFinalPenalties'),
+                            penaltyTitle: l10n.punishment,
+                            penaltyText: penaltyText,
+                          );
+                        }
+                        return PenaltyBlindBoxOverlay(
+                          result: _blindBoxResult!,
+                        );
+                      },
                     ),
                     const Spacer(),
                     GameResultActionBar(

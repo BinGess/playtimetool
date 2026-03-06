@@ -21,6 +21,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('惩罚预设 Penalty Preset'), findsOneWidget);
+
     await tester.tap(find.widgetWithText(ElevatedButton, '开始对决'));
     await tester.pumpAndSettle();
 
@@ -56,6 +58,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+
+    expect(find.text('惩罚预设 Penalty Preset'), findsOneWidget);
 
     await tester.tap(find.widgetWithText(ElevatedButton, '开始对决'));
     await tester.pumpAndSettle();
