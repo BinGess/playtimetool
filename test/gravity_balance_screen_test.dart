@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:playtimetool/core/haptics/haptic_service.dart';
 import 'package:playtimetool/features/gravity_balance/gravity_balance_screen.dart';
 import 'package:playtimetool/l10n/app_localizations.dart';
+import 'package:playtimetool/shared/services/penalty_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -25,8 +26,43 @@ void main() {
 
     expect(find.text('平衡边缘'), findsOneWidget);
     expect(find.textContaining('液态球'), findsOneWidget);
-    expect(find.text('当前玩家 1/2'), findsOneWidget);
-    expect(find.byType(CustomPaint), findsWidgets);
+    expect(find.text('惩罚预设 Penalty Preset'), findsOneWidget);
+    expect(find.text('简单'), findsOneWidget);
+    expect(find.text('中等'), findsOneWidget);
+    expect(find.text('困难'), findsOneWidget);
+  });
+
+  testWidgets('gravity balance screen accepts penalty preset from route',
+      (WidgetTester tester) async {
+    HapticService.setEnabled(false);
+    addTearDown(() => HapticService.setEnabled(true));
+    SharedPreferences.setMockInitialValues(const {
+      'game_help_seen_gravity_balance': true,
+    });
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          locale: Locale('zh'),
+          supportedLocales: [Locale('zh'), Locale('en')],
+          localizationsDelegates: [
+            AppLocalizationsDelegate(),
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: GravityBalanceScreen(
+            penaltyPreset: PenaltyPreset(
+              scene: PenaltyScene.bar,
+              intensity: PenaltyIntensity.wild,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(find.text('平衡边缘'), findsOneWidget);
   });
 }
 

@@ -56,7 +56,6 @@ dependencies:
   # Screenshot & Share
   screenshot: ^3.0.0
   share_plus: ^9.0.0
-  image_gallery_saver_plus: ^3.0.5
   permission_handler: ^11.3.1
 
   # Screen wakelock
