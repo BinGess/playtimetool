@@ -1,9 +1,14 @@
 enum BombPhase { setup, playing, explosion }
 
+const _bombStateNoChange = Object();
+
 class BombState {
   const BombState({
     this.phase = BombPhase.setup,
     this.secretNumber = 0,
+    this.playerCount = 2,
+    this.currentPlayerIndex = 0,
+    this.loserPlayerIndex,
     this.minRange = 1,
     this.maxRange = 100,
     this.originalMin = 1,
@@ -15,6 +20,9 @@ class BombState {
 
   final BombPhase phase;
   final int secretNumber;
+  final int playerCount;
+  final int currentPlayerIndex;
+  final int? loserPlayerIndex;
   final int minRange;
   final int maxRange;
   final int originalMin;
@@ -36,6 +44,9 @@ class BombState {
   BombState copyWith({
     BombPhase? phase,
     int? secretNumber,
+    int? playerCount,
+    int? currentPlayerIndex,
+    Object? loserPlayerIndex = _bombStateNoChange,
     int? minRange,
     int? maxRange,
     int? originalMin,
@@ -47,6 +58,11 @@ class BombState {
     return BombState(
       phase: phase ?? this.phase,
       secretNumber: secretNumber ?? this.secretNumber,
+      playerCount: playerCount ?? this.playerCount,
+      currentPlayerIndex: currentPlayerIndex ?? this.currentPlayerIndex,
+      loserPlayerIndex: identical(loserPlayerIndex, _bombStateNoChange)
+          ? this.loserPlayerIndex
+          : loserPlayerIndex as int?,
       minRange: minRange ?? this.minRange,
       maxRange: maxRange ?? this.maxRange,
       originalMin: originalMin ?? this.originalMin,

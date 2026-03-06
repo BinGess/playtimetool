@@ -174,6 +174,15 @@ class AppLocalizations {
       'prankActive': '恶搞中',
       'edit': '编辑',
       'slideToSpin': '滑动旋转',
+      'spinWheelPrepTitle': '开转前先准备好',
+      'spinWheelPrepHint': '把模板、模式和惩罚规则先设好，再开始这一轮命运转盘。',
+      'spinWheelTemplateTitle': '转盘模板',
+      'spinWheelModeTitle': '模式与选项',
+      'spinWheelPlayerHintTitle': '默认最多 6 人',
+      'spinWheelPlayerHint': '建议 2 到 6 人围成一圈快速决策，人数更多时可分组轮流开转。',
+      'spinWheelSelectedOption': '最终选中',
+      'spinWheelSelectedColor': '最终颜色',
+      'spinWheelBlindBoxPenalty': '惩罚盲盒',
       'presetDinner': '今晚吃啥',
       'presetWhoPays': '谁买单',
       'presetTruthDare': '真心话大冒险',
@@ -183,6 +192,17 @@ class AppLocalizations {
       // Number Bomb
       'numberBombTitle': '数字炸弹',
       'numberBombSubtitle': 'NUMBER BOMB',
+      'numberBombPrepTitle': '准备开炸',
+      'numberBombPrepHint': '先设定参与人数和数字范围，再把手机交给 1 号玩家开始高压猜数。',
+      'numberBombPrepPlayersTitle': '玩家人数',
+      'numberBombPrepPlayersHint': '每次成功输入后自动轮到下一位玩家，踩中炸弹的人立即受罚。',
+      'numberBombPrepRangeTitle': '数字范围',
+      'numberBombPrepRangeHint': '范围越大，前期越安全；范围越小，心理压迫感来得越快。',
+      'numberBombPrepPenaltyTitle': '惩罚联动',
+      'numberBombPrepPenaltyHint': '爆炸后仅由踩中的输家执行惩罚盲盒。',
+      'numberBombCurrentPlayer': '当前玩家 · {player}',
+      'numberBombLoser': '本轮输家：{player}',
+      'numberBombWinners': '获胜玩家：{players}',
       'selectRange': '选择范围',
       'range1_50': '1 – 50',
       'range1_100': '1 – 100',
@@ -337,6 +357,22 @@ class AppLocalizations {
       'bioDetectorWarnCortex': '[WARN] 逻辑皮层活跃度增高',
       'bioDetectorRetry': '再测一次',
       'bioDetectorSetupTitle': '开局设置',
+      'bioDetectorPrepEyebrow': 'BIO-SCAN',
+      'bioDetectorPrepStandby': '待命中',
+      'bioDetectorPrepHeroTitle': '准备检测',
+      'bioDetectorPrepHeroBody': '校准伪生物链路后再开始。每轮通过长按指纹区触发扫描，系统会在高压阶段给出真假判定。',
+      'bioDetectorPrepSignalTag': 'RED-LINE READY',
+      'bioDetectorPrepRoundsLabel': '检测轮次',
+      'bioDetectorPrepRoundsHint': '先设定整局节奏，再进入待机检测。',
+      'bioDetectorPrepRoundsUnit': '轮流程',
+      'bioDetectorPrepPenaltyTitle': '惩罚联动',
+      'bioDetectorPrepPenaltyHint': '仅在判定为谎言时触发惩罚盲盒，先把场景和尺度约好。',
+      'bioDetectorPrepMetricDuration': '检测时长',
+      'bioDetectorPrepMetricDurationValue': '约 10 秒',
+      'bioDetectorPrepMetricTrigger': '触发方式',
+      'bioDetectorPrepMetricTriggerValue': '长按指纹区',
+      'bioDetectorPrepMetricPenalty': '失败后果',
+      'bioDetectorPrepMetricPenaltyValue': '触发惩罚',
       'bioDetectorRoundsSetting': '轮次：{count}',
       'bioDetectorSetupHint': '设置轮次后开始。每轮长按指纹区触发检测。',
       'bioDetectorRoundTruth': '本轮判定：真话',
@@ -651,6 +687,17 @@ class AppLocalizations {
       'prankActive': 'Prank active',
       'edit': 'Edit',
       'slideToSpin': 'Slide to spin',
+      'spinWheelPrepTitle': 'Get ready before spinning',
+      'spinWheelPrepHint':
+          'Set the template, mode and penalties first, then kick off the wheel.',
+      'spinWheelTemplateTitle': 'Wheel template',
+      'spinWheelModeTitle': 'Mode and options',
+      'spinWheelPlayerHintTitle': 'Best with up to 6 players',
+      'spinWheelPlayerHint':
+          'Works best with 2 to 6 players. Rotate in small groups if more people want in.',
+      'spinWheelSelectedOption': 'Selected option',
+      'spinWheelSelectedColor': 'Selected color',
+      'spinWheelBlindBoxPenalty': 'Blind Box Penalty',
       'presetDinner': 'Dinner',
       'presetWhoPays': 'Who Pays',
       'presetTruthDare': 'Truth or Dare',
@@ -659,6 +706,21 @@ class AppLocalizations {
 
       'numberBombTitle': 'Number Bomb',
       'numberBombSubtitle': 'NUMBER BOMB',
+      'numberBombPrepTitle': 'Prep blast',
+      'numberBombPrepHint':
+          'Set player count and number range first, then hand the phone to Player 1 to start the pressure round.',
+      'numberBombPrepPlayersTitle': 'Players',
+      'numberBombPrepPlayersHint':
+          'Each safe guess passes the turn to the next player. Whoever hits the bomb loses immediately.',
+      'numberBombPrepRangeTitle': 'Number range',
+      'numberBombPrepRangeHint':
+          'Bigger ranges feel safer early. Smaller ranges bring pressure much faster.',
+      'numberBombPrepPenaltyTitle': 'Penalty link',
+      'numberBombPrepPenaltyHint':
+          'After explosion, only the losing player takes the blind-box penalty.',
+      'numberBombCurrentPlayer': 'Current player · {player}',
+      'numberBombLoser': 'Loser: {player}',
+      'numberBombWinners': 'Winners: {players}',
       'selectRange': 'Select range',
       'range1_50': '1 – 50',
       'range1_100': '1 – 100',
@@ -826,6 +888,25 @@ class AppLocalizations {
       'bioDetectorWarnCortex': '[WARN] Cortex activity elevated',
       'bioDetectorRetry': 'Run again',
       'bioDetectorSetupTitle': 'Game setup',
+      'bioDetectorPrepEyebrow': 'BIO-SCAN',
+      'bioDetectorPrepStandby': 'Stand by',
+      'bioDetectorPrepHeroTitle': 'Prep scan',
+      'bioDetectorPrepHeroBody':
+          'Calibrate the fake bio-link before starting. Each round begins with a long press on the fingerprint zone, then the system escalates pressure before calling truth or lie.',
+      'bioDetectorPrepSignalTag': 'RED-LINE READY',
+      'bioDetectorPrepRoundsLabel': 'Rounds setup',
+      'bioDetectorPrepRoundsHint':
+          'Set the pace of the whole session before entering standby.',
+      'bioDetectorPrepRoundsUnit': 'round flow',
+      'bioDetectorPrepPenaltyTitle': 'Penalty link',
+      'bioDetectorPrepPenaltyHint':
+          'Penalty blind box only triggers on lie results, so lock the scene and intensity now.',
+      'bioDetectorPrepMetricDuration': 'Scan time',
+      'bioDetectorPrepMetricDurationValue': '~10 sec',
+      'bioDetectorPrepMetricTrigger': 'Trigger',
+      'bioDetectorPrepMetricTriggerValue': 'Hold fingerprint',
+      'bioDetectorPrepMetricPenalty': 'On failure',
+      'bioDetectorPrepMetricPenaltyValue': 'Penalty fires',
       'bioDetectorRoundsSetting': 'Rounds: {count}',
       'bioDetectorSetupHint':
           'Set rounds, then start. Hold the fingerprint zone each round to scan.',
@@ -1067,6 +1148,12 @@ class AppLocalizations {
       t('eliminated', {'current': '$current', 'total': '$total'});
   String invalidRangeHint(int min, int max) =>
       t('invalidRange', {'min': '$min', 'max': '$max'});
+  String numberBombCurrentPlayer(String player) =>
+      t('numberBombCurrentPlayer', {'player': player});
+  String numberBombLoser(String player) =>
+      t('numberBombLoser', {'player': player});
+  String numberBombWinners(String players) =>
+      t('numberBombWinners', {'players': players});
 
   String presetDisplayName(String name) {
     switch (name) {

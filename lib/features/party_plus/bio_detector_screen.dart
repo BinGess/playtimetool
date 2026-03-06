@@ -626,63 +626,419 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.black.withAlpha(120),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0x33FF5252)),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildSetupHeroCard(l10n),
+                const SizedBox(height: 14),
+                _buildSetupSectionCard(
+                  title: l10n.t('bioDetectorSetupTitle'),
+                  subtitle: l10n.t('bioDetectorPrepRoundsHint'),
+                  trailing: _buildSetupStatusChip(
+                    l10n.t('bioDetectorRoundsSetting', {
+                      'count': '$_totalRounds',
+                    }),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 88,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 16,
+                            ),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: const Color(0x4DFF6B6B),
+                              ),
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Color(0x33FF5B5B),
+                                  Color(0x14110B0B),
+                                ],
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  '$_totalRounds',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 30,
+                                    fontWeight: FontWeight.w800,
+                                    height: 1,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  l10n.t('bioDetectorPrepRoundsUnit'),
+                                  style: const TextStyle(
+                                    color: Color(0xFFFFB0B0),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  l10n.t('bioDetectorPrepRoundsLabel'),
+                                  style: GameUiText.bodyStrong,
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  l10n.t('bioDetectorSetupHint'),
+                                  style: GameUiText.body,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      SliderTheme(
+                        data: SliderTheme.of(context).copyWith(
+                          trackHeight: 4,
+                          inactiveTrackColor: Colors.white12,
+                          thumbShape: const RoundSliderThumbShape(
+                            enabledThumbRadius: 8,
+                          ),
+                          overlayShape: const RoundSliderOverlayShape(
+                            overlayRadius: 16,
+                          ),
+                        ),
+                        child: Slider(
+                          key: const Key('bio-detector-rounds-slider'),
+                          value: _totalRounds.toDouble(),
+                          min: 1,
+                          max: 10,
+                          divisions: 9,
+                          activeColor: const Color(0xFFFF6B6B),
+                          onChanged: (v) =>
+                              setState(() => _totalRounds = v.round()),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                _buildSetupSectionCard(
+                  title: l10n.t('bioDetectorPrepPenaltyTitle'),
+                  subtitle: l10n.t('bioDetectorPrepPenaltyHint'),
+                  child: PenaltyPresetCard(
+                    preset: _penaltyPreset,
+                    accentColor: const Color(0xFFFF5454),
+                    onChanged: (preset) {
+                      setState(() => _penaltyPreset = preset);
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: GameUiSpacing.buttonHeight,
+          child: ElevatedButton(
+            key: const Key('bio-detector-start-session'),
+            onPressed: _startSession,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF4D4D),
+              foregroundColor: Colors.white,
+              textStyle: GameUiText.buttonLabel,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+            ),
+            child: Text(l10n.startGame),
+          ),
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
+  Widget _buildSetupHeroCard(AppLocalizations l10n) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0x4DFF5A5A)),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF1A0D0D),
+            Color(0xFF110909),
+            Color(0xFF090909),
+          ],
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x22000000),
+            blurRadius: 26,
+            offset: Offset(0, 16),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
               Text(
-                l10n.t('bioDetectorSetupTitle'),
-                style: GameUiText.sectionTitle,
+                l10n.t('bioDetectorPrepEyebrow'),
+                style: const TextStyle(
+                  color: Color(0xFFFF8D8D),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.4,
+                ),
               ),
-              const SizedBox(height: 14),
-              Text(
-                l10n.t('bioDetectorRoundsSetting', {'count': '$_totalRounds'}),
-                style: GameUiText.body,
+              const Spacer(),
+              _buildSetupStatusChip(l10n.t('bioDetectorPrepStandby')),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            l10n.t('bioDetectorPrepHeroTitle'),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              height: 1.1,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l10n.t('bioDetectorPrepHeroBody'),
+            style: GameUiText.body.copyWith(
+              color: const Color(0xFFD6B8B8),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Container(
+            height: 168,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0x33FFFFFF)),
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0x1FFF6B6B),
+                  Color(0x120C0C0C),
+                ],
               ),
-              Slider(
-                key: const Key('bio-detector-rounds-slider'),
-                value: _totalRounds.toDouble(),
-                min: 1,
-                max: 10,
-                divisions: 9,
-                activeColor: const Color(0xFFFF6B6B),
-                onChanged: (v) => setState(() => _totalRounds = v.round()),
+            ),
+            child: Stack(
+              children: [
+                const Positioned.fill(
+                  child: CustomPaint(
+                    painter: _BioGridPainter(lineColor: Color(0x14FF7A7A)),
+                  ),
+                ),
+                const Center(
+                  child: Icon(
+                    Icons.fingerprint_rounded,
+                    size: 96,
+                    color: Color(0x88FF9A9A),
+                  ),
+                ),
+                Positioned(
+                  left: 20,
+                  right: 20,
+                  top: 68,
+                  child: Container(
+                    height: 6,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(999),
+                      gradient: const LinearGradient(
+                        colors: [
+                          Colors.transparent,
+                          Color(0x44FFB0B0),
+                          Color(0x99FF5F5F),
+                          Color(0x44FFB0B0),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 14,
+                  top: 14,
+                  child: _buildHeroBadge(l10n.t('bioDetectorPrepSignalTag')),
+                ),
+                Positioned(
+                  right: 14,
+                  bottom: 14,
+                  child: _buildHeroBadge(
+                    l10n.t('bioDetectorRoundsSetting', {'count': '$_totalRounds'}),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _buildPrepMetricChip(
+                title: l10n.t('bioDetectorPrepMetricDuration'),
+                value: l10n.t('bioDetectorPrepMetricDurationValue'),
               ),
-              Text(
-                l10n.t('bioDetectorSetupHint'),
-                style: GameUiText.body,
+              _buildPrepMetricChip(
+                title: l10n.t('bioDetectorPrepMetricTrigger'),
+                value: l10n.t('bioDetectorPrepMetricTriggerValue'),
               ),
-              const SizedBox(height: 12),
-              PenaltyPresetCard(
-                preset: _penaltyPreset,
-                accentColor: const Color(0xFFFF5454),
-                onChanged: (preset) {
-                  setState(() => _penaltyPreset = preset);
-                },
+              _buildPrepMetricChip(
+                title: l10n.t('bioDetectorPrepMetricPenalty'),
+                value: l10n.t('bioDetectorPrepMetricPenaltyValue'),
               ),
             ],
           ),
-        ),
-        const Spacer(),
-        ElevatedButton(
-          key: const Key('bio-detector-start-session'),
-          onPressed: _startSession,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFFF4D4D),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            textStyle: GameUiText.buttonLabel,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSetupSectionCard({
+    required String title,
+    required Widget child,
+    String? subtitle,
+    Widget? trailing,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.black.withAlpha(132),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0x33FF6B6B)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: GameUiText.sectionTitle),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 6),
+                      Text(subtitle, style: GameUiText.body),
+                    ],
+                  ],
+                ),
+              ),
+              if (trailing != null) ...[
+                const SizedBox(width: 12),
+                trailing,
+              ],
+            ],
           ),
-          child: Text(l10n.startGame),
+          const SizedBox(height: 14),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSetupStatusChip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0x22FF6B6B),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0x44FF8F8F)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Color(0xFFFFC1C1),
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.4,
         ),
-        const SizedBox(height: 18),
-      ],
+      ),
+    );
+  }
+
+  Widget _buildHeroBadge(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xBB120C0C),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0x40FF7575)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Color(0xFFFFBABA),
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.6,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPrepMetricChip({
+    required String title,
+    required String value,
+  }) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 92),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xAA120D0D),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0x28FFFFFF)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: Color(0xFFB79696),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -778,13 +1134,15 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
 }
 
 class _BioGridPainter extends CustomPainter {
-  const _BioGridPainter();
+  const _BioGridPainter({this.lineColor = const Color(0x112D2D2D)});
+
+  final Color lineColor;
 
   @override
   void paint(Canvas canvas, Size size) {
     const spacing = 10.0;
     final paint = Paint()
-      ..color = const Color(0x112D2D2D)
+      ..color = lineColor
       ..strokeWidth = 1;
     for (double x = 0; x <= size.width; x += spacing) {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);

@@ -13,6 +13,8 @@ import '../../shared/services/penalty_service.dart';
 import '../../shared/styles/game_ui_style.dart';
 import '../../shared/widgets/game_result_action_bar.dart';
 import '../../shared/widgets/game_result_template_card.dart';
+import '../../shared/widgets/penalty_blind_box_overlay.dart';
+import '../../shared/widgets/penalty_preset_card.dart';
 import '../../shared/widgets/web3_game_background.dart';
 import 'models/wheel_segment.dart';
 import 'providers/spin_wheel_provider.dart';
@@ -35,6 +37,9 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
   double _lastDragAngle = 0;
   double _dragVelocity = 0;
   bool _showHelpButton = false;
+  bool _inSetup = true;
+  PenaltyPreset _penaltyPreset = PenaltyPreset.defaults;
+  PenaltyBlindBoxResult? _blindBoxResult;
 
   @override
   void initState() {
@@ -116,11 +121,22 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
     final wheelSize = MediaQuery.sizeOf(context).width * 0.88;
 
     ref.listen(spinWheelProvider, (prev, next) {
-      if (prev?.phase != SpinPhase.result && next.phase == SpinPhase.result) {
+      if (prev?.phase != SpinPhase.result &&
+          next.phase == SpinPhase.result &&
+          next.resultSegment != null) {
         _resultController.reset();
         _resultController.forward();
+        _blindBoxResult = PenaltyService.resolveBlindBox(
+          l10n: l10n,
+          random: Random(),
+          preset: _penaltyPreset,
+          losers: <String>[next.resultSegment!.label],
+        );
         HapticService.notificationSuccess();
         AudioService.play(AppSounds.wheelResult);
+        if (mounted) {
+          setState(() {});
+        }
       }
     });
 
@@ -133,178 +149,76 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
             secondaryColor: AppColors.fingerCyan,
           ),
           SafeArea(
-            child: Column(
-              children: [
-                const SizedBox(height: 16),
-                // Top bar
-                Padding(
-                  padding:
-                      GameUiSpacing.screenPadding.copyWith(top: 0, bottom: 0),
-                  child: Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () => context.pop(),
-                        child: const Icon(Icons.arrow_back_ios,
-                            color: Colors.white, size: 20),
-                      ),
-                      const Spacer(),
-                      // Edit button
-                      GestureDetector(
-                        onTap: () => _showEditorSheet(context, state, notifier),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 6),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: AppColors.textDim),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.edit_outlined,
-                                color: AppColors.textSecondary,
-                                size: 14,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                l10n.edit,
-                                style: GameUiText.caption,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      _ModeToggle(
+            child: Padding(
+              padding: GameUiSpacing.screenPadding,
+              child: Column(
+                children: [
+                  _TopBar(
+                    title: l10n.spinWheel,
+                    showHelpButton: _showHelpButton,
+                    onBack: () => context.pop(),
+                    onHelp: _showGameHelp,
+                  ),
+                  const SizedBox(height: GameUiSpacing.sectionGap),
+                  if (_inSetup) ...[
+                    Expanded(
+                      child: _SpinWheelPrepView(
                         l10n: l10n,
-                        isPrank: state.config.isPrankMode,
-                        onToggle: notifier.togglePrankMode,
-                      ),
-                      if (_showHelpButton) ...[
-                        const SizedBox(width: 10),
-                        GameHelpButton(
-                          onTap: _showGameHelp,
-                          iconColor: AppColors.textSecondary,
-                          borderColor: AppColors.textDim,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const SizedBox(height: 8),
-
-                // Wheel area
-                SizedBox(
-                  height: screenH * 0.52,
-                  child: GestureDetector(
-                    onPanStart: (d) {
-                      _lastDragAngle = _angleFrom(context, d.globalPosition);
-                      _dragVelocity = 0;
-                    },
-                    onPanUpdate: (d) {
-                      final current = _angleFrom(context, d.globalPosition);
-                      final delta = current - _lastDragAngle;
-                      _dragVelocity = delta * 60;
-                      _lastDragAngle = current;
-                      ref.read(spinWheelProvider.notifier).dismissResult();
-                    },
-                    onPanEnd: (d) {
-                      final vel = d.velocity.pixelsPerSecond.distance;
-                      final sign = _dragVelocity.sign;
-                      final radius = wheelSize / 2;
-                      notifier.startSpin(vel * sign, radius);
-                    },
-                    child: AnimatedBuilder(
-                      animation: _glowAnim,
-                      builder: (_, __) => Center(
-                        child: CustomPaint(
-                          painter: WheelPainter(
-                            segments: state.config.segments,
-                            totalWeight: state.config.totalWeight,
-                            angle: state.angle,
-                            accentColor: AppColors.wheelOrange,
-                            glowIntensity: _glowAnim.value,
-                            speed: state.angularVelocity.abs(),
-                          ),
-                          size: Size(wheelSize, wheelSize),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Template selector
-                SizedBox(
-                  height: 52,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: WheelPresets.all.length,
-                    itemBuilder: (_, i) {
-                      final preset = WheelPresets.all[i];
-                      final active = state.config.name == preset.name;
-                      return GestureDetector(
-                        onTap: () {
-                          notifier.loadConfig(preset);
-                          HapticService.lightImpact();
+                        state: state,
+                        notifier: notifier,
+                        penaltyPreset: _penaltyPreset,
+                        onPenaltyPresetChanged: (preset) {
+                          setState(() => _penaltyPreset = preset);
                         },
-                        child: SizedBox(
-                          height: 52,
-                          child: Center(
-                            child: Container(
-                              margin: const EdgeInsets.only(right: 10),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 8),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: active
-                                      ? AppColors.wheelOrange
-                                      : AppColors.textDim,
-                                  width: active ? 1.5 : 1,
-                                ),
-                                color: active
-                                    ? AppColors.wheelOrange.withAlpha(20)
-                                    : Colors.transparent,
-                              ),
-                              child: Text(
-                                l10n.presetDisplayName(preset.name),
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: active
-                                      ? AppColors.wheelOrange
-                                      : AppColors.textSecondary,
-                                  fontSize: 14,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-
-                // Hint
-                Padding(
-                  padding: const EdgeInsets.only(top: 8, bottom: 4),
-                  child: Text(
-                    state.config.isPrankMode
-                        ? '${l10n.slideToSpin}  •  ${l10n.presetDisplayName(state.config.name)}  •  ${l10n.prankActive}'
-                        : '${l10n.slideToSpin}  •  ${l10n.presetDisplayName(state.config.name)}',
-                    style: TextStyle(
-                      color: state.config.isPrankMode
-                          ? AppColors.bombRed.withAlpha(180)
-                          : AppColors.textDim,
-                      fontSize: 11,
-                      letterSpacing: 1,
+                        onEditWheel: () =>
+                            _showEditorSheet(context, state, notifier),
+                      ),
                     ),
-                  ),
-                ),
-              ],
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: GameUiSpacing.buttonHeight,
+                      child: ElevatedButton(
+                        onPressed: () => _startGame(notifier),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.wheelOrange,
+                          foregroundColor: Colors.white,
+                          textStyle: GameUiText.buttonLabel,
+                        ),
+                        child: Text(l10n.start),
+                      ),
+                    ),
+                  ] else
+                    Expanded(
+                      child: _SpinWheelPlayView(
+                        l10n: l10n,
+                        state: state,
+                        notifier: notifier,
+                        glowAnimation: _glowAnim,
+                        screenHeight: screenH,
+                        wheelSize: wheelSize,
+                        onPanStart: (d) {
+                          _lastDragAngle =
+                              _angleFrom(context, d.globalPosition);
+                          _dragVelocity = 0;
+                        },
+                        onPanUpdate: (d) {
+                          final current = _angleFrom(context, d.globalPosition);
+                          final delta = current - _lastDragAngle;
+                          _dragVelocity = delta * 60;
+                          _lastDragAngle = current;
+                          _dismissResult(notifier);
+                        },
+                        onPanEnd: (d) {
+                          final vel = d.velocity.pixelsPerSecond.distance;
+                          final sign = _dragVelocity.sign;
+                          final radius = wheelSize / 2;
+                          notifier.startSpin(vel * sign, radius);
+                        },
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
 
@@ -313,8 +227,9 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
             _ResultOverlay(
               l10n: l10n,
               segment: state.resultSegment!,
+              blindBoxResult: _blindBoxResult,
               animation: _resultAnim,
-              onDismiss: notifier.dismissResult,
+              onDismiss: () => _dismissResult(notifier),
             ),
 
           // Back edge swipe
@@ -357,6 +272,22 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
     );
   }
 
+  void _startGame(SpinWheelNotifier notifier) {
+    HapticService.mediumImpact();
+    notifier.dismissResult();
+    setState(() {
+      _inSetup = false;
+      _blindBoxResult = null;
+    });
+  }
+
+  void _dismissResult(SpinWheelNotifier notifier) {
+    notifier.dismissResult();
+    if (_blindBoxResult != null) {
+      setState(() => _blindBoxResult = null);
+    }
+  }
+
   void _showEditorSheet(
       BuildContext ctx, SpinWheelState state, SpinWheelNotifier notifier) {
     final l10n = AppLocalizations.of(ctx);
@@ -368,6 +299,344 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
         l10n: l10n,
         config: state.config,
         notifier: notifier,
+      ),
+    );
+  }
+}
+
+class _TopBar extends StatelessWidget {
+  const _TopBar({
+    required this.title,
+    required this.showHelpButton,
+    required this.onBack,
+    required this.onHelp,
+  });
+
+  final String title;
+  final bool showHelpButton;
+  final VoidCallback onBack;
+  final VoidCallback onHelp;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        GestureDetector(
+          onTap: onBack,
+          child:
+              const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            title,
+            textAlign: TextAlign.center,
+            style: GameUiText.navTitle,
+          ),
+        ),
+        const SizedBox(width: 12),
+        showHelpButton
+            ? GameHelpButton(
+                onTap: onHelp,
+                iconColor: AppColors.textSecondary,
+                borderColor: AppColors.textDim,
+              )
+            : const SizedBox(width: 32, height: 32),
+      ],
+    );
+  }
+}
+
+class _SpinWheelPrepView extends StatelessWidget {
+  const _SpinWheelPrepView({
+    required this.l10n,
+    required this.state,
+    required this.notifier,
+    required this.penaltyPreset,
+    required this.onPenaltyPresetChanged,
+    required this.onEditWheel,
+  });
+
+  final AppLocalizations l10n;
+  final SpinWheelState state;
+  final SpinWheelNotifier notifier;
+  final PenaltyPreset penaltyPreset;
+  final ValueChanged<PenaltyPreset> onPenaltyPresetChanged;
+  final VoidCallback onEditWheel;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.t('spinWheelPrepTitle'),
+            textAlign: TextAlign.center,
+            style: GameUiText.sectionTitle.copyWith(fontSize: 24),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l10n.t('spinWheelPrepHint'),
+            textAlign: TextAlign.center,
+            style: GameUiText.body,
+          ),
+          const SizedBox(height: 18),
+          _SectionCard(
+            title: l10n.t('spinWheelTemplateTitle'),
+            child: _PresetSelectorBar(
+              l10n: l10n,
+              state: state,
+              notifier: notifier,
+            ),
+          ),
+          const SizedBox(height: 14),
+          _SectionCard(
+            title: l10n.t('spinWheelModeTitle'),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _ModeToggle(
+                    l10n: l10n,
+                    isPrank: state.config.isPrankMode,
+                    onToggle: notifier.togglePrankMode,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                OutlinedButton.icon(
+                  onPressed: onEditWheel,
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.textDim),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    foregroundColor: AppColors.textSecondary,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                  ),
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  label: Text(l10n.editWheel),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          _InfoNoticeCard(
+            title: l10n.t('spinWheelPlayerHintTitle'),
+            description: l10n.t('spinWheelPlayerHint'),
+          ),
+          const SizedBox(height: 14),
+          PenaltyPresetCard(
+            preset: penaltyPreset,
+            onChanged: onPenaltyPresetChanged,
+            accentColor: AppColors.wheelOrange,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SpinWheelPlayView extends StatelessWidget {
+  const _SpinWheelPlayView({
+    required this.l10n,
+    required this.state,
+    required this.notifier,
+    required this.glowAnimation,
+    required this.screenHeight,
+    required this.wheelSize,
+    required this.onPanStart,
+    required this.onPanUpdate,
+    required this.onPanEnd,
+  });
+
+  final AppLocalizations l10n;
+  final SpinWheelState state;
+  final SpinWheelNotifier notifier;
+  final Animation<double> glowAnimation;
+  final double screenHeight;
+  final double wheelSize;
+  final GestureDragStartCallback onPanStart;
+  final GestureDragUpdateCallback onPanUpdate;
+  final GestureDragEndCallback onPanEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        SizedBox(
+          height: screenHeight * 0.56,
+          child: GestureDetector(
+            onPanStart: onPanStart,
+            onPanUpdate: onPanUpdate,
+            onPanEnd: onPanEnd,
+            child: AnimatedBuilder(
+              animation: glowAnimation,
+              builder: (_, __) => Center(
+                child: CustomPaint(
+                  painter: WheelPainter(
+                    segments: state.config.segments,
+                    totalWeight: state.config.totalWeight,
+                    angle: state.angle,
+                    accentColor: AppColors.wheelOrange,
+                    glowIntensity: glowAnimation.value,
+                    speed: state.angularVelocity.abs(),
+                  ),
+                  size: Size(wheelSize, wheelSize),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          state.config.isPrankMode
+              ? '${l10n.slideToSpin}  •  ${l10n.presetDisplayName(state.config.name)}  •  ${l10n.prankActive}'
+              : '${l10n.slideToSpin}  •  ${l10n.presetDisplayName(state.config.name)}',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: state.config.isPrankMode
+                ? AppColors.bombRed.withAlpha(180)
+                : AppColors.textDim,
+            fontSize: 11,
+            letterSpacing: 1,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({
+    required this.title,
+    required this.child,
+  });
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.black.withAlpha(72),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: GameUiText.bodyStrong,
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoNoticeCard extends StatelessWidget {
+  const _InfoNoticeCard({
+    required this.title,
+    required this.description,
+  });
+
+  final String title;
+  final String description;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.wheelOrange.withAlpha(20),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.wheelOrange.withAlpha(120)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.info_outline,
+              color: AppColors.wheelOrange, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: GameUiText.bodyStrong),
+                const SizedBox(height: 4),
+                Text(description, style: GameUiText.body),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PresetSelectorBar extends StatelessWidget {
+  const _PresetSelectorBar({
+    required this.l10n,
+    required this.state,
+    required this.notifier,
+  });
+
+  final AppLocalizations l10n;
+  final SpinWheelState state;
+  final SpinWheelNotifier notifier;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 52,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: WheelPresets.all.length,
+        itemBuilder: (_, i) {
+          final preset = WheelPresets.all[i];
+          final active = state.config.name == preset.name;
+          return GestureDetector(
+            onTap: () {
+              notifier.loadConfig(preset);
+              HapticService.lightImpact();
+            },
+            child: Container(
+              margin: const EdgeInsets.only(right: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: active ? AppColors.wheelOrange : AppColors.textDim,
+                  width: active ? 1.5 : 1,
+                ),
+                color: active
+                    ? AppColors.wheelOrange.withAlpha(20)
+                    : Colors.transparent,
+              ),
+              child: Center(
+                child: Text(
+                  l10n.presetDisplayName(preset.name),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: active
+                        ? AppColors.wheelOrange
+                        : AppColors.textSecondary,
+                    fontSize: 14,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -774,54 +1043,179 @@ class _ResultOverlay extends StatelessWidget {
   const _ResultOverlay({
     required this.l10n,
     required this.segment,
+    required this.blindBoxResult,
     required this.animation,
     required this.onDismiss,
   });
 
   final AppLocalizations l10n;
   final WheelSegment segment;
+  final PenaltyBlindBoxResult? blindBoxResult;
   final Animation<double> animation;
   final VoidCallback onDismiss;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onDismiss,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          color: Colors.black.withAlpha(100),
-          child: Center(
+    return BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: onDismiss,
+              child: Container(color: Colors.black.withAlpha(100)),
+            ),
+          ),
+          Center(
             child: ScaleTransition(
               scale: animation,
               child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 28),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    GameResultTemplateCard(
-                      accentColor: segment.color,
-                      resultTitle: l10n.t('resultSummary'),
-                      resultText: segment.label,
-                      penaltyTitle: l10n.punishment,
-                      penaltyText: PenaltyService.guidancePlan(
-                        l10n: l10n,
-                        guide: PenaltyGuideType.wheel,
-                      ).text,
-                    ),
-                    const SizedBox(height: 14),
-                    GameResultActionBar(
-                      accentColor: segment.color,
-                      primaryLabel: l10n.touchToContinue,
-                      onPrimaryTap: onDismiss,
-                    ),
-                  ],
+                margin:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      GameResultTemplateCard(
+                        accentColor: segment.color,
+                        resultTitle: l10n.t('resultSummary'),
+                        resultText: segment.label,
+                        penaltyTitle: l10n.punishment,
+                        penaltyText: PenaltyService.guidancePlan(
+                          l10n: l10n,
+                          guide: PenaltyGuideType.wheel,
+                        ).text,
+                      ),
+                      const SizedBox(height: 14),
+                      SpinWheelResultDetails(
+                        optionLabel: segment.label,
+                        selectedColor: segment.color,
+                        blindBoxResult: blindBoxResult,
+                      ),
+                      const SizedBox(height: 14),
+                      GameResultActionBar(
+                        accentColor: segment.color,
+                        primaryLabel: l10n.touchToContinue,
+                        onPrimaryTap: onDismiss,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
+}
+
+class SpinWheelResultDetails extends StatelessWidget {
+  const SpinWheelResultDetails({
+    super.key,
+    required this.optionLabel,
+    required this.selectedColor,
+    required this.blindBoxResult,
+  });
+
+  final String optionLabel;
+  final Color selectedColor;
+  final PenaltyBlindBoxResult? blindBoxResult;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final colorCode = _colorHexString(selectedColor);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.black.withAlpha(84),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.white24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.t('spinWheelSelectedOption'),
+            style: GameUiText.body.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            optionLabel,
+            style: GameUiText.sectionTitle.copyWith(fontSize: 24),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            l10n.t('spinWheelSelectedColor'),
+            style: GameUiText.body.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(10),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.white24),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 18,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    color: selectedColor,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: selectedColor.withAlpha(120),
+                        blurRadius: 12,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  colorCode,
+                  style: GameUiText.bodyStrong.copyWith(letterSpacing: 0.8),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            l10n.t('spinWheelBlindBoxPenalty'),
+            style: GameUiText.bodyStrong,
+          ),
+          const SizedBox(height: 10),
+          if (blindBoxResult != null)
+            PenaltyBlindBoxOverlay(result: blindBoxResult!)
+          else
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(10),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.white24),
+              ),
+              child: Text(
+                PenaltyService.guidancePlan(
+                  l10n: l10n,
+                  guide: PenaltyGuideType.wheel,
+                ).text,
+                style: GameUiText.body,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+String _colorHexString(Color color) {
+  final rgb = color.toARGB32() & 0xFFFFFF;
+  return '#${rgb.toRadixString(16).padLeft(6, '0').toUpperCase()}';
 }

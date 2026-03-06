@@ -6,15 +6,20 @@ import '../../../core/audio/audio_service.dart';
 import '../../../core/constants/app_sounds.dart';
 
 class NumberBombNotifier extends StateNotifier<BombState> {
-  NumberBombNotifier() : super(const BombState());
+  NumberBombNotifier({Random? random})
+      : _random = random ?? Random(),
+        super(const BombState());
 
-  final _random = Random();
+  final Random _random;
 
-  void startGame({int min = 1, int max = 100}) {
+  void startGame({int min = 1, int max = 100, int playerCount = 2}) {
     final secret = min + _random.nextInt(max - min + 1);
     state = BombState(
       phase: BombPhase.playing,
       secretNumber: secret,
+      playerCount: playerCount,
+      currentPlayerIndex: 0,
+      loserPlayerIndex: null,
       minRange: min,
       maxRange: max,
       originalMin: min,
@@ -61,6 +66,7 @@ class NumberBombNotifier extends StateNotifier<BombState> {
     if (input == state.secretNumber) {
       state = state.copyWith(
         phase: BombPhase.explosion,
+        loserPlayerIndex: state.currentPlayerIndex,
         currentInput: '',
         punishmentText: '',
       );
@@ -81,6 +87,7 @@ class NumberBombNotifier extends StateNotifier<BombState> {
 
     state = state.copyWith(
       currentInput: '',
+      currentPlayerIndex: (state.currentPlayerIndex + 1) % state.playerCount,
       minRange: newMin,
       maxRange: newMax,
       lastGuessInvalid: false,

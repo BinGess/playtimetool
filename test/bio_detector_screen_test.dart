@@ -29,6 +29,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
 
     expect(find.text('开局设置'), findsOneWidget);
+    expect(find.text('BIO-SCAN'), findsOneWidget);
+    expect(find.text('准备检测'), findsOneWidget);
     expect(find.text('惩罚预设 Penalty Preset'), findsOneWidget);
     expect(find.byKey(const Key('bio-detector-rounds-slider')), findsOneWidget);
 

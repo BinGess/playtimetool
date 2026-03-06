@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:playtimetool/features/number_bomb/models/bomb_state.dart';
@@ -22,10 +24,12 @@ void main() {
     });
 
     test('startGame creates playing state with correct range', () {
-      notifier.startGame(min: 1, max: 50);
+      notifier.startGame(min: 1, max: 50, playerCount: 4);
       final state = container.read(numberBombProvider);
 
       expect(state.phase, BombPhase.playing);
+      expect(state.playerCount, 4);
+      expect(state.currentPlayerIndex, 0);
       expect(state.minRange, 1);
       expect(state.maxRange, 50);
       expect(state.originalMin, 1);
@@ -138,6 +142,54 @@ void main() {
       notifier.startGame();
       notifier.reset();
       expect(container.read(numberBombProvider).phase, BombPhase.setup);
+    });
+
+    test('valid guess rotates turn to next player', () {
+      notifier = NumberBombNotifier(random: Random(0));
+      container.dispose();
+      container = ProviderContainer(
+        overrides: [
+          numberBombProvider.overrideWith((ref) => notifier),
+        ],
+      );
+
+      notifier.startGame(min: 1, max: 10, playerCount: 3);
+      final initial = container.read(numberBombProvider);
+      final secret = initial.secretNumber;
+      final guess = secret == 10 ? 9 : 10;
+
+      for (final digit in '$guess'.split('')) {
+        notifier.addDigit(digit);
+      }
+      notifier.confirmGuess();
+
+      final state = container.read(numberBombProvider);
+      expect(state.phase, BombPhase.playing);
+      expect(state.currentPlayerIndex, 1);
+      expect(state.loserPlayerIndex, isNull);
+    });
+
+    test('secret hit records loser and ends round immediately', () {
+      notifier = NumberBombNotifier(random: Random(0));
+      container.dispose();
+      container = ProviderContainer(
+        overrides: [
+          numberBombProvider.overrideWith((ref) => notifier),
+        ],
+      );
+
+      notifier.startGame(min: 1, max: 10, playerCount: 4);
+      final secret = container.read(numberBombProvider).secretNumber;
+
+      for (final digit in '$secret'.split('')) {
+        notifier.addDigit(digit);
+      }
+      notifier.confirmGuess();
+
+      final state = container.read(numberBombProvider);
+      expect(state.phase, BombPhase.explosion);
+      expect(state.loserPlayerIndex, 0);
+      expect(state.playerCount, 4);
     });
   });
 }

@@ -84,13 +84,15 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
       }
       if (next.phase == BombPhase.explosion &&
           prev?.phase != BombPhase.explosion) {
+        final loserLabel = next.loserPlayerIndex == null
+            ? AppLocalizations.of(context).t('penaltyCurrentPlayerLabel')
+            : AppLocalizations.of(context)
+                .playerLabel(next.loserPlayerIndex! + 1);
         _blindBoxResult = PenaltyService.resolveBlindBox(
           l10n: AppLocalizations.of(context),
           random: _penaltyRandom,
           preset: _penaltyPreset,
-          losers: <String>[
-            AppLocalizations.of(context).t('penaltyCurrentPlayerLabel'),
-          ],
+          losers: <String>[loserLabel],
         );
         _explosionController.reset();
         _explosionController.forward();
@@ -102,6 +104,17 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
       AppColors.bombRedDark,
       state.pressureRatio,
     )!;
+
+    if (state.phase == BombPhase.explosion &&
+        !_explosionController.isAnimating &&
+        _explosionController.value == 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (ref.read(numberBombProvider).phase == BombPhase.explosion) {
+          _explosionController.forward();
+        }
+      });
+    }
 
     return Scaffold(
       body: AnimatedBuilder(
@@ -153,6 +166,7 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
             // Explosion overlay
             if (state.phase == BombPhase.explosion)
               _ExplosionOverlay(
+                state: state,
                 anim: _explosionAnim,
                 blindBoxResult: _blindBoxResult,
                 onReset: notifier.reset,
@@ -220,7 +234,7 @@ class _SetupView extends StatefulWidget {
     required this.onPenaltyPresetChanged,
   });
 
-  final void Function({int min, int max}) onStart;
+  final void Function({int min, int max, int playerCount}) onStart;
   final AppLocalizations l10n;
   final PenaltyPreset penaltyPreset;
   final ValueChanged<PenaltyPreset> onPenaltyPresetChanged;
@@ -239,6 +253,7 @@ class _SetupViewState extends State<_SetupView> {
   ];
 
   int _selectedPreset = 1; // default: 1–100
+  int _playerCount = 2;
   int _customMin = 1;
   int _customMax = 200;
 
@@ -254,146 +269,463 @@ class _SetupViewState extends State<_SetupView> {
     return Padding(
       padding: GameUiSpacing.screenPadding,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: 32),
-          // Back button row
-          Align(
-            alignment: Alignment.centerLeft,
-            child: GestureDetector(
-              onTap: () => context.pop(),
-              child: const Icon(Icons.arrow_back_ios,
-                  color: Colors.white, size: 20),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              IconButton(
+                onPressed: () => context.pop(),
+                icon: const Icon(Icons.arrow_back_ios, size: 18),
+                color: Colors.white,
+              ),
+              Expanded(
+                child: Text(
+                  widget.l10n.numberBombTitle,
+                  textAlign: TextAlign.center,
+                  style: GameUiText.navTitle,
+                ),
+              ),
+              const SizedBox(width: 40),
+            ],
+          ),
+          const SizedBox(height: GameUiSpacing.blockGap),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildHeroCard(),
+                  const SizedBox(height: 14),
+                  _buildSectionCard(
+                    title: widget.l10n.t('numberBombPrepPlayersTitle'),
+                    subtitle: widget.l10n.t('numberBombPrepPlayersHint'),
+                    trailing: _buildStatusChip(
+                      widget.l10n.playersCount(_playerCount),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 88,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 16,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                  color: AppColors.bombRed.withAlpha(110),
+                                ),
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    AppColors.bombRed.withAlpha(42),
+                                    const Color(0x14110B0B),
+                                  ],
+                                ),
+                              ),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    '$_playerCount',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 30,
+                                      fontWeight: FontWeight.w800,
+                                      height: 1,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    widget.l10n.t('numberBombPrepPlayersTitle'),
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      color: Color(0xFFFFB3B3),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                widget.l10n.t('numberBombPrepHint'),
+                                style: GameUiText.body,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            trackHeight: 4,
+                            inactiveTrackColor: Colors.white12,
+                            thumbShape: const RoundSliderThumbShape(
+                              enabledThumbRadius: 8,
+                            ),
+                            overlayShape: const RoundSliderOverlayShape(
+                              overlayRadius: 16,
+                            ),
+                          ),
+                          child: Slider(
+                            key: const Key('number-bomb-player-slider'),
+                            value: _playerCount.toDouble(),
+                            min: 2,
+                            max: 8,
+                            divisions: 6,
+                            activeColor: AppColors.bombRed,
+                            onChanged: (value) =>
+                                setState(() => _playerCount = value.round()),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  _buildSectionCard(
+                    title: widget.l10n.t('numberBombPrepRangeTitle'),
+                    subtitle: widget.l10n.t('numberBombPrepRangeHint'),
+                    trailing: _buildStatusChip(
+                      '$_effectiveMin — $_effectiveMax',
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: List.generate(_presets.length, (i) {
+                            final active = i == _selectedPreset;
+                            return GestureDetector(
+                              onTap: () {
+                                setState(() => _selectedPreset = i);
+                                HapticService.lightImpact();
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: active
+                                        ? AppColors.bombRed.withAlpha(210)
+                                        : AppColors.textDim,
+                                    width: active ? 1.5 : 1,
+                                  ),
+                                  color: active
+                                      ? AppColors.bombRed.withAlpha(25)
+                                      : Colors.transparent,
+                                ),
+                                child: Text(
+                                  widget.l10n.rangePresetLabel(_presets[i].$1),
+                                  style: TextStyle(
+                                    color: active
+                                        ? AppColors.bombRed
+                                        : AppColors.textSecondary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                        ),
+                        if (_isCustom) ...[
+                          const SizedBox(height: 16),
+                          _RangeRow(
+                            label: widget.l10n.min,
+                            value: _customMin,
+                            min: 1,
+                            max: _customMax - 1,
+                            onChanged: (v) => setState(() => _customMin = v),
+                          ),
+                          const SizedBox(height: 8),
+                          _RangeRow(
+                            label: widget.l10n.max,
+                            value: _customMax,
+                            min: _customMin + 1,
+                            max: 9999,
+                            onChanged: (v) => setState(() => _customMax = v),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  _buildSectionCard(
+                    title: widget.l10n.t('numberBombPrepPenaltyTitle'),
+                    subtitle: widget.l10n.t('numberBombPrepPenaltyHint'),
+                    child: PenaltyPresetCard(
+                      preset: widget.penaltyPreset,
+                      accentColor: AppColors.bombRed,
+                      onChanged: widget.onPenaltyPresetChanged,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          const Spacer(flex: 2),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: GameUiSpacing.buttonHeight,
+            child: ElevatedButton.icon(
+              key: const Key('number-bomb-start-button'),
+              onPressed: () => widget.onStart(
+                min: _effectiveMin,
+                max: _effectiveMax,
+                playerCount: _playerCount,
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.bombRed,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+              icon: const Icon(Icons.play_arrow_rounded),
+              label: Text(
+                widget.l10n.startGame,
+                style: GameUiText.buttonLabel,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeroCard() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.bombRed.withAlpha(92)),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF160B12),
+            Color(0xFF0F1320),
+            Color(0xFF0A0A12),
+          ],
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x22000000),
+            blurRadius: 24,
+            offset: Offset(0, 16),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                widget.l10n.numberBombSubtitle,
+                style: const TextStyle(
+                  color: Color(0xFFFF9797),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.4,
+                ),
+              ),
+              const Spacer(),
+              _buildStatusChip(widget.l10n.playersCount(_playerCount)),
+            ],
+          ),
+          const SizedBox(height: 12),
           Text(
-            widget.l10n.numberBombTitle,
-            style: GameUiText.sectionTitle.copyWith(
-              fontSize: 24,
-              letterSpacing: 1.2,
+            widget.l10n.t('numberBombPrepTitle'),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              height: 1.1,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            widget.l10n.numberBombSubtitle,
-            style: GameUiText.caption.copyWith(letterSpacing: 1.2),
-          ),
-          const Spacer(flex: 2),
-          PenaltyPresetCard(
-            preset: widget.penaltyPreset,
-            accentColor: AppColors.bombRed,
-            onChanged: widget.onPenaltyPresetChanged,
-          ),
-          const SizedBox(height: 20),
-
-          // Range picker
-          Text(
-            widget.l10n.selectRange,
-            style: GameUiText.body,
+            widget.l10n.t('numberBombPrepHint'),
+            style: GameUiText.body.copyWith(
+              color: const Color(0xFFD8C1C7),
+            ),
           ),
           const SizedBox(height: 16),
-          Row(
-            children: List.generate(_presets.length, (i) {
-              final active = i == _selectedPreset;
-              return Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() => _selectedPreset = i);
-                    HapticService.lightImpact();
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: active
-                            ? AppColors.bombRed.withAlpha(200)
-                            : AppColors.textDim,
-                        width: active ? 1.5 : 1,
-                      ),
-                      color: active
-                          ? AppColors.bombRed.withAlpha(25)
-                          : Colors.transparent,
-                    ),
-                    child: Text(
-                      widget.l10n.rangePresetLabel(_presets[i].$1),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: active
-                            ? AppColors.bombRed
-                            : AppColors.textSecondary,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ),
-
-          // Custom range sliders
-          if (_isCustom) ...[
-            const SizedBox(height: 20),
-            _RangeRow(
-              label: widget.l10n.min,
-              value: _customMin,
-              min: 1,
-              max: _customMax - 1,
-              onChanged: (v) => setState(() => _customMin = v),
-            ),
-            const SizedBox(height: 8),
-            _RangeRow(
-              label: widget.l10n.max,
-              value: _customMax,
-              min: _customMin + 1,
-              max: 9999,
-              onChanged: (v) => setState(() => _customMax = v),
-            ),
-          ],
-
-          const SizedBox(height: 20),
-          // Current range display
-          Text(
-            '$_effectiveMin  —  $_effectiveMax',
-            style: TextStyle(
-              color: AppColors.bombRed.withAlpha(200),
-              fontSize: 28,
-              fontWeight: FontWeight.w200,
-              letterSpacing: 2,
-            ),
-          ),
-
-          const Spacer(flex: 3),
-
-          // Start button
-          GestureDetector(
-            onTap: () => widget.onStart(min: _effectiveMin, max: _effectiveMax),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 18),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(40),
-                border: Border.all(color: AppColors.bombRed.withAlpha(150)),
-                color: AppColors.bombRed.withAlpha(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.bombRed.withAlpha(60),
-                    blurRadius: 24,
-                  ),
+          Container(
+            height: 160,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0x2EFFFFFF)),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppColors.bombRed.withAlpha(28),
+                  AppColors.bombBlueDark.withAlpha(20),
                 ],
               ),
-              child: Text(
-                widget.l10n.startGame,
-                style: GameUiText.buttonLabel.copyWith(
-                  color: AppColors.bombRed,
-                  letterSpacing: 1.0,
+            ),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Color(0x10000000),
+                          Color(0x00000000),
+                          Color(0x12000000),
+                        ],
+                        stops: [0, 0.45, 1],
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                Center(
+                  child: Text(
+                    '$_effectiveMin — $_effectiveMax',
+                    style: TextStyle(
+                      color: Colors.white.withAlpha(235),
+                      fontSize: 34,
+                      fontWeight: FontWeight.w200,
+                      letterSpacing: 1.4,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 20,
+                  right: 20,
+                  top: 74,
+                  child: Container(
+                    height: 6,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(999),
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.transparent,
+                          AppColors.bombRed.withAlpha(72),
+                          AppColors.bombRed.withAlpha(170),
+                          AppColors.fingerCyan.withAlpha(110),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 14,
+                  top: 14,
+                  child: _buildMetricTag(widget.l10n.safeRange),
+                ),
+                Positioned(
+                  right: 14,
+                  bottom: 14,
+                  child: _buildMetricTag(widget.l10n.playerLabel(1)),
+                ),
+              ],
             ),
           ),
-          const Spacer(flex: 2),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSectionCard({
+    required String title,
+    required Widget child,
+    String? subtitle,
+    Widget? trailing,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.black.withAlpha(96),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.bombRed.withAlpha(60)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: GameUiText.sectionTitle),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 6),
+                      Text(subtitle, style: GameUiText.body),
+                    ],
+                  ],
+                ),
+              ),
+              if (trailing != null) ...[
+                const SizedBox(width: 12),
+                trailing,
+              ],
+            ],
+          ),
+          const SizedBox(height: 14),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.bombRed.withAlpha(26),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.bombRed.withAlpha(70)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Color(0xFFFFC4C4),
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.4,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMetricTag(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xAA0F0F16),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0x33FFFFFF)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Color(0xFFD7C5D4),
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -493,6 +825,15 @@ class _PlayingView extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          l10n.numberBombCurrentPlayer(
+            l10n.playerLabel(state.currentPlayerIndex + 1),
+          ),
+          style: GameUiText.bodyStrong.copyWith(
+            color: AppColors.bombRed.withAlpha(220),
           ),
         ),
         const SizedBox(height: 8),
@@ -710,12 +1051,14 @@ class _KeyButtonState extends State<_KeyButton>
 
 class _ExplosionOverlay extends StatelessWidget {
   const _ExplosionOverlay({
+    required this.state,
     required this.anim,
     required this.blindBoxResult,
     required this.onReset,
     required this.l10n,
   });
 
+  final BombState state;
   final Animation<double> anim;
   final PenaltyBlindBoxResult? blindBoxResult;
   final VoidCallback onReset;
@@ -723,6 +1066,14 @@ class _ExplosionOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loserLabel = state.loserPlayerIndex == null
+        ? l10n.t('penaltyCurrentPlayerLabel')
+        : l10n.playerLabel(state.loserPlayerIndex! + 1);
+    final winnerLabels = List.generate(state.playerCount, (index) => index)
+        .where((index) => index != state.loserPlayerIndex)
+        .map((index) => l10n.playerLabel(index + 1))
+        .join(' / ');
+
     return AnimatedBuilder(
       animation: anim,
       builder: (_, __) {
@@ -743,38 +1094,53 @@ class _ExplosionOverlay extends StatelessWidget {
                 size: Size.infinite,
               ),
 
-            // Punishment card
-            if (t > 0.6)
-              Opacity(
-                opacity: ((t - 0.6) / 0.4).clamp(0.0, 1.0),
-                child: Center(
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 26),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        GameResultTemplateCard(
-                          accentColor: AppColors.bombRed,
-                          resultTitle: l10n.t('resultSummary'),
-                          resultText: l10n.numberBombTitle,
-                          penaltyTitle: l10n.punishment,
-                          penaltyText: l10n.t('penaltyBlindBoxTitle'),
-                        ),
-                        if (blindBoxResult != null) ...[
-                          const SizedBox(height: 12),
-                          PenaltyBlindBoxOverlay(result: blindBoxResult!),
-                        ],
-                        const SizedBox(height: 16),
-                        GameResultActionBar(
-                          accentColor: AppColors.bombRed,
-                          primaryLabel: l10n.againRound,
-                          onPrimaryTap: onReset,
-                        ),
-                      ],
+            Center(
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 26),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      l10n.numberBombCurrentPlayer(loserLabel),
+                      style: GameUiText.bodyStrong.copyWith(
+                        color: AppColors.bombRed.withAlpha(220),
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                  ),
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.numberBombLoser(loserLabel),
+                      style: GameUiText.bodyStrong,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.numberBombWinners(winnerLabels),
+                      style: GameUiText.body,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    GameResultTemplateCard(
+                      accentColor: AppColors.bombRed,
+                      resultTitle: l10n.t('resultSummary'),
+                      resultText: l10n.numberBombTitle,
+                      penaltyTitle: l10n.punishment,
+                      penaltyText: l10n.t('penaltyBlindBoxTitle'),
+                    ),
+                    if (blindBoxResult != null) ...[
+                      const SizedBox(height: 12),
+                      PenaltyBlindBoxOverlay(result: blindBoxResult!),
+                    ],
+                    const SizedBox(height: 16),
+                    GameResultActionBar(
+                      accentColor: AppColors.bombRed,
+                      primaryLabel: l10n.againRound,
+                      onPrimaryTap: onReset,
+                    ),
+                  ],
                 ),
               ),
+            ),
           ],
         );
       },
