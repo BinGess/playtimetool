@@ -28,15 +28,10 @@ class GameResultActionBar extends StatelessWidget {
             height: GameUiSpacing.buttonHeight,
             child: OutlinedButton(
               onPressed: onSecondaryTap,
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: accentColor.withAlpha(150)),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
+              style: GameUiSurface.secondaryButton(accentColor),
               child: Text(
                 secondaryLabel!,
-                style: GameUiText.bodyStrong,
+                style: GameUiText.buttonLabel,
               ),
             ),
           ),
@@ -47,19 +42,7 @@ class GameResultActionBar extends StatelessWidget {
           height: GameUiSpacing.buttonHeight + 4,
           child: ElevatedButton(
             onPressed: onPrimaryTap,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: accentColor,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              textStyle: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.4,
-              ),
-            ),
+            style: GameUiSurface.primaryButton(accentColor),
             child: Text(primaryLabel),
           ),
         ),

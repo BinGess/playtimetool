@@ -195,135 +195,140 @@ class _BombPassScreenState extends ConsumerState<BombPassScreen>
                   ),
                   const SizedBox(height: GameUiSpacing.topGap),
                   const SizedBox(height: 18),
-                  Text(
-                    l10n.playersCount(_playerCount),
-                    style: GameUiText.body,
-                  ),
-                  Slider(
-                    value: _playerCount.toDouble(),
-                    min: 3,
-                    max: 6,
-                    divisions: 3,
-                    label: '$_playerCount',
-                    activeColor: AppColors.bombRed,
-                    onChanged: _running
-                        ? null
-                        : (v) => setState(() => _playerCount = v.round()),
-                  ),
-                  if (!_running && !_exploded) ...[
-                    const SizedBox(height: 12),
-                    PenaltyPresetCard(
-                      preset: _penaltyPreset,
-                      accentColor: AppColors.bombRed,
-                      onChanged: (preset) {
-                        setState(() => _penaltyPreset = preset);
-                      },
+                  if (!_exploded) ...[
+                    Text(
+                      l10n.playersCount(_playerCount),
+                      style: GameUiText.body,
                     ),
-                  ],
-                  const SizedBox(height: 8),
-                  // Hidden timer: only show a danger hint, no exact time
-                  if (_running)
-                    Center(
-                      child: AnimatedDefaultTextStyle(
-                        duration: const Duration(milliseconds: 300),
-                        style: TextStyle(
-                          color: Color.lerp(
-                            AppColors.textDim,
-                            AppColors.bombRed,
-                            _intensity,
-                          ),
-                          fontSize: 13 + _intensity * 4,
-                          letterSpacing: 2,
-                        ),
-                        child: Text(l10n.t('passBombDanger')),
+                    Slider(
+                      value: _playerCount.toDouble(),
+                      min: 3,
+                      max: 6,
+                      divisions: 3,
+                      label: '$_playerCount',
+                      activeColor: AppColors.bombRed,
+                      onChanged: _running
+                          ? null
+                          : (v) => setState(() => _playerCount = v.round()),
+                    ),
+                    if (!_running) ...[
+                      const SizedBox(height: 12),
+                      PenaltyPresetCard(
+                        preset: _penaltyPreset,
+                        accentColor: AppColors.bombRed,
+                        onChanged: (preset) {
+                          setState(() => _penaltyPreset = preset);
+                        },
                       ),
-                    ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: Center(
-                      child: AnimatedBuilder(
-                        animation: _pulseAnim,
-                        builder: (_, child) => Transform.scale(
-                          scale: _running ? _pulseAnim.value : 1.0,
-                          child: child,
-                        ),
-                        child: AnimatedContainer(
+                    ],
+                    const SizedBox(height: 8),
+                    // Hidden timer: only show a danger hint, no exact time
+                    if (_running)
+                      Center(
+                        child: AnimatedDefaultTextStyle(
                           duration: const Duration(milliseconds: 300),
-                          width: bombSize,
-                          height: bombSize,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: RadialGradient(
-                              colors: [
-                                AppColors.bombRed.withAlpha(bombAlpha),
-                                AppColors.bombRedDark,
+                          style: TextStyle(
+                            color: Color.lerp(
+                              AppColors.textDim,
+                              AppColors.bombRed,
+                              _intensity,
+                            ),
+                            fontSize: 13 + _intensity * 4,
+                            letterSpacing: 2,
+                          ),
+                          child: Text(l10n.t('passBombDanger')),
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: Center(
+                        child: AnimatedBuilder(
+                          animation: _pulseAnim,
+                          builder: (_, child) => Transform.scale(
+                            scale: _running ? _pulseAnim.value : 1.0,
+                            child: child,
+                          ),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            width: bombSize,
+                            height: bombSize,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: RadialGradient(
+                                colors: [
+                                  AppColors.bombRed.withAlpha(bombAlpha),
+                                  AppColors.bombRedDark,
+                                ],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.bombRed.withAlpha(glowAlpha),
+                                  blurRadius:
+                                      12 + (_running ? _intensity * 30 : 0),
+                                  spreadRadius: _running ? _intensity * 8 : 0,
+                                ),
                               ],
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.bombRed.withAlpha(glowAlpha),
-                                blurRadius:
-                                    12 + (_running ? _intensity * 30 : 0),
-                                spreadRadius: _running ? _intensity * 8 : 0,
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    _running
+                                        ? l10n.t('passBombCurrentHolder')
+                                        : l10n.t('passBombReady'),
+                                    style: const TextStyle(
+                                      color: AppColors.textSecondary,
+                                      letterSpacing: 1,
+                                      fontSize: 14,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    PartyPlusStrings.player(
+                                        context, _holderIndex),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 30,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
                               ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: Center(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              GameResultTemplateCard(
+                                accentColor: AppColors.bombRed,
+                                resultTitle: l10n.t('resultSummary'),
+                                resultText:
+                                    '${PartyPlusStrings.player(context, _holderIndex)} ${l10n.t('passBombBoom')}',
+                                penaltyTitle: l10n.punishment,
+                                penaltyText: l10n.t('penaltyBlindBoxTitle'),
+                              ),
+                              if (_blindBoxResult != null) ...[
+                                const SizedBox(height: 12),
+                                PenaltyBlindBoxOverlay(
+                                  result: _blindBoxResult!,
+                                ),
+                              ],
                             ],
                           ),
-                          child: Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  _exploded
-                                      ? l10n.t('passBombBoom')
-                                      : (_running
-                                          ? l10n.t('passBombCurrentHolder')
-                                          : l10n.t('passBombReady')),
-                                  style: TextStyle(
-                                    color: _exploded
-                                        ? Colors.white
-                                        : AppColors.textSecondary,
-                                    letterSpacing: 1,
-                                    fontSize: _exploded ? 16 : 14,
-                                    fontWeight: _exploded
-                                        ? FontWeight.w700
-                                        : FontWeight.normal,
-                                    height: 1.4,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                Text(
-                                  PartyPlusStrings.player(
-                                      context, _holderIndex),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 30,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
                         ),
                       ),
                     ),
-                  ),
-                  if (_exploded)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: GameResultTemplateCard(
-                        accentColor: AppColors.bombRed,
-                        resultTitle: l10n.t('resultSummary'),
-                        resultText:
-                            '${PartyPlusStrings.player(context, _holderIndex)} ${l10n.t('passBombBoom')}',
-                        penaltyTitle: l10n.punishment,
-                        penaltyText: l10n.t('penaltyBlindBoxTitle'),
-                      ),
-                    ),
-                  if (_exploded && _blindBoxResult != null)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: PenaltyBlindBoxOverlay(result: _blindBoxResult!),
-                    ),
+                  ],
                   if (_exploded)
                     GameResultActionBar(
                       accentColor: AppColors.bombRed,

@@ -41,8 +41,7 @@ class SpinWheelState {
 }
 
 class SpinWheelNotifier extends StateNotifier<SpinWheelState> {
-  SpinWheelNotifier()
-      : super(SpinWheelState(config: WheelPresets.dinner));
+  SpinWheelNotifier() : super(SpinWheelState(config: WheelPresets.dinner));
 
   final _random = Random();
   Ticker? _ticker;
@@ -148,11 +147,12 @@ class SpinWheelNotifier extends StateNotifier<SpinWheelState> {
 
     // 有权重差异：偏向权重最低的选项（如「谁买单」的老板）
     if (maxW - minW > 0.01) {
-      final lowIndices =
-          segments.asMap().entries
-              .where((e) => (e.value.weight - minW).abs() < 0.01)
-              .map((e) => e.key)
-              .toList();
+      final lowIndices = segments
+          .asMap()
+          .entries
+          .where((e) => (e.value.weight - minW).abs() < 0.01)
+          .map((e) => e.key)
+          .toList();
       if (_random.nextDouble() < 0.55) {
         return lowIndices[_random.nextInt(lowIndices.length)];
       }
@@ -174,6 +174,13 @@ class SpinWheelNotifier extends StateNotifier<SpinWheelState> {
   void togglePrankMode() {
     state = state.copyWith(
       config: state.config.copyWith(isPrankMode: !state.config.isPrankMode),
+    );
+  }
+
+  void setPrankMode(bool isPrankMode) {
+    if (state.config.isPrankMode == isPrankMode) return;
+    state = state.copyWith(
+      config: state.config.copyWith(isPrankMode: isPrankMode),
     );
   }
 
@@ -222,7 +229,7 @@ class SpinWheelNotifier extends StateNotifier<SpinWheelState> {
   }
 }
 
-final spinWheelProvider = StateNotifierProvider.autoDispose<SpinWheelNotifier,
-    SpinWheelState>(
+final spinWheelProvider =
+    StateNotifierProvider.autoDispose<SpinWheelNotifier, SpinWheelState>(
   (ref) => SpinWheelNotifier(),
 );

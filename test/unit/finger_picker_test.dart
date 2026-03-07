@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:playtimetool/features/finger_picker/models/finger_state.dart';
@@ -19,14 +20,15 @@ void main() {
 
     tearDown(() => container.dispose());
 
-    test('initial state is waiting with no fingers', () {
+    test('initial state is setup with no fingers', () {
       final state = container.read(fingerPickerProvider);
-      expect(state.phase, PickerPhase.waiting);
+      expect(state.phase, PickerPhase.setup);
       expect(state.fingers, isEmpty);
       expect(state.maxWinners, 1);
     });
 
     test('addFinger adds finger with correct neon color', () {
+      notifier.startGame();
       notifier.addFinger(1, const Offset(100, 200));
       final state = container.read(fingerPickerProvider);
 
@@ -36,6 +38,7 @@ void main() {
     });
 
     test('second finger gets different color', () {
+      notifier.startGame();
       notifier.addFinger(1, const Offset(100, 100));
       notifier.addFinger(2, const Offset(200, 200));
       final state = container.read(fingerPickerProvider);
@@ -46,6 +49,7 @@ void main() {
     });
 
     test('adding more than max players triggers overflow reset', () {
+      notifier.startGame();
       for (int i = 1; i <= kMaxFingerPlayers + 1; i++) {
         notifier.addFinger(i, Offset(i * 20.0, 100));
       }
@@ -55,6 +59,7 @@ void main() {
     });
 
     test('removeFinger in waiting phase removes it cleanly', () {
+      notifier.startGame();
       notifier.addFinger(1, const Offset(100, 100));
       notifier.addFinger(2, const Offset(200, 200));
       notifier.removeFinger(1);
@@ -67,6 +72,7 @@ void main() {
 
     test('removeFinger during countdown shows escape alert', () {
       // Manually set countdown state
+      notifier.startGame();
       notifier.addFinger(1, const Offset(100, 100));
       notifier.addFinger(2, const Offset(200, 200));
 
@@ -91,7 +97,71 @@ void main() {
       expect(container.read(fingerPickerProvider).maxWinners, 3);
     });
 
+    test('movement does not reset lock countdown flow', () {
+      fakeAsync((async) {
+        final localContainer = ProviderContainer();
+        final subscription = localContainer.listen<FingerPickerState>(
+          fingerPickerProvider,
+          (_, __) {},
+        );
+        final localNotifier =
+            localContainer.read(fingerPickerProvider.notifier);
+
+        localNotifier.startGame();
+        localNotifier.addFinger(1, const Offset(100, 100));
+        localNotifier.addFinger(2, const Offset(200, 200));
+
+        async.elapse(const Duration(milliseconds: 1500));
+        expect(localContainer.read(fingerPickerProvider).phase,
+            PickerPhase.locked);
+
+        localNotifier.updateFinger(1, const Offset(140, 120));
+        async.elapse(const Duration(milliseconds: 1500));
+        expect(
+          localContainer.read(fingerPickerProvider).phase,
+          PickerPhase.countdown,
+        );
+
+        subscription.close();
+        localContainer.dispose();
+      });
+    });
+
+    test('removeFinger is ignored in result phase', () {
+      fakeAsync((async) {
+        final localContainer = ProviderContainer();
+        final subscription = localContainer.listen<FingerPickerState>(
+          fingerPickerProvider,
+          (_, __) {},
+        );
+        final localNotifier =
+            localContainer.read(fingerPickerProvider.notifier);
+
+        localNotifier.startGame();
+        localNotifier.setMaxWinners(2);
+        localNotifier.addFinger(1, const Offset(120, 120));
+        localNotifier.addFinger(2, const Offset(240, 240));
+
+        async.elapse(const Duration(milliseconds: 1500));
+        async.elapse(const Duration(milliseconds: 1500));
+        async.elapse(const Duration(seconds: 3));
+
+        expect(localContainer.read(fingerPickerProvider).phase,
+            PickerPhase.result);
+        expect(localContainer.read(fingerPickerProvider).fingers.length, 2);
+
+        localNotifier.removeFinger(1);
+        expect(localContainer.read(fingerPickerProvider).phase,
+            PickerPhase.result);
+        expect(localContainer.read(fingerPickerProvider).fingers.length, 2);
+
+        subscription.close();
+        localContainer.dispose();
+      });
+    });
+
     test('reset returns to initial state', () {
+      notifier.startGame();
       notifier.addFinger(1, const Offset(100, 100));
       notifier.setMaxWinners(3);
       notifier.reset();

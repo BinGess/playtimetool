@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/haptics/haptic_service.dart';
+import '../../../shared/styles/game_ui_style.dart';
 
 class GameCard extends StatefulWidget {
   const GameCard({
@@ -70,6 +71,9 @@ class _GameCardState extends State<GameCard>
 
   @override
   Widget build(BuildContext context) {
+    final secondaryColor = GameUiSurface.shiftHue(widget.accentColor, by: 46);
+    final tertiaryColor = GameUiSurface.shiftHue(widget.accentColor, by: 92);
+
     return GestureDetector(
       onTapDown: _onTapDown,
       onTapUp: _onTapUp,
@@ -85,51 +89,107 @@ class _GameCardState extends State<GameCard>
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: widget.accentColor.withAlpha(50),
+                  color: widget.accentColor.withAlpha(80),
                   width: 1,
                 ),
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    widget.accentColor.withAlpha(18),
-                    Colors.black.withAlpha(200),
+                    GameUiSurface.darkTone(widget.accentColor, lightness: 0.22),
+                    GameUiSurface.darkTone(secondaryColor, lightness: 0.16),
+                    const Color(0xFF05070E),
                   ],
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: widget.accentColor.withAlpha(36),
+                    blurRadius: 24,
+                    offset: const Offset(0, 18),
+                  ),
+                ],
               ),
               child: Stack(
                 children: [
+                  Positioned(
+                    left: -12,
+                    top: -18,
+                    child: _GlowOrb(
+                      size: 92,
+                      color: widget.accentColor.withAlpha(72),
+                    ),
+                  ),
+                  Positioned(
+                    right: -26,
+                    bottom: -16,
+                    child: _GlowOrb(
+                      size: 118,
+                      color: tertiaryColor.withAlpha(52),
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.white.withAlpha(12),
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                   Padding(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(14),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          widget.icon,
-                          size: 34,
-                          color: Colors.white,
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            color: Colors.black.withAlpha(80),
+                            border: Border.all(
+                              color: widget.accentColor.withAlpha(120),
+                            ),
+                          ),
+                          child: Icon(
+                            widget.icon,
+                            size: 24,
+                            color: Colors.white,
+                          ),
                         ),
                         const SizedBox(height: 10),
-                        // Subtitle
-                        Text(
-                          widget.subtitle,
-                          style: TextStyle(
-                            color: widget.accentColor.withAlpha(160),
-                            fontSize: 9,
-                            letterSpacing: 2,
-                            fontWeight: FontWeight.w400,
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 5,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          decoration: GameUiSurface.chip(
+                            accentColor: widget.accentColor,
+                          ),
+                          child: Text(
+                            widget.subtitle,
+                            style: TextStyle(
+                              color: widget.accentColor,
+                              fontSize: 9,
+                              letterSpacing: 1.4,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                        const SizedBox(height: 4),
-                        // Title
+                        const SizedBox(height: 10),
                         Text(
                           widget.title,
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
                             height: 1.2,
                             shadows: [
                               Shadow(
@@ -141,17 +201,52 @@ class _GameCardState extends State<GameCard>
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 4),
-                        // Description
+                        const SizedBox(height: 6),
                         Text(
                           widget.description,
                           style: const TextStyle(
                             color: AppColors.textSecondary,
-                            fontSize: 11,
-                            height: 1.3,
+                            fontSize: 11.5,
+                            height: 1.4,
                           ),
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
+                        ),
+                        const Spacer(),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                widget.locked
+                                    ? (widget.lockBadgeText ?? widget.subtitle)
+                                    : widget.subtitle,
+                                style: TextStyle(
+                                  color: Colors.white.withAlpha(150),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 1.2,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Container(
+                              width: 34,
+                              height: 34,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: widget.accentColor.withAlpha(28),
+                                border: Border.all(
+                                  color: widget.accentColor.withAlpha(90),
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.arrow_forward_rounded,
+                                size: 18,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -203,6 +298,37 @@ class _GameCardState extends State<GameCard>
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GlowOrb extends StatelessWidget {
+  const _GlowOrb({
+    required this.size,
+    required this.color,
+  });
+
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: color,
+          boxShadow: [
+            BoxShadow(
+              color: color,
+              blurRadius: 36,
+              spreadRadius: 12,
+            ),
+          ],
         ),
       ),
     );

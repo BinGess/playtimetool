@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:noise_meter/noise_meter.dart';
@@ -17,6 +16,7 @@ import '../../shared/services/penalty_service.dart';
 import '../../shared/styles/game_ui_style.dart';
 import '../../shared/widgets/game_result_action_bar.dart';
 import '../../shared/widgets/game_result_template_card.dart';
+import '../../shared/widgets/game_top_bar.dart';
 import '../../shared/widgets/penalty_blind_box_overlay.dart';
 import '../../shared/widgets/penalty_preset_card.dart';
 import '../../shared/widgets/web3_game_background.dart';
@@ -24,6 +24,7 @@ import 'logic/decibel_bomb_logic.dart';
 import 'logic/decibel_bomb_permission_logic.dart';
 
 enum _DecibelBombPhase {
+  setup,
   requestingPermission,
   permissionDenied,
   calibrating,
@@ -55,13 +56,14 @@ class _DecibelBombScreenState extends State<DecibelBombScreen>
   late final AnimationController _ringController;
   late final AnimationController _explosionController;
 
-  _DecibelBombPhase _phase = _DecibelBombPhase.requestingPermission;
+  _DecibelBombPhase _phase = _DecibelBombPhase.setup;
   bool _showHelpButton = false;
   bool _showFlash = false;
 
   int _playerCount = 4;
   int _holderIndex = 0;
   bool _isHoldingSpeak = false;
+  bool _awaitingNextPlayer = false;
   PermissionStatus? _permissionStatus;
   PenaltyPreset _penaltyPreset = PenaltyPreset.defaults;
   PenaltyBlindBoxResult? _blindBoxResult;
@@ -85,24 +87,12 @@ class _DecibelBombScreenState extends State<DecibelBombScreen>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     );
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final delay = defaultTargetPlatform == TargetPlatform.iOS
-          ? const Duration(milliseconds: 350)
-          : Duration.zero;
-      Future<void>.delayed(delay, () {
-        if (!mounted) return;
-        _requestMicrophonePermissionAndStart();
-      });
-    });
     _initGameHelp();
   }
 
   @override
   void dispose() {
-    _noiseSub?.cancel();
-    _calibrationTimer?.cancel();
-    _flashTimer?.cancel();
+    _stopNoiseTracking();
     _ringController.dispose();
     _explosionController.dispose();
     super.dispose();
@@ -172,6 +162,8 @@ class _DecibelBombScreenState extends State<DecibelBombScreen>
       );
       _explosionController.reset();
       _blindBoxResult = null;
+      _showFlash = false;
+      _awaitingNextPlayer = false;
     });
 
     _calibrationTimer = Timer(_calibrationDuration, _finishCalibration);
@@ -240,13 +232,16 @@ class _DecibelBombScreenState extends State<DecibelBombScreen>
     HapticService.tripleHeavyImpact();
 
     _isHoldingSpeak = false;
+    _awaitingNextPlayer = false;
     _showFlash = true;
     _phase = _DecibelBombPhase.exploded;
     _blindBoxResult = PenaltyService.resolveBlindBox(
       l10n: AppLocalizations.of(context),
       random: _random,
       preset: _penaltyPreset,
-      losers: <String>[AppLocalizations.of(context).playerLabel(_holderIndex + 1)],
+      losers: <String>[
+        AppLocalizations.of(context).playerLabel(_holderIndex + 1)
+      ],
     );
 
     _explosionController
@@ -262,7 +257,17 @@ class _DecibelBombScreenState extends State<DecibelBombScreen>
 
   void _setHoldingSpeak(bool speaking) {
     if (_phase != _DecibelBombPhase.ready) return;
-    setState(() => _isHoldingSpeak = speaking);
+    if (speaking) {
+      setState(() {
+        _isHoldingSpeak = true;
+      });
+      return;
+    }
+    if (!_isHoldingSpeak) return;
+    setState(() {
+      _isHoldingSpeak = false;
+      _awaitingNextPlayer = true;
+    });
   }
 
   void _nextPlayer() {
@@ -270,9 +275,18 @@ class _DecibelBombScreenState extends State<DecibelBombScreen>
     HapticService.selectionClick();
     setState(() {
       _isHoldingSpeak = false;
+      _awaitingNextPlayer = false;
       _holderIndex = (_holderIndex + 1) % _playerCount;
       _bombState = DecibelBombRules.startHandoffSensitiveWindow(_bombState);
     });
+  }
+
+  void _stopNoiseTracking() {
+    _noiseSub?.cancel();
+    _noiseSub = null;
+    _calibrationTimer?.cancel();
+    _flashTimer?.cancel();
+    _lastSampleAt = null;
   }
 
   String _explosionSummary(AppLocalizations l10n) {
@@ -289,6 +303,8 @@ class _DecibelBombScreenState extends State<DecibelBombScreen>
 
   String _statusLine(AppLocalizations l10n) {
     switch (_phase) {
+      case _DecibelBombPhase.setup:
+        return l10n.t('decibelBombPrepHint');
       case _DecibelBombPhase.requestingPermission:
         return l10n.t('decibelBombRequestingPermission');
       case _DecibelBombPhase.permissionDenied:
@@ -331,207 +347,14 @@ class _DecibelBombScreenState extends State<DecibelBombScreen>
             overlayOpacity: 0.72,
           ),
           SafeArea(
-            child: Padding(
-              padding: GameUiSpacing.screenPadding,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () => context.pop(),
-                        child: const Icon(
-                          Icons.arrow_back_ios,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        l10n.t('decibelBomb'),
-                        style: GameUiText.navTitle,
-                      ),
-                      const Spacer(),
-                      const SizedBox(width: 20),
-                    ],
+            child: _phase == _DecibelBombPhase.setup
+                ? _buildSetupView(l10n)
+                : _buildGameView(
+                    l10n,
+                    loudness: loudness,
+                    energyRatio: energyRatio,
+                    shouldOpenSettingsFirst: shouldOpenSettingsFirst,
                   ),
-                  const SizedBox(height: GameUiSpacing.blockGap),
-                  Text(
-                    _statusLine(l10n),
-                    textAlign: TextAlign.center,
-                    style: GameUiText.body.copyWith(letterSpacing: 0.6),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    l10n.playersCount(_playerCount),
-                    style: GameUiText.body,
-                  ),
-                  Slider(
-                    value: _playerCount.toDouble(),
-                    min: 3,
-                    max: 8,
-                    divisions: 5,
-                    label: '$_playerCount',
-                    activeColor: AppColors.fingerCyan,
-                    onChanged: _phase == _DecibelBombPhase.ready
-                        ? (v) => setState(() {
-                              _playerCount = v.round();
-                              _holderIndex = _holderIndex % _playerCount;
-                            })
-                        : null,
-                  ),
-                  if (_phase != _DecibelBombPhase.exploded) ...[
-                    const SizedBox(height: 8),
-                    PenaltyPresetCard(
-                      preset: _penaltyPreset,
-                      accentColor: AppColors.fingerCyan,
-                      onChanged: (preset) {
-                        setState(() => _penaltyPreset = preset);
-                      },
-                    ),
-                    const SizedBox(height: 10),
-                  ],
-                  Expanded(
-                    child: Center(
-                      child: AnimatedBuilder(
-                        animation: Listenable.merge([
-                          _ringController,
-                          _explosionController,
-                        ]),
-                        builder: (context, _) {
-                          return CustomPaint(
-                            size: const Size.square(320),
-                            painter: _DecibelRingPainter(
-                              time: _ringController.value,
-                              loudness: loudness,
-                              energyRatio: energyRatio,
-                              explosion: _explosionController.value,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  _MetricLine(
-                    label: l10n.t('decibelBombCurrentDb'),
-                    value: '${_currentDb.toStringAsFixed(1)} dB',
-                  ),
-                  _MetricLine(
-                    label: l10n.t('decibelBombBaseline'),
-                    value: '${_bombState.baselineDb.toStringAsFixed(1)} dB',
-                  ),
-                  _MetricLine(
-                    label: l10n.t('decibelBombSensitivity'),
-                    value: _bombState.sensitivity.toStringAsFixed(1),
-                  ),
-                  _MetricLine(
-                    label: l10n.t('decibelBombEnergy'),
-                    value:
-                        '${_bombState.energy.toStringAsFixed(0)} / ${_bombState.maxEnergy.toStringAsFixed(0)}',
-                  ),
-                  const SizedBox(height: 10),
-                  if (_phase == _DecibelBombPhase.exploded)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: GameResultTemplateCard(
-                        accentColor: AppColors.bombRed,
-                        resultTitle: l10n.t('resultSummary'),
-                        resultText: _explosionSummary(l10n),
-                        penaltyTitle: l10n.punishment,
-                        penaltyText: l10n.t('penaltyBlindBoxTitle'),
-                      ),
-                    ),
-                  if (_phase == _DecibelBombPhase.exploded &&
-                      _blindBoxResult != null)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: PenaltyBlindBoxOverlay(result: _blindBoxResult!),
-                    ),
-                  if (_phase == _DecibelBombPhase.exploded)
-                    GameResultActionBar(
-                      accentColor: AppColors.bombRed,
-                      primaryLabel: l10n.t('decibelBombRecalibrate'),
-                      onPrimaryTap: _startCalibration,
-                    )
-                  else if (_phase == _DecibelBombPhase.permissionDenied)
-                    GameResultActionBar(
-                      accentColor: AppColors.wheelOrange,
-                      primaryLabel: shouldOpenSettingsFirst
-                          ? l10n.t('decibelBombOpenSettings')
-                          : l10n.t('decibelBombGrantPermission'),
-                      onPrimaryTap: shouldOpenSettingsFirst
-                          ? openAppSettings
-                          : _requestMicrophonePermissionAndStart,
-                      secondaryLabel: shouldOpenSettingsFirst
-                          ? l10n.t('decibelBombGrantPermission')
-                          : l10n.t('decibelBombOpenSettings'),
-                      onSecondaryTap: shouldOpenSettingsFirst
-                          ? _requestMicrophonePermissionAndStart
-                          : openAppSettings,
-                    )
-                  else
-                    Row(
-                      children: [
-                        Expanded(
-                          child: SizedBox(
-                            height: 56,
-                            child: GestureDetector(
-                              onTapDown: (_) => _setHoldingSpeak(true),
-                              onTapUp: (_) => _setHoldingSpeak(false),
-                              onTapCancel: () => _setHoldingSpeak(false),
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(16),
-                                  color: _isHoldingSpeak
-                                      ? AppColors.fingerCyan
-                                      : AppColors.surfaceVariant,
-                                  border: Border.all(
-                                    color: _isHoldingSpeak
-                                        ? AppColors.fingerCyan
-                                        : AppColors.textDim,
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    l10n.t('decibelBombSpeakHold'),
-                                    style: TextStyle(
-                                      color: _isHoldingSpeak
-                                          ? Colors.black
-                                          : Colors.white,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: SizedBox(
-                            height: 56,
-                            child: ElevatedButton(
-                              onPressed: _phase == _DecibelBombPhase.ready
-                                  ? _nextPlayer
-                                  : null,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.bombRed,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                              child: Text(l10n.t('nextPlayer')),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  const SizedBox(height: 8),
-                ],
-              ),
-            ),
           ),
           if (_showFlash)
             Positioned.fill(
@@ -561,6 +384,348 @@ class _DecibelBombScreenState extends State<DecibelBombScreen>
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSetupView(AppLocalizations l10n) {
+    return Padding(
+      padding: GameUiSpacing.screenPadding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          GameTopBar(
+            title: l10n.t('decibelBomb'),
+            onBack: () => context.pop(),
+            accentColor: AppColors.fingerCyan,
+          ),
+          const SizedBox(height: GameUiSpacing.blockGap),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildHeroCard(l10n),
+                  const SizedBox(height: 14),
+                  _buildSetupSectionCard(
+                    title: l10n.t('decibelBombPrepPlayersTitle'),
+                    subtitle: l10n.t('decibelBombPrepPlayersHint'),
+                    trailing: _buildSetupStatusChip(
+                      l10n.playersCount(_playerCount),
+                    ),
+                    child: SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        trackHeight: 4,
+                        inactiveTrackColor: Colors.white12,
+                        thumbShape: const RoundSliderThumbShape(
+                          enabledThumbRadius: 8,
+                        ),
+                        overlayShape: const RoundSliderOverlayShape(
+                          overlayRadius: 16,
+                        ),
+                      ),
+                      child: Slider(
+                        key: const Key('decibel-bomb-player-slider'),
+                        value: _playerCount.toDouble(),
+                        min: 3,
+                        max: 8,
+                        divisions: 5,
+                        activeColor: AppColors.fingerCyan,
+                        onChanged: (value) =>
+                            setState(() => _playerCount = value.round()),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  PenaltyPresetCard(
+                    preset: _penaltyPreset,
+                    accentColor: AppColors.fingerCyan,
+                    onChanged: (preset) {
+                      setState(() => _penaltyPreset = preset);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: GameUiSpacing.buttonHeight,
+            child: ElevatedButton.icon(
+              key: const Key('decibel-bomb-start-button'),
+              onPressed: _requestMicrophonePermissionAndStart,
+              style: GameUiSurface.primaryButton(AppColors.fingerCyan),
+              icon: const Icon(Icons.mic_rounded),
+              label: Text(
+                l10n.startGame,
+                style: GameUiText.buttonLabel.copyWith(
+                  color: GameUiSurface.foregroundOn(AppColors.fingerCyan),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGameView(
+    AppLocalizations l10n, {
+    required double loudness,
+    required double energyRatio,
+    required bool shouldOpenSettingsFirst,
+  }) {
+    return Padding(
+      padding: GameUiSpacing.screenPadding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          GameTopBar(
+            title: l10n.t('decibelBomb'),
+            onBack: () => context.pop(),
+            accentColor: AppColors.fingerCyan,
+          ),
+          const SizedBox(height: GameUiSpacing.blockGap),
+          Text(
+            _statusLine(l10n),
+            textAlign: TextAlign.center,
+            style: GameUiText.body.copyWith(letterSpacing: 0.6),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _buildSetupStatusChip(l10n.playersCount(_playerCount)),
+              _buildSetupStatusChip(
+                l10n.t('decibelBombCurrentPlayer', {
+                  'player': l10n.playerLabel(_holderIndex + 1),
+                }),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Expanded(
+            child: Center(
+              child: AnimatedBuilder(
+                animation: Listenable.merge([
+                  _ringController,
+                  _explosionController,
+                ]),
+                builder: (context, _) {
+                  return CustomPaint(
+                    size: const Size.square(320),
+                    painter: _DecibelRingPainter(
+                      time: _ringController.value,
+                      loudness: loudness,
+                      energyRatio: energyRatio,
+                      explosion: _explosionController.value,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          _MetricLine(
+            label: l10n.t('decibelBombCurrentDb'),
+            value: '${_currentDb.toStringAsFixed(1)} dB',
+          ),
+          _MetricLine(
+            label: l10n.t('decibelBombBaseline'),
+            value: '${_bombState.baselineDb.toStringAsFixed(1)} dB',
+          ),
+          _MetricLine(
+            label: l10n.t('decibelBombSensitivity'),
+            value: _bombState.sensitivity.toStringAsFixed(1),
+          ),
+          _MetricLine(
+            label: l10n.t('decibelBombEnergy'),
+            value:
+                '${_bombState.energy.toStringAsFixed(0)} / ${_bombState.maxEnergy.toStringAsFixed(0)}',
+          ),
+          const SizedBox(height: 10),
+          if (_phase == _DecibelBombPhase.exploded)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: GameResultTemplateCard(
+                accentColor: AppColors.bombRed,
+                resultTitle: l10n.t('resultSummary'),
+                resultText: _explosionSummary(l10n),
+                penaltyTitle: l10n.punishment,
+                penaltyText: l10n.t('penaltyBlindBoxTitle'),
+              ),
+            ),
+          if (_phase == _DecibelBombPhase.exploded && _blindBoxResult != null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: PenaltyBlindBoxOverlay(result: _blindBoxResult!),
+            ),
+          if (_phase == _DecibelBombPhase.exploded)
+            GameResultActionBar(
+              accentColor: AppColors.bombRed,
+              primaryLabel: l10n.t('decibelBombRecalibrate'),
+              onPrimaryTap: _startCalibration,
+            )
+          else if (_phase == _DecibelBombPhase.permissionDenied)
+            GameResultActionBar(
+              accentColor: AppColors.wheelOrange,
+              primaryLabel: shouldOpenSettingsFirst
+                  ? l10n.t('decibelBombOpenSettings')
+                  : l10n.t('decibelBombGrantPermission'),
+              onPrimaryTap: shouldOpenSettingsFirst
+                  ? openAppSettings
+                  : _requestMicrophonePermissionAndStart,
+              secondaryLabel: shouldOpenSettingsFirst
+                  ? l10n.t('decibelBombGrantPermission')
+                  : l10n.t('decibelBombOpenSettings'),
+              onSecondaryTap: shouldOpenSettingsFirst
+                  ? _requestMicrophonePermissionAndStart
+                  : openAppSettings,
+            )
+          else
+            SizedBox(
+              height: 56,
+              width: double.infinity,
+              child: _awaitingNextPlayer
+                  ? ElevatedButton(
+                      key: const Key('decibel-bomb-next-button'),
+                      onPressed: _nextPlayer,
+                      style: GameUiSurface.primaryButton(AppColors.bombRed),
+                      child: Text(l10n.t('nextPlayer')),
+                    )
+                  : GestureDetector(
+                      key: const Key('decibel-bomb-scream-button'),
+                      onTapDown: (_) => _setHoldingSpeak(true),
+                      onTapUp: (_) => _setHoldingSpeak(false),
+                      onTapCancel: () => _setHoldingSpeak(false),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          color: _isHoldingSpeak
+                              ? AppColors.fingerCyan
+                              : AppColors.surfaceVariant,
+                          border: Border.all(
+                            color: _isHoldingSpeak
+                                ? AppColors.fingerCyan
+                                : AppColors.textDim,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            l10n.t('decibelBombSpeakHold'),
+                            style: TextStyle(
+                              color:
+                                  _isHoldingSpeak ? Colors.black : Colors.white,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+            ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeroCard(AppLocalizations l10n) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: GameUiSurface.heroPanel(
+        accentColor: AppColors.fingerCyan,
+        secondaryColor: AppColors.wheelOrange,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                l10n.t('decibelBombSub'),
+                style: const TextStyle(
+                  color: Color(0xFF8CF4FF),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.4,
+                ),
+              ),
+              const Spacer(),
+              _buildSetupStatusChip(l10n.playersCount(_playerCount)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            l10n.t('decibelBombPrepGuideHint'),
+            style: GameUiText.body.copyWith(
+              color: const Color(0xFFD0E3E8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSetupSectionCard({
+    required String title,
+    required Widget child,
+    String? subtitle,
+    Widget? trailing,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: GameUiSurface.panel(accentColor: AppColors.fingerCyan),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: GameUiText.sectionTitle),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 6),
+                      Text(subtitle, style: GameUiText.body),
+                    ],
+                  ],
+                ),
+              ),
+              if (trailing != null) ...[
+                const SizedBox(width: 12),
+                trailing,
+              ],
+            ],
+          ),
+          const SizedBox(height: 14),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSetupStatusChip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.fingerCyan.withAlpha(20),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.fingerCyan.withAlpha(70)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Color(0xFFBEFBF9),
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.4,
+        ),
       ),
     );
   }
@@ -662,7 +827,8 @@ class _DecibelRingPainter extends CustomPainter {
         colorT,
       )!
           .withAlpha(
-              (140 + 110 * (0.2 + loudness + explosion)).clamp(0, 255).toInt());
+        (140 + 110 * (0.2 + loudness + explosion)).clamp(0, 255).toInt(),
+      );
 
       canvas.drawCircle(point, 1.4 + 1.5 * loudness + explosion, ringPaint);
     }

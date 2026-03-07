@@ -9,12 +9,8 @@ import '../../core/help/game_help_service.dart';
 import '../../core/haptics/haptic_service.dart';
 import '../../core/audio/audio_service.dart';
 import '../../core/constants/app_sounds.dart';
-import '../../shared/services/penalty_service.dart';
 import '../../shared/styles/game_ui_style.dart';
 import '../../shared/widgets/game_result_action_bar.dart';
-import '../../shared/widgets/game_result_template_card.dart';
-import '../../shared/widgets/penalty_blind_box_overlay.dart';
-import '../../shared/widgets/penalty_preset_card.dart';
 import '../../shared/widgets/web3_game_background.dart';
 import 'models/wheel_segment.dart';
 import 'providers/spin_wheel_provider.dart';
@@ -38,8 +34,6 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
   double _dragVelocity = 0;
   bool _showHelpButton = false;
   bool _inSetup = true;
-  PenaltyPreset _penaltyPreset = PenaltyPreset.defaults;
-  PenaltyBlindBoxResult? _blindBoxResult;
 
   @override
   void initState() {
@@ -126,17 +120,8 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
           next.resultSegment != null) {
         _resultController.reset();
         _resultController.forward();
-        _blindBoxResult = PenaltyService.resolveBlindBox(
-          l10n: l10n,
-          random: Random(),
-          preset: _penaltyPreset,
-          losers: <String>[next.resultSegment!.label],
-        );
         HapticService.notificationSuccess();
         AudioService.play(AppSounds.wheelResult);
-        if (mounted) {
-          setState(() {});
-        }
       }
     });
 
@@ -166,10 +151,6 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
                         l10n: l10n,
                         state: state,
                         notifier: notifier,
-                        penaltyPreset: _penaltyPreset,
-                        onPenaltyPresetChanged: (preset) {
-                          setState(() => _penaltyPreset = preset);
-                        },
                         onEditWheel: () =>
                             _showEditorSheet(context, state, notifier),
                       ),
@@ -226,8 +207,8 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
           if (state.phase == SpinPhase.result && state.resultSegment != null)
             _ResultOverlay(
               l10n: l10n,
+              wheelTitle: l10n.presetDisplayName(state.config.name),
               segment: state.resultSegment!,
-              blindBoxResult: _blindBoxResult,
               animation: _resultAnim,
               onDismiss: () => _dismissResult(notifier),
             ),
@@ -277,15 +258,11 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
     notifier.dismissResult();
     setState(() {
       _inSetup = false;
-      _blindBoxResult = null;
     });
   }
 
   void _dismissResult(SpinWheelNotifier notifier) {
     notifier.dismissResult();
-    if (_blindBoxResult != null) {
-      setState(() => _blindBoxResult = null);
-    }
   }
 
   void _showEditorSheet(
@@ -352,16 +329,12 @@ class _SpinWheelPrepView extends StatelessWidget {
     required this.l10n,
     required this.state,
     required this.notifier,
-    required this.penaltyPreset,
-    required this.onPenaltyPresetChanged,
     required this.onEditWheel,
   });
 
   final AppLocalizations l10n;
   final SpinWheelState state;
   final SpinWheelNotifier notifier;
-  final PenaltyPreset penaltyPreset;
-  final ValueChanged<PenaltyPreset> onPenaltyPresetChanged;
   final VoidCallback onEditWheel;
 
   @override
@@ -370,39 +343,17 @@ class _SpinWheelPrepView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            l10n.t('spinWheelPrepTitle'),
-            textAlign: TextAlign.center,
-            style: GameUiText.sectionTitle.copyWith(fontSize: 24),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.t('spinWheelPrepHint'),
-            textAlign: TextAlign.center,
-            style: GameUiText.body,
-          ),
-          const SizedBox(height: 18),
           _SectionCard(
             title: l10n.t('spinWheelTemplateTitle'),
-            child: _PresetSelectorBar(
-              l10n: l10n,
-              state: state,
-              notifier: notifier,
-            ),
-          ),
-          const SizedBox(height: 14),
-          _SectionCard(
-            title: l10n.t('spinWheelModeTitle'),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: _ModeToggle(
-                    l10n: l10n,
-                    isPrank: state.config.isPrankMode,
-                    onToggle: notifier.togglePrankMode,
-                  ),
+                _PresetSelectorBar(
+                  l10n: l10n,
+                  state: state,
+                  notifier: notifier,
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(height: 12),
                 OutlinedButton.icon(
                   onPressed: onEditWheel,
                   style: OutlinedButton.styleFrom(
@@ -423,15 +374,19 @@ class _SpinWheelPrepView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          _InfoNoticeCard(
-            title: l10n.t('spinWheelPlayerHintTitle'),
-            description: l10n.t('spinWheelPlayerHint'),
-          ),
-          const SizedBox(height: 14),
-          PenaltyPresetCard(
-            preset: penaltyPreset,
-            onChanged: onPenaltyPresetChanged,
-            accentColor: AppColors.wheelOrange,
+          _SectionCard(
+            title: l10n.t('spinWheelModeTitle'),
+            trailing: GameHelpButton(
+              key: const Key('spinWheelModeHelpButton'),
+              onTap: () => _showSpinWheelModeHelpDialog(context, l10n),
+              iconColor: AppColors.textSecondary,
+              borderColor: AppColors.textDim,
+            ),
+            child: _ModeSelector(
+              l10n: l10n,
+              isPrank: state.config.isPrankMode,
+              onSelected: notifier.setPrankMode,
+            ),
           ),
         ],
       ),
@@ -513,10 +468,12 @@ class _SectionCard extends StatelessWidget {
   const _SectionCard({
     required this.title,
     required this.child,
+    this.trailing,
   });
 
   final String title;
   final Widget child;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -530,9 +487,19 @@ class _SectionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: GameUiText.bodyStrong,
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: GameUiText.bodyStrong,
+                ),
+              ),
+              if (trailing != null) ...[
+                const SizedBox(width: 12),
+                trailing!,
+              ],
+            ],
           ),
           const SizedBox(height: 12),
           child,
@@ -542,44 +509,41 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
-class _InfoNoticeCard extends StatelessWidget {
-  const _InfoNoticeCard({
-    required this.title,
-    required this.description,
-  });
-
-  final String title;
-  final String description;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.wheelOrange.withAlpha(20),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.wheelOrange.withAlpha(120)),
+Future<void> _showSpinWheelModeHelpDialog(
+  BuildContext context,
+  AppLocalizations l10n,
+) {
+  return showDialog<void>(
+    context: context,
+    builder: (_) => AlertDialog(
+      backgroundColor: const Color(0xFF101010),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: Color(0x33FFFFFF)),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.info_outline,
-              color: AppColors.wheelOrange, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: GameUiText.bodyStrong),
-                const SizedBox(height: 4),
-                Text(description, style: GameUiText.body),
-              ],
-            ),
+      title: Text(
+        l10n.t('spinWheelModeHelpTitle'),
+        style: const TextStyle(color: Colors.white, fontSize: 18),
+      ),
+      content: Text(
+        l10n.t('spinWheelModeHelpBody'),
+        style: const TextStyle(
+          color: Color(0xFFCCCCCC),
+          fontSize: 14,
+          height: 1.55,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(
+            l10n.ok,
+            style: const TextStyle(color: Colors.white),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
 }
 
 class _PresetSelectorBar extends StatelessWidget {
@@ -999,37 +963,89 @@ class _SegmentTile extends StatelessWidget {
 
 // ─────────────────────────── Mode toggle ───────────────────────────
 
-class _ModeToggle extends StatelessWidget {
-  const _ModeToggle({
+class _ModeSelector extends StatelessWidget {
+  const _ModeSelector({
     required this.l10n,
     required this.isPrank,
-    required this.onToggle,
+    required this.onSelected,
   });
 
   final AppLocalizations l10n;
   final bool isPrank;
-  final VoidCallback onToggle;
+  final ValueChanged<bool> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onToggle,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color:
-                isPrank ? AppColors.bombRed.withAlpha(150) : AppColors.textDim,
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white24),
+        color: Colors.white.withAlpha(10),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _ModeOption(
+              label: l10n.fair,
+              selected: !isPrank,
+              activeColor: AppColors.wheelOrange,
+              onTap: () => onSelected(false),
+            ),
           ),
-          color: isPrank ? AppColors.bombRed.withAlpha(20) : Colors.transparent,
-        ),
-        child: Text(
-          isPrank ? l10n.prank : l10n.fair,
-          style: TextStyle(
-            color: isPrank ? AppColors.bombRed : AppColors.textSecondary,
-            fontSize: GameUiText.caption.fontSize,
+          const SizedBox(width: 8),
+          Expanded(
+            child: _ModeOption(
+              label: l10n.prank,
+              selected: isPrank,
+              activeColor: AppColors.bombRed,
+              onTap: () => onSelected(true),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ModeOption extends StatelessWidget {
+  const _ModeOption({
+    required this.label,
+    required this.selected,
+    required this.activeColor,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final Color activeColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: selected ? activeColor.withAlpha(180) : Colors.white12,
+            ),
+            color: selected ? activeColor.withAlpha(28) : Colors.transparent,
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: GameUiText.bodyStrong.copyWith(
+                color: selected ? activeColor : AppColors.textSecondary,
+                fontSize: 14,
+              ),
+            ),
           ),
         ),
       ),
@@ -1042,15 +1058,15 @@ class _ModeToggle extends StatelessWidget {
 class _ResultOverlay extends StatelessWidget {
   const _ResultOverlay({
     required this.l10n,
+    required this.wheelTitle,
     required this.segment,
-    required this.blindBoxResult,
     required this.animation,
     required this.onDismiss,
   });
 
   final AppLocalizations l10n;
+  final String wheelTitle;
   final WheelSegment segment;
-  final PenaltyBlindBoxResult? blindBoxResult;
   final Animation<double> animation;
   final VoidCallback onDismiss;
 
@@ -1077,21 +1093,10 @@ class _ResultOverlay extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      GameResultTemplateCard(
-                        accentColor: segment.color,
-                        resultTitle: l10n.t('resultSummary'),
-                        resultText: segment.label,
-                        penaltyTitle: l10n.punishment,
-                        penaltyText: PenaltyService.guidancePlan(
-                          l10n: l10n,
-                          guide: PenaltyGuideType.wheel,
-                        ).text,
-                      ),
-                      const SizedBox(height: 14),
                       SpinWheelResultDetails(
+                        wheelTitle: wheelTitle,
                         optionLabel: segment.label,
-                        selectedColor: segment.color,
-                        blindBoxResult: blindBoxResult,
+                        accentColor: segment.color,
                       ),
                       const SizedBox(height: 14),
                       GameResultActionBar(
@@ -1114,19 +1119,18 @@ class _ResultOverlay extends StatelessWidget {
 class SpinWheelResultDetails extends StatelessWidget {
   const SpinWheelResultDetails({
     super.key,
+    required this.wheelTitle,
     required this.optionLabel,
-    required this.selectedColor,
-    required this.blindBoxResult,
+    required this.accentColor,
   });
 
+  final String wheelTitle;
   final String optionLabel;
-  final Color selectedColor;
-  final PenaltyBlindBoxResult? blindBoxResult;
+  final Color accentColor;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final colorCode = _colorHexString(selectedColor);
 
     return Container(
       width: double.infinity,
@@ -1134,88 +1138,51 @@ class SpinWheelResultDetails extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.black.withAlpha(84),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white24),
+        border: Border.all(color: accentColor.withAlpha(120)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            l10n.t('spinWheelSelectedOption'),
+            l10n.t('spinWheelResultHeadline', {'template': wheelTitle}),
+            style: GameUiText.bodyStrong.copyWith(
+              color: accentColor,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            l10n.t('spinWheelResultTypeLabel'),
             style: GameUiText.body.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 6),
           Text(
-            optionLabel,
-            style: GameUiText.sectionTitle.copyWith(fontSize: 24),
+            wheelTitle,
+            style: GameUiText.bodyStrong.copyWith(fontSize: 20),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           Text(
-            l10n.t('spinWheelSelectedColor'),
+            l10n.t('spinWheelSelectedOption'),
             style: GameUiText.body.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white.withAlpha(10),
+              color: accentColor.withAlpha(18),
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.white24),
+              border: Border.all(color: accentColor.withAlpha(120)),
             ),
-            child: Row(
-              children: [
-                Container(
-                  width: 18,
-                  height: 18,
-                  decoration: BoxDecoration(
-                    color: selectedColor,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: selectedColor.withAlpha(120),
-                        blurRadius: 12,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  colorCode,
-                  style: GameUiText.bodyStrong.copyWith(letterSpacing: 0.8),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 18),
-          Text(
-            l10n.t('spinWheelBlindBoxPenalty'),
-            style: GameUiText.bodyStrong,
-          ),
-          const SizedBox(height: 10),
-          if (blindBoxResult != null)
-            PenaltyBlindBoxOverlay(result: blindBoxResult!)
-          else
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white.withAlpha(10),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.white24),
-              ),
-              child: Text(
-                PenaltyService.guidancePlan(
-                  l10n: l10n,
-                  guide: PenaltyGuideType.wheel,
-                ).text,
-                style: GameUiText.body,
+            child: Text(
+              optionLabel,
+              style: GameUiText.sectionTitle.copyWith(
+                fontSize: 26,
+                color: Colors.white,
               ),
             ),
+          ),
         ],
       ),
     );
   }
-}
-
-String _colorHexString(Color color) {
-  final rgb = color.toARGB32() & 0xFFFFFF;
-  return '#${rgb.toRadixString(16).padLeft(6, '0').toUpperCase()}';
 }

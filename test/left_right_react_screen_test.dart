@@ -28,7 +28,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('惩罚预设 Penalty Preset'), findsOneWidget);
+    expect(find.text('惩罚预设'), findsOneWidget);
     expect(find.text('简单'), findsOneWidget);
     expect(find.text('中等'), findsOneWidget);
     expect(find.text('困难'), findsOneWidget);
@@ -41,6 +41,21 @@ void main() {
     expect(find.byType(Switch), findsNothing);
     expect(find.byType(DifficultyOptionCard), findsNWidgets(3));
     expect(find.byType(ChoiceChip), findsNothing);
+
+    final ruleY = tester
+        .getTopLeft(
+          find.text('每轮每位玩家各 1 次，含反转回合，错误或超时记罚分'),
+        )
+        .dy;
+    final difficultyY = tester.getTopLeft(find.text('难度模式')).dy;
+    final penaltyY = tester.getTopLeft(find.text('惩罚预设')).dy;
+    final playersY = tester.getTopLeft(find.text('人数 4 人')).dy;
+    final roundsY = tester.getTopLeft(find.text('轮次：8')).dy;
+
+    expect(ruleY, lessThan(difficultyY));
+    expect(difficultyY, lessThan(penaltyY));
+    expect(penaltyY, lessThan(playersY));
+    expect(playersY, lessThan(roundsY));
   });
 
   testWidgets('starts reaction window automatically after tapping start',

@@ -21,8 +21,7 @@ class DifficultyOptionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final borderColor = selected ? accentColor : Colors.white.withAlpha(55);
-    final bgColor =
-        selected ? accentColor.withAlpha(22) : Colors.black.withAlpha(96);
+    final secondaryColor = GameUiSurface.shiftHue(accentColor, by: 24);
 
     return Material(
       color: Colors.transparent,
@@ -33,15 +32,46 @@ class DifficultyOptionCard extends StatelessWidget {
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           decoration: BoxDecoration(
-            color: bgColor,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: selected
+                  ? [
+                      accentColor.withAlpha(36),
+                      secondaryColor.withAlpha(18),
+                      Colors.black.withAlpha(132),
+                    ]
+                  : [
+                      Colors.white.withAlpha(8),
+                      Colors.black.withAlpha(118),
+                    ],
+            ),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: borderColor),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: accentColor.withAlpha(28),
+                      blurRadius: 18,
+                      offset: const Offset(0, 12),
+                    ),
+                  ]
+                : null,
           ),
           child: Row(
             children: [
-              Icon(
-                selected ? Icons.check_circle : Icons.radio_button_unchecked,
-                color: selected ? accentColor : Colors.white.withAlpha(145),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: GameUiSurface.chip(
+                  accentColor: accentColor,
+                  selected: selected,
+                ),
+                child: Icon(
+                  selected ? Icons.check_rounded : Icons.add_rounded,
+                  color: selected ? accentColor : Colors.white.withAlpha(145),
+                  size: 18,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -50,7 +80,9 @@ class DifficultyOptionCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: GameUiText.bodyStrong,
+                      style: GameUiText.bodyStrong.copyWith(
+                        fontSize: 15,
+                      ),
                     ),
                     if (hint != null && hint!.isNotEmpty) ...[
                       const SizedBox(height: 4),

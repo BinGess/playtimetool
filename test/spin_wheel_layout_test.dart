@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:playtimetool/features/spin_wheel/spin_wheel_screen.dart';
 import 'package:playtimetool/l10n/app_localizations.dart';
-import 'package:playtimetool/shared/services/penalty_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -22,54 +21,56 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
-    expect(find.text('Get ready before spinning'), findsOneWidget);
-    expect(find.text('Best with up to 6 players'), findsOneWidget);
-    expect(find.text('Penalty Preset'), findsOneWidget);
+    expect(find.text('Best with up to 6 players'), findsNothing);
+    expect(find.text('Get ready before spinning'), findsNothing);
+    expect(
+        find.text(
+            'Set the template, mode and penalties first, then kick off the wheel.'),
+        findsNothing);
+    expect(find.text('Wheel template'), findsOneWidget);
+    expect(find.text('Mode and options'), findsOneWidget);
+    expect(find.text('Fair'), findsOneWidget);
+    expect(find.text('Cheat'), findsOneWidget);
+    expect(find.text('Edit Wheel'), findsOneWidget);
+    expect(find.text('Penalty Preset'), findsNothing);
     expect(find.text('Start'), findsAtLeastNWidgets(1));
   });
 
-  testWidgets('spin wheel result details show selected color and penalty box',
+  testWidgets('spin wheel mode help dialog explains fair and cheat modes',
       (WidgetTester tester) async {
-    const blindBox = PenaltyBlindBoxResult(
-      losers: <String>['Pizza'],
-      cards: <PenaltyBlindBoxCard>[
-        PenaltyBlindBoxCard(
-          entry: PenaltyEntry(
-            id: 'card1',
-            scene: PenaltyScene.home,
-            level: PenaltyLevel.level1,
-            category: PenaltyCategory.physical,
-            text: 'Do 10 squats',
-          ),
-        ),
-        PenaltyBlindBoxCard(
-          entry: PenaltyEntry(
-            id: 'card2',
-            scene: PenaltyScene.home,
-            level: PenaltyLevel.level2,
-            category: PenaltyCategory.social,
-            text: 'Sing a chorus',
-          ),
-        ),
-        PenaltyBlindBoxCard(
-          entry: PenaltyEntry(
-            id: 'card3',
-            scene: PenaltyScene.home,
-            level: PenaltyLevel.level3,
-            category: PenaltyCategory.truth,
-            text: 'Change your avatar',
-          ),
-        ),
-      ],
+    SharedPreferences.setMockInitialValues(
+      {'game_help_seen_spin_wheel': true},
     );
 
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: _SpinWheelTestApp(),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    await tester.tap(find.byKey(const Key('spinWheelModeHelpButton')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(find.text('What is the difference?'), findsOneWidget);
+    expect(
+      find.text(
+          'Fair mode settles on the wheel\'s true stopping result. Cheat mode applies a bias right before reveal, making it easier to push the outcome toward a more mischievous pick.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('spin wheel result details show wheel type and selected option',
+      (WidgetTester tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
           body: SpinWheelResultDetails(
-            optionLabel: 'Pizza',
-            selectedColor: Color(0xFFFF4444),
-            blindBoxResult: blindBox,
+            wheelTitle: 'Dinner',
+            optionLabel: 'Sushi',
+            accentColor: Color(0xFFFF4444),
           ),
         ),
         locale: Locale('en'),
@@ -84,9 +85,12 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Selected color'), findsOneWidget);
-    expect(find.text('#FF4444'), findsOneWidget);
-    expect(find.text('Blind Box Penalty'), findsOneWidget);
+    expect(find.text('Dinner Result'), findsOneWidget);
+    expect(find.text('Wheel type'), findsOneWidget);
+    expect(find.text('Dinner'), findsOneWidget);
+    expect(find.text('Selected option'), findsOneWidget);
+    expect(find.text('Sushi'), findsOneWidget);
+    expect(find.text('Blind Box Penalty'), findsNothing);
   });
 }
 

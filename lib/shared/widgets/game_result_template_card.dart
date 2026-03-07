@@ -22,43 +22,51 @@ class GameResultTemplateCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GlassContainer(
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(24),
       borderColor: accentColor.withAlpha(120),
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      tintColor:
+          GameUiSurface.darkTone(accentColor, lightness: 0.16).withAlpha(205),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            resultTitle,
-            style: TextStyle(
-              color: accentColor,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.2,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration:
+                GameUiSurface.chip(accentColor: accentColor, selected: true),
+            child: Text(
+              resultTitle,
+              style: TextStyle(
+                color: accentColor,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.0,
+              ),
             ),
           ),
           const SizedBox(height: 8),
           Text(
             resultText,
-            style: GameUiText.bodyStrong,
+            style: GameUiText.bodyStrong.copyWith(
+              fontSize: 18,
+              height: 1.35,
+            ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           Divider(color: AppColors.glassBorder.withAlpha(180), height: 1),
           const SizedBox(height: 12),
           Text(
             penaltyTitle,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.2,
-            ),
+            style: GameUiText.eyebrow.copyWith(fontSize: 11),
           ),
           const SizedBox(height: 8),
           Text(
             penaltyText,
-            style: GameUiText.body.copyWith(color: AppColors.textPrimary),
+            style: GameUiText.body.copyWith(
+              color: AppColors.textPrimary,
+              fontSize: 15,
+            ),
           ),
         ],
       ),

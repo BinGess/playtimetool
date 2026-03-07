@@ -4,6 +4,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/haptics/haptic_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../services/penalty_service.dart';
+import '../styles/game_ui_style.dart';
 
 class PenaltyPresetCard extends StatelessWidget {
   const PenaltyPresetCard({
@@ -23,38 +24,30 @@ class PenaltyPresetCard extends StatelessWidget {
 
     return Container(
       key: const Key('penalty-preset-card'),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.black.withAlpha(84),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: accentColor.withAlpha(90)),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: GameUiSurface.panel(
+        accentColor: accentColor,
+        borderRadius: BorderRadius.circular(22),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             l10n.t('penaltyPresetTitle'),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
+            style: GameUiText.sectionTitle.copyWith(fontSize: 18),
           ),
           const SizedBox(height: 6),
           Text(
             l10n.t('penaltyPresetHint'),
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 11,
-              height: 1.4,
-            ),
+            style: GameUiText.caption.copyWith(fontSize: 12),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
           _SectionLabel(label: l10n.t('penaltySceneTitle')),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Wrap(
-            spacing: 6,
-            runSpacing: 6,
+            spacing: 8,
+            runSpacing: 8,
             children: [
               _PresetChip(
                 label: l10n.t('penaltySceneHome'),
@@ -76,12 +69,12 @@ class PenaltyPresetCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
           _SectionLabel(label: l10n.t('penaltyIntensityTitle')),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Wrap(
-            spacing: 6,
-            runSpacing: 6,
+            spacing: 8,
+            runSpacing: 8,
             children: [
               _PresetChip(
                 label: l10n.t('penaltyIntensityMild'),
@@ -133,11 +126,7 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       label,
-      style: const TextStyle(
-        color: AppColors.textSecondary,
-        fontSize: 11,
-        fontWeight: FontWeight.w600,
-      ),
+      style: GameUiText.eyebrow,
     );
   }
 }
@@ -157,24 +146,37 @@ class _PresetChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          color: selected ? accentColor.withAlpha(30) : Colors.white12,
-          border: Border.all(
-            color: selected ? accentColor : Colors.white24,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            color: selected ? accentColor.withAlpha(28) : Colors.white12,
+            border: Border.all(
+              color: selected ? accentColor.withAlpha(190) : Colors.white24,
+            ),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: accentColor.withAlpha(25),
+                      blurRadius: 14,
+                      offset: const Offset(0, 8),
+                    ),
+                  ]
+                : null,
           ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? Colors.white : AppColors.textSecondary,
-            fontWeight: FontWeight.w600,
-            fontSize: 12,
+          child: Text(
+            label,
+            style: TextStyle(
+              color: selected ? Colors.white : AppColors.textSecondary,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
           ),
         ),
       ),

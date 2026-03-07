@@ -430,6 +430,39 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Text(
+                              l10n.t('leftRightRule'),
+                              style: GameUiText.body,
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              l10n.t('leftRightDifficultyTitle'),
+                              style: GameUiText.bodyStrong,
+                            ),
+                            const SizedBox(height: 8),
+                            ..._LeftRightDifficulty.values.map((level) {
+                              final selected = _difficulty == level;
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: DifficultyOptionCard(
+                                  title: _difficultyLabel(level, l10n),
+                                  hint: _difficultyHint(level, l10n),
+                                  selected: selected,
+                                  accentColor: _difficultyAccentColor(level),
+                                  onTap: () =>
+                                      setState(() => _difficulty = level),
+                                ),
+                              );
+                            }),
+                            const SizedBox(height: 4),
+                            PenaltyPresetCard(
+                              preset: _penaltyPreset,
+                              accentColor: AppColors.wheelOrange,
+                              onChanged: (preset) {
+                                setState(() => _penaltyPreset = preset);
+                              },
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
                               l10n.playersCount(_playerCount),
                               style: GameUiText.body,
                             ),
@@ -458,39 +491,6 @@ class _LeftRightReactScreenState extends State<LeftRightReactScreen> {
                               onChanged: (v) =>
                                   setState(() => _selectedRounds = v.round()),
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              l10n.t('leftRightRule'),
-                              style: GameUiText.body,
-                            ),
-                            const SizedBox(height: 12),
-                            PenaltyPresetCard(
-                              preset: _penaltyPreset,
-                              accentColor: AppColors.wheelOrange,
-                              onChanged: (preset) {
-                                setState(() => _penaltyPreset = preset);
-                              },
-                            ),
-                            const SizedBox(height: 14),
-                            Text(
-                              l10n.t('leftRightDifficultyTitle'),
-                              style: GameUiText.bodyStrong,
-                            ),
-                            const SizedBox(height: 8),
-                            ..._LeftRightDifficulty.values.map((level) {
-                              final selected = _difficulty == level;
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 10),
-                                child: DifficultyOptionCard(
-                                  title: _difficultyLabel(level, l10n),
-                                  hint: _difficultyHint(level, l10n),
-                                  selected: selected,
-                                  accentColor: _difficultyAccentColor(level),
-                                  onTap: () =>
-                                      setState(() => _difficulty = level),
-                                ),
-                              );
-                            }),
                             const SizedBox(height: 8),
                           ],
                         ),

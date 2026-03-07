@@ -9,6 +9,7 @@ import '../../l10n/app_localizations.dart';
 import '../../shared/services/penalty_service.dart';
 import '../../shared/widgets/game_result_action_bar.dart';
 import '../../shared/widgets/game_result_template_card.dart';
+import '../../shared/widgets/game_top_bar.dart';
 import '../../shared/widgets/penalty_blind_box_overlay.dart';
 import '../../shared/widgets/penalty_preset_card.dart';
 import '../../shared/styles/game_ui_style.dart';
@@ -272,22 +273,10 @@ class _SetupViewState extends State<_SetupView> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: 8),
-          Row(
-            children: [
-              IconButton(
-                onPressed: () => context.pop(),
-                icon: const Icon(Icons.arrow_back_ios, size: 18),
-                color: Colors.white,
-              ),
-              Expanded(
-                child: Text(
-                  widget.l10n.numberBombTitle,
-                  textAlign: TextAlign.center,
-                  style: GameUiText.navTitle,
-                ),
-              ),
-              const SizedBox(width: 40),
-            ],
+          GameTopBar(
+            title: widget.l10n.numberBombTitle,
+            onBack: () => context.pop(),
+            accentColor: AppColors.bombRed,
           ),
           const SizedBox(height: GameUiSpacing.blockGap),
           Expanded(
@@ -296,8 +285,6 @@ class _SetupViewState extends State<_SetupView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _buildHeroCard(),
-                  const SizedBox(height: 14),
                   _buildSectionCard(
                     title: widget.l10n.t('numberBombPrepPlayersTitle'),
                     subtitle: widget.l10n.t('numberBombPrepPlayersHint'),
@@ -307,62 +294,6 @@ class _SetupViewState extends State<_SetupView> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 88,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 16,
-                              ),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(18),
-                                border: Border.all(
-                                  color: AppColors.bombRed.withAlpha(110),
-                                ),
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    AppColors.bombRed.withAlpha(42),
-                                    const Color(0x14110B0B),
-                                  ],
-                                ),
-                              ),
-                              child: Column(
-                                children: [
-                                  Text(
-                                    '$_playerCount',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 30,
-                                      fontWeight: FontWeight.w800,
-                                      height: 1,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    widget.l10n.t('numberBombPrepPlayersTitle'),
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      color: Color(0xFFFFB3B3),
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                widget.l10n.t('numberBombPrepHint'),
-                                style: GameUiText.body,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
                         SliderTheme(
                           data: SliderTheme.of(context).copyWith(
                             trackHeight: 4,
@@ -462,14 +393,10 @@ class _SetupViewState extends State<_SetupView> {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  _buildSectionCard(
-                    title: widget.l10n.t('numberBombPrepPenaltyTitle'),
-                    subtitle: widget.l10n.t('numberBombPrepPenaltyHint'),
-                    child: PenaltyPresetCard(
-                      preset: widget.penaltyPreset,
-                      accentColor: AppColors.bombRed,
-                      onChanged: widget.onPenaltyPresetChanged,
-                    ),
+                  PenaltyPresetCard(
+                    preset: widget.penaltyPreset,
+                    accentColor: AppColors.bombRed,
+                    onChanged: widget.onPenaltyPresetChanged,
                   ),
                 ],
               ),
@@ -485,14 +412,7 @@ class _SetupViewState extends State<_SetupView> {
                 max: _effectiveMax,
                 playerCount: _playerCount,
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.bombRed,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
-              ),
+              style: GameUiSurface.primaryButton(AppColors.bombRed),
               icon: const Icon(Icons.play_arrow_rounded),
               label: Text(
                 widget.l10n.startGame,
@@ -506,147 +426,6 @@ class _SetupViewState extends State<_SetupView> {
     );
   }
 
-  Widget _buildHeroCard() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.bombRed.withAlpha(92)),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF160B12),
-            Color(0xFF0F1320),
-            Color(0xFF0A0A12),
-          ],
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x22000000),
-            blurRadius: 24,
-            offset: Offset(0, 16),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                widget.l10n.numberBombSubtitle,
-                style: const TextStyle(
-                  color: Color(0xFFFF9797),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.4,
-                ),
-              ),
-              const Spacer(),
-              _buildStatusChip(widget.l10n.playersCount(_playerCount)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            widget.l10n.t('numberBombPrepTitle'),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              height: 1.1,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            widget.l10n.t('numberBombPrepHint'),
-            style: GameUiText.body.copyWith(
-              color: const Color(0xFFD8C1C7),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            height: 160,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0x2EFFFFFF)),
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  AppColors.bombRed.withAlpha(28),
-                  AppColors.bombBlueDark.withAlpha(20),
-                ],
-              ),
-            ),
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      gradient: const LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Color(0x10000000),
-                          Color(0x00000000),
-                          Color(0x12000000),
-                        ],
-                        stops: [0, 0.45, 1],
-                      ),
-                    ),
-                  ),
-                ),
-                Center(
-                  child: Text(
-                    '$_effectiveMin — $_effectiveMax',
-                    style: TextStyle(
-                      color: Colors.white.withAlpha(235),
-                      fontSize: 34,
-                      fontWeight: FontWeight.w200,
-                      letterSpacing: 1.4,
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 20,
-                  right: 20,
-                  top: 74,
-                  child: Container(
-                    height: 6,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(999),
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.transparent,
-                          AppColors.bombRed.withAlpha(72),
-                          AppColors.bombRed.withAlpha(170),
-                          AppColors.fingerCyan.withAlpha(110),
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 14,
-                  top: 14,
-                  child: _buildMetricTag(widget.l10n.safeRange),
-                ),
-                Positioned(
-                  right: 14,
-                  bottom: 14,
-                  child: _buildMetricTag(widget.l10n.playerLabel(1)),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildSectionCard({
     required String title,
     required Widget child,
@@ -655,11 +434,7 @@ class _SetupViewState extends State<_SetupView> {
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.black.withAlpha(96),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.bombRed.withAlpha(60)),
-      ),
+      decoration: GameUiSurface.panel(accentColor: AppColors.bombRed),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -706,25 +481,6 @@ class _SetupViewState extends State<_SetupView> {
           fontSize: 11,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.4,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMetricTag(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: const Color(0xAA0F0F16),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0x33FFFFFF)),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Color(0xFFD7C5D4),
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -1069,10 +825,6 @@ class _ExplosionOverlay extends StatelessWidget {
     final loserLabel = state.loserPlayerIndex == null
         ? l10n.t('penaltyCurrentPlayerLabel')
         : l10n.playerLabel(state.loserPlayerIndex! + 1);
-    final winnerLabels = List.generate(state.playerCount, (index) => index)
-        .where((index) => index != state.loserPlayerIndex)
-        .map((index) => l10n.playerLabel(index + 1))
-        .join(' / ');
 
     return AnimatedBuilder(
       animation: anim,
@@ -1101,22 +853,8 @@ class _ExplosionOverlay extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      l10n.numberBombCurrentPlayer(loserLabel),
-                      style: GameUiText.bodyStrong.copyWith(
-                        color: AppColors.bombRed.withAlpha(220),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
                       l10n.numberBombLoser(loserLabel),
                       style: GameUiText.bodyStrong,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      l10n.numberBombWinners(winnerLabels),
-                      style: GameUiText.body,
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 12),

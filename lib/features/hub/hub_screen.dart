@@ -7,6 +7,7 @@ import '../../features/settings/providers/settings_provider.dart';
 import '../purchase/iap_purchase_provider.dart';
 import '../purchase/purchase_catalog.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/widgets/game_top_bar.dart';
 import 'widgets/game_card.dart';
 
 enum _PremiumDialogAction { buy, restore }
@@ -68,35 +69,36 @@ class _HubScreenState extends ConsumerState<HubScreen> {
               children: [
                 Column(
                   children: [
-                    const SizedBox(height: 24),
-                    // Title
-                    Text(
-                      l10n.appTitle,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        letterSpacing: 2,
-                        fontWeight: FontWeight.w700,
+                    const SizedBox(height: 12),
+                    GameTopBar(
+                      title: l10n.appTitle,
+                      trailing: GameIconButton(
+                        key: const Key('hub-settings-button'),
+                        onPressed: () => context.push('/settings'),
+                        tooltip: l10n.settings,
+                        icon: Icons.settings_rounded,
+                        accentColor: AppColors.textSecondary,
                       ),
                     ),
-                    const SizedBox(height: 20),
-
-                    // Game grid
+                    const SizedBox(height: 18),
                     Expanded(
                       child: GridView.builder(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
-                          mainAxisSpacing: 12,
-                          crossAxisSpacing: 10,
-                          childAspectRatio: 0.88,
+                          mainAxisSpacing: 14,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 0.84,
                         ),
                         itemCount: games.length,
                         itemBuilder: (_, i) {
                           final g = games[i];
-                          final productId = g.purchaseProductId;
+                          final productId =
+                              PurchaseCatalog.routeToProductId[g.route];
                           final locked = paywallEnabled &&
                               productId != null &&
                               !purchaseState.isUnlocked(productId);
@@ -120,24 +122,6 @@ class _HubScreenState extends ConsumerState<HubScreen> {
                     ),
                   ],
                 ),
-                Positioned(
-                  top: 6,
-                  right: 8,
-                  child: IconButton(
-                    key: const Key('hub-settings-button'),
-                    onPressed: () => context.push('/settings'),
-                    tooltip: l10n.settings,
-                    icon: const Icon(Icons.settings_rounded),
-                    color: AppColors.textSecondary,
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.black.withAlpha(125),
-                      side: BorderSide(
-                        color: AppColors.textDim.withAlpha(110),
-                      ),
-                      padding: const EdgeInsets.all(10),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -155,7 +139,7 @@ class _HubScreenState extends ConsumerState<HubScreen> {
       return;
     }
 
-    final productId = game.purchaseProductId;
+    final productId = PurchaseCatalog.routeToProductId[game.route];
     if (productId == null) {
       context.push(game.route);
       return;
@@ -320,40 +304,23 @@ class _HubScreenState extends ConsumerState<HubScreen> {
         title: l10n.t('passBomb'),
         subtitle: l10n.t('passBombSub'),
         description: l10n.t('passBombDesc'),
-        accentColor: const Color(0xFFFF4757),
+        accentColor: const Color(0xFFFF4FA3),
         route: '/games/pass-bomb',
         icon: Icons.local_fire_department,
-      ),
-      _HubGameItem(
-        title: l10n.t('gestureDuel'),
-        subtitle: l10n.t('gestureDuelSub'),
-        description: l10n.t('gestureDuelDesc'),
-        accentColor: const Color(0xFF00E5FF),
-        route: '/games/gesture-duel',
-        icon: Icons.sports_mma,
       ),
       _HubGameItem(
         title: l10n.t('leftRight'),
         subtitle: l10n.t('leftRightSub'),
         description: l10n.t('leftRightDesc'),
-        accentColor: const Color(0xFFFFA726),
+        accentColor: const Color(0xFF5B8CFF),
         route: '/games/left-right',
         icon: Icons.compare_arrows,
-      ),
-      _HubGameItem(
-        title: l10n.t('truthRaise'),
-        subtitle: l10n.t('truthRaiseSub'),
-        description: l10n.t('truthRaiseDesc'),
-        accentColor: const Color(0xFFFF5252),
-        route: '/games/truth-raise',
-        icon: Icons.question_answer,
-        purchaseProductId: PurchaseCatalog.truthRaiseUnlock,
       ),
       _HubGameItem(
         title: l10n.t('bioDetector'),
         subtitle: l10n.t('bioDetectorSub'),
         description: l10n.t('bioDetectorDesc'),
-        accentColor: const Color(0xFF42F57E),
+        accentColor: const Color(0xFF43E97B),
         route: '/games/bio-detector',
         icon: Icons.monitor_heart,
       ),
@@ -361,7 +328,7 @@ class _HubScreenState extends ConsumerState<HubScreen> {
         title: l10n.t('decibelBomb'),
         subtitle: l10n.t('decibelBombSub'),
         description: l10n.t('decibelBombDesc'),
-        accentColor: const Color(0xFF00D6FF),
+        accentColor: const Color(0xFF9B6BFF),
         route: '/games/decibel-bomb',
         icon: Icons.graphic_eq,
       ),
@@ -369,7 +336,7 @@ class _HubScreenState extends ConsumerState<HubScreen> {
         title: l10n.t('gravityBalance'),
         subtitle: l10n.t('gravityBalanceSub'),
         description: l10n.t('gravityBalanceDesc'),
-        accentColor: const Color(0xFF4DFFD8),
+        accentColor: const Color(0xFF7DFF7A),
         route: '/games/gravity-balance',
         icon: Icons.timeline,
       ),
@@ -385,7 +352,6 @@ class _HubGameItem {
     required this.accentColor,
     required this.route,
     required this.icon,
-    this.purchaseProductId,
   });
 
   final String title;
@@ -394,7 +360,6 @@ class _HubGameItem {
   final Color accentColor;
   final String route;
   final IconData icon;
-  final String? purchaseProductId;
 }
 
 /// Subtle dot-grid that shifts slightly with gyroscope.

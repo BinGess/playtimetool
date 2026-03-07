@@ -7,9 +7,7 @@ import '../../features/number_bomb/number_bomb_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/settings/about_screen.dart';
 import '../../features/party_plus/bomb_pass_screen.dart';
-import '../../features/party_plus/gesture_duel_screen.dart';
 import '../../features/party_plus/left_right_react_screen.dart';
-import '../../features/party_plus/truth_or_raise_screen.dart';
 import '../../features/party_plus/bio_detector_screen.dart';
 import '../../features/gravity_balance/gravity_balance_screen.dart';
 import '../../features/gravity_balance/gravity_balance_prep_screen.dart';
@@ -57,26 +55,10 @@ final appRouter = GoRouter(
       ),
     ),
     GoRoute(
-      path: '/games/gesture-duel',
-      pageBuilder: (_, state) => CustomTransitionPage(
-        key: state.pageKey,
-        child: const GestureDuelScreen(),
-        transitionsBuilder: _fadeSlideTransition,
-      ),
-    ),
-    GoRoute(
       path: '/games/left-right',
       pageBuilder: (_, state) => CustomTransitionPage(
         key: state.pageKey,
         child: const LeftRightReactScreen(),
-        transitionsBuilder: _fadeSlideTransition,
-      ),
-    ),
-    GoRoute(
-      path: '/games/truth-raise',
-      pageBuilder: (_, state) => CustomTransitionPage(
-        key: state.pageKey,
-        child: const TruthOrRaiseScreen(),
         transitionsBuilder: _fadeSlideTransition,
       ),
     ),

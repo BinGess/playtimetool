@@ -251,6 +251,80 @@ Offset _cubicBezierPoint(Offset p0, Offset p1, Offset p2, Offset p3, double t) {
       p3 * (t * t * t);
 }
 
+double circleOverlapArea({
+  required double radiusA,
+  required double radiusB,
+  required double centerDistance,
+}) {
+  if (radiusA <= 0 || radiusB <= 0) {
+    return 0;
+  }
+
+  if (centerDistance >= radiusA + radiusB) {
+    return 0;
+  }
+
+  if (centerDistance <= (radiusA - radiusB).abs()) {
+    final smallerRadius = min(radiusA, radiusB);
+    return pi * smallerRadius * smallerRadius;
+  }
+
+  final angleA = 2 *
+      acos(
+        (((centerDistance * centerDistance) +
+                    (radiusA * radiusA) -
+                    (radiusB * radiusB)) /
+                (2 * centerDistance * radiusA))
+            .clamp(-1.0, 1.0),
+      );
+  final angleB = 2 *
+      acos(
+        (((centerDistance * centerDistance) +
+                    (radiusB * radiusB) -
+                    (radiusA * radiusA)) /
+                (2 * centerDistance * radiusB))
+            .clamp(-1.0, 1.0),
+      );
+
+  final segmentA = 0.5 * radiusA * radiusA * (angleA - sin(angleA));
+  final segmentB = 0.5 * radiusB * radiusB * (angleB - sin(angleB));
+  return segmentA + segmentB;
+}
+
+double ballHoleOverlapRatio({
+  required double ballRadius,
+  required double holeRadius,
+  required double centerDistance,
+}) {
+  if (ballRadius <= 0) {
+    return 0;
+  }
+  final ballArea = pi * ballRadius * ballRadius;
+  if (ballArea == 0) {
+    return 0;
+  }
+  return circleOverlapArea(
+        radiusA: ballRadius,
+        radiusB: holeRadius,
+        centerDistance: centerDistance,
+      ) /
+      ballArea;
+}
+
+bool isBallCapturedByHole({
+  required double ballRadius,
+  required double holeRadius,
+  required double centerDistance,
+  double requiredBallOverlapRatio = 0.5,
+}) {
+  return ballHoleOverlapRatio(
+        ballRadius: ballRadius,
+        holeRadius: holeRadius,
+        centerDistance: centerDistance,
+      ) >=
+      requiredBallOverlapRatio;
+}
+
 class ShockScheduler {
   ShockScheduler({
     required this.random,

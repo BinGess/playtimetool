@@ -38,17 +38,44 @@ class _GravityDifficultyConfig {
   final double swayStartProgress;
 }
 
+class GravityBalanceDebugController {
+  VoidCallback? _advanceFromRoundResult;
+  VoidCallback? _showFinalSummary;
+  void Function({required bool success, required double elapsedSeconds})?
+      _finishRound;
+
+  @visibleForTesting
+  void finishRound({
+    required bool success,
+    double elapsedSeconds = 1,
+  }) {
+    _finishRound?.call(success: success, elapsedSeconds: elapsedSeconds);
+  }
+
+  @visibleForTesting
+  void showFinalSummary() {
+    _showFinalSummary?.call();
+  }
+
+  @visibleForTesting
+  void advanceFromRoundResult() {
+    _advanceFromRoundResult?.call();
+  }
+}
+
 class GravityBalanceScreen extends ConsumerStatefulWidget {
   const GravityBalanceScreen({
     super.key,
     this.difficulty = GravityBalanceDifficulty.medium,
     this.participantCount = 2,
     this.penaltyPreset = PenaltyPreset.defaults,
+    this.debugController,
   });
 
   final GravityBalanceDifficulty difficulty;
   final int participantCount;
   final PenaltyPreset penaltyPreset;
+  final GravityBalanceDebugController? debugController;
 
   @override
   ConsumerState<GravityBalanceScreen> createState() =>
@@ -89,7 +116,7 @@ class _GravityBalanceScreenState extends ConsumerState<GravityBalanceScreen>
   PenaltyBlindBoxResult? _blindBoxResult;
 
   _GravityDifficultyConfig get _difficultyConfig {
-      return switch (_difficulty) {
+    return switch (_difficulty) {
       GravityBalanceDifficulty.easy => const _GravityDifficultyConfig(
           trackWidthMultiplier: 1.18,
           swayAmplitudeMultiplier: 0.75,
@@ -123,6 +150,7 @@ class _GravityBalanceScreenState extends ConsumerState<GravityBalanceScreen>
     _difficulty = widget.difficulty;
     _playerCount = _safeParticipantCount;
     _penaltyPreset = widget.penaltyPreset;
+    _attachDebugController(widget.debugController);
     _ticker = createTicker(_tick);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _showFirstTimeHelp();
@@ -130,9 +158,65 @@ class _GravityBalanceScreenState extends ConsumerState<GravityBalanceScreen>
   }
 
   @override
+  void didUpdateWidget(covariant GravityBalanceScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.debugController != widget.debugController) {
+      _detachDebugController(oldWidget.debugController);
+      _attachDebugController(widget.debugController);
+    }
+  }
+
+  @override
   void dispose() {
+    _detachDebugController(widget.debugController);
     _ticker.dispose();
     super.dispose();
+  }
+
+  void _attachDebugController(GravityBalanceDebugController? controller) {
+    if (controller == null) {
+      return;
+    }
+    controller._finishRound = ({
+      required bool success,
+      required double elapsedSeconds,
+    }) {
+      if (!mounted) {
+        return;
+      }
+      _ticker.stop();
+      setState(() {
+        _elapsedSeconds = elapsedSeconds;
+        _state = success
+            ? _GravityBalanceState.completed
+            : _GravityBalanceState.failed;
+        _finishCurrentRound(success: success);
+      });
+    };
+    controller._showFinalSummary = () {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _blindBoxResult = _buildFinalBlindBoxResult();
+        _sessionView = _GravityBalanceSessionView.finalSummary;
+      });
+    };
+    controller._advanceFromRoundResult = () {
+      if (!mounted) {
+        return;
+      }
+      _goNextFromRoundResult();
+    };
+  }
+
+  void _detachDebugController(GravityBalanceDebugController? controller) {
+    if (controller == null) {
+      return;
+    }
+    controller._finishRound = null;
+    controller._advanceFromRoundResult = null;
+    controller._showFinalSummary = null;
   }
 
   Future<void> _showFirstTimeHelp() async {
@@ -223,16 +307,6 @@ class _GravityBalanceScreenState extends ConsumerState<GravityBalanceScreen>
   }
 
   void _finishCurrentRound({required bool success}) {
-    if (!success) {
-      _blindBoxResult = PenaltyService.resolveBlindBox(
-        l10n: AppLocalizations.of(context),
-        random: _random,
-        preset: _penaltyPreset,
-        losers: <String>[
-          AppLocalizations.of(context).playerLabel(_currentPlayer + 1)
-        ],
-      );
-    }
     _results = [
       ..._results,
       GravityBalanceSessionResult(
@@ -247,6 +321,7 @@ class _GravityBalanceScreenState extends ConsumerState<GravityBalanceScreen>
   void _goNextFromRoundResult() {
     if (_results.length >= _safeParticipantCount) {
       setState(() {
+        _blindBoxResult = _buildFinalBlindBoxResult();
         _sessionView = _GravityBalanceSessionView.finalSummary;
       });
       return;
@@ -260,6 +335,23 @@ class _GravityBalanceScreenState extends ConsumerState<GravityBalanceScreen>
     _currentPlayer = 0;
     _results = const [];
     _resetGame();
+  }
+
+  PenaltyBlindBoxResult? _buildFinalBlindBoxResult() {
+    final l10n = AppLocalizations.of(context);
+    final losers = _results
+        .where((result) => !result.success)
+        .map((result) => l10n.playerLabel(result.playerIndex + 1))
+        .toList(growable: false);
+    if (losers.isEmpty) {
+      return null;
+    }
+    return PenaltyService.resolveBlindBox(
+      l10n: l10n,
+      random: _random,
+      preset: _penaltyPreset,
+      losers: losers,
+    );
   }
 
   void _tick(Duration elapsed) {
@@ -346,7 +438,11 @@ class _GravityBalanceScreenState extends ConsumerState<GravityBalanceScreen>
       _finishCurrentRound(success: false);
     } else if (_progress >= 0.995) {
       _ticker.stop();
-      if (distanceToHole <= _holeCaptureRadius(path.trackWidth)) {
+      if (isBallCapturedByHole(
+        ballRadius: _ballDiameter / 2,
+        holeRadius: _holeVisualRadius(path.trackWidth),
+        centerDistance: distanceToHole,
+      )) {
         _state = _GravityBalanceState.completed;
         HapticService.notificationSuccess();
         _finishCurrentRound(success: true);
@@ -490,7 +586,8 @@ class _GravityBalanceScreenState extends ConsumerState<GravityBalanceScreen>
                                   trackWidth: path.trackWidth,
                                   ballRadius: _ballDiameter / 2,
                                   holeCenter: _activeCenterline.last,
-                                  holeRadius: _holeVisualRadius(path.trackWidth),
+                                  holeRadius:
+                                      _holeVisualRadius(path.trackWidth),
                                   exploded:
                                       _state == _GravityBalanceState.exploded,
                                 ),
@@ -536,21 +633,22 @@ class _GravityBalanceScreenState extends ConsumerState<GravityBalanceScreen>
                             if (_sessionView ==
                                 _GravityBalanceSessionView.roundResult)
                               _RoundResultOverlay(
-                                title: _state == _GravityBalanceState.completed
-                                    ? l10n.t('gravityBalanceCompleted')
-                                    : l10n.t('gravityBalanceExploded'),
-                                statusText: _resultStatusText(
-                                  l10n,
-                                  _state == _GravityBalanceState.completed,
-                                ),
-                                timeText: latestResult != null
-                                    ? _resultTimeText(l10n, latestResult)
-                                    : '',
-                                playerLabel:
-                                    l10n.playerLabel(_currentPlayer + 1),
-                                blindBoxResult: _blindBoxResult,
+                                title:
+                                    l10n.t('gravityBalanceRoundResultTitle', {
+                                  'player':
+                                      l10n.playerLabel(_currentPlayer + 1),
+                                }),
+                                resultText: latestResult == null
+                                    ? ''
+                                    : latestResult.success
+                                        ? _resultTimeText(l10n, latestResult)
+                                        : _resultStatusToken(l10n, false),
+                                success: latestResult?.success ?? false,
                                 onNext: _goNextFromRoundResult,
-                                nextLabel: l10n.t('nextPlayer'),
+                                nextLabel:
+                                    _results.length >= _safeParticipantCount
+                                        ? l10n.t('gravityBalanceViewSummary')
+                                        : l10n.t('nextPlayer'),
                               ),
                             if (_sessionView ==
                                 _GravityBalanceSessionView.finalSummary)
@@ -558,6 +656,7 @@ class _GravityBalanceScreenState extends ConsumerState<GravityBalanceScreen>
                                 l10n: l10n,
                                 results: _results,
                                 champion: _champion,
+                                blindBoxResult: _blindBoxResult,
                                 playerLabelBuilder: (i) =>
                                     l10n.playerLabel(i + 1),
                                 resultStatusTextBuilder: (s) =>
@@ -595,12 +694,6 @@ class _GravityBalanceScreenState extends ConsumerState<GravityBalanceScreen>
         : l10n.t('gravityBalanceResultSuccessNo');
   }
 
-  String _resultStatusText(AppLocalizations l10n, bool success) {
-    return l10n.t('gravityBalanceResultStatus', {
-      'status': _resultStatusToken(l10n, success),
-    });
-  }
-
   String _resultTimeToken(
     AppLocalizations l10n,
     GravityBalanceSessionResult result,
@@ -625,9 +718,6 @@ class _GravityBalanceScreenState extends ConsumerState<GravityBalanceScreen>
 
   double _holeVisualRadius(double trackWidth) =>
       max(trackWidth * 0.38, _ballDiameter * 0.55);
-
-  double _holeCaptureRadius(double trackWidth) =>
-      max(trackWidth * 0.24, _ballDiameter * 0.33);
 }
 
 class _ProgressIndicator extends StatelessWidget {
@@ -664,19 +754,15 @@ class _ProgressIndicator extends StatelessWidget {
 class _RoundResultOverlay extends StatelessWidget {
   const _RoundResultOverlay({
     required this.title,
-    required this.statusText,
-    required this.timeText,
-    required this.playerLabel,
-    required this.blindBoxResult,
+    required this.resultText,
+    required this.success,
     required this.onNext,
     required this.nextLabel,
   });
 
   final String title;
-  final String statusText;
-  final String timeText;
-  final String playerLabel;
-  final PenaltyBlindBoxResult? blindBoxResult;
+  final String resultText;
+  final bool success;
   final VoidCallback onNext;
   final String nextLabel;
 
@@ -702,26 +788,14 @@ class _RoundResultOverlay extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              statusText,
-              style: GameUiText.bodyStrong.copyWith(fontSize: 15),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              timeText,
-              style: GameUiText.body,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              playerLabel,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
+              resultText,
+              textAlign: TextAlign.center,
+              style: GameUiText.bodyStrong.copyWith(
+                fontSize: 16,
+                color:
+                    success ? const Color(0xFF86FFD8) : const Color(0xFFFF8F8F),
               ),
             ),
-            if (blindBoxResult != null) ...[
-              const SizedBox(height: 14),
-              PenaltyBlindBoxOverlay(result: blindBoxResult!),
-            ],
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: onNext,
@@ -743,6 +817,7 @@ class _FinalSummaryOverlay extends StatelessWidget {
     required this.l10n,
     required this.results,
     required this.champion,
+    required this.blindBoxResult,
     required this.playerLabelBuilder,
     required this.resultStatusTextBuilder,
     required this.resultTimeTextBuilder,
@@ -753,6 +828,7 @@ class _FinalSummaryOverlay extends StatelessWidget {
   final AppLocalizations l10n;
   final List<GravityBalanceSessionResult> results;
   final GravityBalanceSessionResult? champion;
+  final PenaltyBlindBoxResult? blindBoxResult;
   final String Function(int playerIndex) playerLabelBuilder;
   final String Function(bool success) resultStatusTextBuilder;
   final String Function(GravityBalanceSessionResult result)
@@ -771,87 +847,87 @@ class _FinalSummaryOverlay extends StatelessWidget {
 
     return Center(
       child: Container(
-        width: 340,
-        constraints: const BoxConstraints(maxHeight: 520),
+        width: double.infinity,
+        constraints: const BoxConstraints(maxWidth: 560, maxHeight: 680),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
           color: const Color(0xE60D0F16),
           border: Border.all(color: Colors.white.withAlpha(60)),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              l10n.t('gravityBalanceSummaryTitle'),
-              textAlign: TextAlign.center,
-              style: GameUiText.sectionTitle,
-            ),
-            const SizedBox(height: 12),
-            Flexible(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: results.map((result) {
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                l10n.t('gravityBalanceSummaryTitle'),
+                textAlign: TextAlign.center,
+                style: GameUiText.sectionTitle,
+              ),
+              const SizedBox(height: 12),
+              ...results.map((result) {
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withAlpha(80),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.white.withAlpha(34)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          playerLabelBuilder(result.playerIndex),
+                          style: GameUiText.bodyStrong,
+                        ),
                       ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withAlpha(80),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.white.withAlpha(34)),
+                      Text(
+                        resultStatusTextBuilder(result.success),
+                        style: TextStyle(
+                          color: result.success
+                              ? const Color(0xFF86FFD8)
+                              : const Color(0xFFFF8F8F),
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              playerLabelBuilder(result.playerIndex),
-                              style: GameUiText.bodyStrong,
-                            ),
-                          ),
-                          Text(
-                            resultStatusTextBuilder(result.success),
-                            style: TextStyle(
-                              color: result.success
-                                  ? const Color(0xFF86FFD8)
-                                  : const Color(0xFFFF8F8F),
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            resultTimeTextBuilder(result),
-                            style: GameUiText.body.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
+                      const SizedBox(width: 10),
+                      Text(
+                        resultTimeTextBuilder(result),
+                        style: GameUiText.body.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    );
-                  }).toList(),
+                    ],
+                  ),
+                );
+              }),
+              const SizedBox(height: 10),
+              Text(
+                championText,
+                textAlign: TextAlign.center,
+                style: GameUiText.bodyStrong,
+              ),
+              if (blindBoxResult != null) ...[
+                const SizedBox(height: 14),
+                PenaltyBlindBoxOverlay(result: blindBoxResult!),
+              ],
+              const SizedBox(height: 14),
+              ElevatedButton(
+                onPressed: onRestart,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4DFFD8),
+                  foregroundColor: Colors.black,
+                  textStyle: GameUiText.buttonLabel,
                 ),
+                child: Text(restartLabel),
               ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              championText,
-              textAlign: TextAlign.center,
-              style: GameUiText.bodyStrong,
-            ),
-            const SizedBox(height: 14),
-            ElevatedButton(
-              onPressed: onRestart,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4DFFD8),
-                foregroundColor: Colors.black,
-                textStyle: GameUiText.buttonLabel,
-              ),
-              child: Text(restartLabel),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

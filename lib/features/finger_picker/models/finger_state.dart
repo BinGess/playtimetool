@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
+// setup       → 准备页
 // waiting     → 等待手指放上（<2 根 或手指刚放下）
 // locked      → ≥2根静止1.5s后锁定，显示"开始"按钮，再1.5s自动触发
 // countdown   → 3-2-1 倒计时阶段，圆环高速旋转
 // eliminating → 逐步排除落败者动画
-// result      → 展示最终结果（胜利者烟花 + 落败者 X）
-enum PickerPhase { waiting, locked, countdown, eliminating, result }
+// result      → 结果页
+enum PickerPhase { setup, waiting, locked, countdown, eliminating, result }
 
 class FingerData {
   const FingerData({
@@ -43,7 +44,7 @@ const int kMaxFingerPlayers = 6;
 class FingerPickerState {
   const FingerPickerState({
     this.fingers = const {},
-    this.phase = PickerPhase.waiting,
+    this.phase = PickerPhase.setup,
     this.countdownValue = 3,
     this.maxWinners = 1,
     this.showEscapeAlert = false,

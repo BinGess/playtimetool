@@ -13,8 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('setup shows hero title and player count controls',
-      (tester) async {
+  testWidgets('setup shows title and player count controls', (tester) async {
     SharedPreferences.setMockInitialValues(const {
       'game_help_seen_number_bomb': true,
     });
@@ -36,13 +35,12 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 200));
 
-    expect(find.text('NUMBER BOMB'), findsWidgets);
-    expect(find.text('准备开炸'), findsOneWidget);
+    expect(find.text('数字炸弹'), findsOneWidget);
+    expect(find.text('玩家人数'), findsWidgets);
     expect(find.byKey(const Key('number-bomb-player-slider')), findsOneWidget);
   });
 
-  testWidgets('playing and explosion states show player turn and loser result',
-      (tester) async {
+  testWidgets('explosion state only shows loser result text', (tester) async {
     SharedPreferences.setMockInitialValues(const {
       'game_help_seen_number_bomb': true,
     });
@@ -81,8 +79,9 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 900));
 
-    expect(find.text('当前玩家 · 玩家3'), findsOneWidget);
     expect(find.text('本轮输家：玩家3'), findsOneWidget);
+    expect(find.textContaining('当前玩家'), findsNothing);
+    expect(find.textContaining('获胜玩家'), findsNothing);
   });
 }
 

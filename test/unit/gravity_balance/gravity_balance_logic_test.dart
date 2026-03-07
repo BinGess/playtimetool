@@ -205,4 +205,61 @@ void main() {
 
     expect(distance, closeTo(10, 0.0001));
   });
+
+  test('ball-hole overlap ratio is zero when circles do not intersect', () {
+    final ratio = ballHoleOverlapRatio(
+      ballRadius: 18,
+      holeRadius: 23,
+      centerDistance: 41.1,
+    );
+
+    expect(ratio, 0);
+    expect(
+      isBallCapturedByHole(
+        ballRadius: 18,
+        holeRadius: 23,
+        centerDistance: 41.1,
+      ),
+      isFalse,
+    );
+  });
+
+  test('ball is captured once more than half of its area overlaps the hole',
+      () {
+    expect(
+      ballHoleOverlapRatio(
+        ballRadius: 18,
+        holeRadius: 23,
+        centerDistance: 20.4,
+      ),
+      greaterThan(0.5),
+    );
+    expect(
+      isBallCapturedByHole(
+        ballRadius: 18,
+        holeRadius: 23,
+        centerDistance: 20.4,
+      ),
+      isTrue,
+    );
+  });
+
+  test('ball is not captured when overlap stays below half of ball area', () {
+    expect(
+      ballHoleOverlapRatio(
+        ballRadius: 18,
+        holeRadius: 23,
+        centerDistance: 20.6,
+      ),
+      lessThan(0.5),
+    );
+    expect(
+      isBallCapturedByHole(
+        ballRadius: 18,
+        holeRadius: 23,
+        centerDistance: 20.6,
+      ),
+      isFalse,
+    );
+  });
 }

@@ -7,6 +7,7 @@ import '../../l10n/app_localizations.dart';
 import '../../shared/services/penalty_service.dart';
 import '../../shared/styles/game_ui_style.dart';
 import '../../shared/widgets/difficulty_option_card.dart';
+import '../../shared/widgets/game_top_bar.dart';
 import '../../shared/widgets/penalty_preset_card.dart';
 import '../../shared/widgets/web3_game_background.dart';
 import 'logic/gravity_balance_logic.dart';
@@ -42,22 +43,10 @@ class _GravityBalancePrepScreenState extends State<GravityBalancePrepScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: () => context.pop(),
-                        icon: const Icon(Icons.arrow_back_ios, size: 18),
-                        color: Colors.white,
-                      ),
-                      Expanded(
-                        child: Text(
-                          l10n.t('gravityBalance'),
-                          textAlign: TextAlign.center,
-                          style: GameUiText.navTitle,
-                        ),
-                      ),
-                      const SizedBox(width: 40),
-                    ],
+                  GameTopBar(
+                    title: l10n.t('gravityBalance'),
+                    onBack: () => context.pop(),
+                    accentColor: const Color(0xFF4DFFD8),
                   ),
                   const SizedBox(height: GameUiSpacing.blockGap),
                   Expanded(
@@ -65,18 +54,19 @@ class _GravityBalancePrepScreenState extends State<GravityBalancePrepScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text(
-                            l10n.t('gravityBalancePrepTitle'),
-                            textAlign: TextAlign.center,
-                            style: GameUiText.sectionTitle.copyWith(
-                              fontSize: 22,
+                          Container(
+                            padding: const EdgeInsets.all(18),
+                            decoration: GameUiSurface.heroPanel(
+                              accentColor: const Color(0xFF4DFFD8),
+                              secondaryColor: const Color(0xFFFF6B6B),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            l10n.t('gravityBalancePrepHint'),
-                            textAlign: TextAlign.center,
-                            style: GameUiText.body,
+                            child: Text(
+                              l10n.t('gravityBalancePrepHint'),
+                              textAlign: TextAlign.center,
+                              style: GameUiText.body.copyWith(
+                                color: const Color(0xFFD6FFF7),
+                              ),
+                            ),
                           ),
                           const SizedBox(height: 16),
                           Text(
@@ -139,14 +129,17 @@ class _GravityBalancePrepScreenState extends State<GravityBalancePrepScreen> {
                     height: GameUiSpacing.buttonHeight,
                     child: ElevatedButton.icon(
                       onPressed: _start,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4DFFD8),
-                        foregroundColor: Colors.black,
+                      style: GameUiSurface.primaryButton(
+                        const Color(0xFF4DFFD8),
                       ),
                       icon: const Icon(Icons.play_arrow_rounded),
                       label: Text(
                         l10n.t('gravityBalanceStartChallenge'),
-                        style: GameUiText.buttonLabel,
+                        style: GameUiText.buttonLabel.copyWith(
+                          color: GameUiSurface.foregroundOn(
+                            const Color(0xFF4DFFD8),
+                          ),
+                        ),
                       ),
                     ),
                   ),
