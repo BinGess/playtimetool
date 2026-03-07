@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
@@ -70,15 +71,18 @@ class SettingsScreen extends ConsumerWidget {
                   ref.read(settingsProvider.notifier).toggleAlcoholPenalty(),
             ),
             const SizedBox(height: 12),
-            _SettingsTile(
-              label: l10n.t('iapPaywallSwitch'),
-              sublabel: l10n.t('iapPaywallSwitchSub'),
-              value: settings.iapPaywallEnabled,
-              accentColor: AppColors.bombRed,
-              onToggle: () =>
-                  ref.read(settingsProvider.notifier).toggleIapPaywallEnabled(),
-            ),
-            const SizedBox(height: 12),
+            if (kDebugMode) ...[
+              _SettingsTile(
+                label: l10n.t('iapPaywallSwitch'),
+                sublabel: l10n.t('iapPaywallSwitchSub'),
+                value: settings.iapPaywallEnabled,
+                accentColor: AppColors.bombRed,
+                onToggle: () => ref
+                    .read(settingsProvider.notifier)
+                    .toggleIapPaywallEnabled(),
+              ),
+              const SizedBox(height: 12),
+            ],
             _LanguageTile(
               label: l10n.language,
               sublabel: l10n.languageSub,
@@ -184,6 +188,14 @@ class SettingsScreen extends ConsumerWidget {
                   Navigator.pop(ctx);
                 },
               ),
+              _LangOption(
+                label: l10n.langJapanese,
+                active: current?.languageCode == 'ja',
+                onTap: () {
+                  notifier.setJapanese();
+                  Navigator.pop(ctx);
+                },
+              ),
               const SizedBox(height: 24),
             ],
           ),
@@ -243,6 +255,8 @@ class _LanguageTile extends StatelessWidget {
       value = l10n.langFollowSystem;
     } else if (localeOverride!.languageCode == 'zh') {
       value = l10n.langChinese;
+    } else if (localeOverride?.languageCode == 'ja') {
+      value = l10n.langJapanese;
     } else {
       value = l10n.langEnglish;
     }

@@ -67,10 +67,10 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
   Widget build(BuildContext context) {
     final state = ref.watch(numberBombProvider);
     final notifier = ref.read(numberBombProvider.notifier);
+    final l10n = AppLocalizations.of(context);
 
     ref.listen(numberBombProvider, (prev, next) {
       if (next.lastGuessInvalid && !(prev?.lastGuessInvalid ?? false)) {
-        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -85,20 +85,22 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
       }
       if (next.phase == BombPhase.explosion &&
           prev?.phase != BombPhase.explosion) {
-        final loserLabel = next.loserPlayerIndex == null
-            ? AppLocalizations.of(context).t('penaltyCurrentPlayerLabel')
-            : AppLocalizations.of(context)
-                .playerLabel(next.loserPlayerIndex! + 1);
-        _blindBoxResult = PenaltyService.resolveBlindBox(
-          l10n: AppLocalizations.of(context),
-          random: _penaltyRandom,
-          preset: _penaltyPreset,
-          losers: <String>[loserLabel],
-        );
         _explosionController.reset();
         _explosionController.forward();
       }
     });
+
+    if (state.phase != BombPhase.explosion) {
+      _blindBoxResult = null;
+    }
+    final blindBoxResult = state.phase == BombPhase.explosion
+        ? (_blindBoxResult ??= PenaltyService.resolveBlindBox(
+            l10n: l10n,
+            random: _penaltyRandom,
+            preset: _penaltyPreset,
+            losers: <String>[_loserLabel(state, l10n)],
+          ))
+        : null;
 
     final bgColor = Color.lerp(
       AppColors.bombBlueDark,
@@ -148,7 +150,7 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
               child: state.phase == BombPhase.setup
                   ? _SetupView(
                       onStart: notifier.startGame,
-                      l10n: AppLocalizations.of(context),
+                      l10n: l10n,
                       penaltyPreset: _penaltyPreset,
                       onPenaltyPresetChanged: (preset) {
                         setState(() => _penaltyPreset = preset);
@@ -159,7 +161,7 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
                           state: state,
                           notifier: notifier,
                           bombPulse: _bombPulse,
-                          l10n: AppLocalizations.of(context),
+                          l10n: l10n,
                         )
                       : const SizedBox.shrink(),
             ),
@@ -169,9 +171,9 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
               _ExplosionOverlay(
                 state: state,
                 anim: _explosionAnim,
-                blindBoxResult: _blindBoxResult,
+                blindBoxResult: blindBoxResult,
                 onReset: notifier.reset,
-                l10n: AppLocalizations.of(context),
+                l10n: l10n,
               ),
 
             // Back edge swipe
@@ -224,6 +226,12 @@ class _NumberBombScreenState extends ConsumerState<NumberBombScreen>
       gameTitle: l10n.numberBomb,
       helpBody: l10n.t('helpNumberBombBody'),
     );
+  }
+
+  String _loserLabel(BombState state, AppLocalizations l10n) {
+    return state.loserPlayerIndex == null
+        ? l10n.t('penaltyCurrentPlayerLabel')
+        : l10n.playerLabel(state.loserPlayerIndex! + 1);
   }
 }
 
@@ -852,16 +860,10 @@ class _ExplosionOverlay extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      l10n.numberBombLoser(loserLabel),
-                      style: GameUiText.bodyStrong,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
                     GameResultTemplateCard(
                       accentColor: AppColors.bombRed,
                       resultTitle: l10n.t('resultSummary'),
-                      resultText: l10n.numberBombTitle,
+                      resultText: l10n.numberBombLoser(loserLabel),
                       penaltyTitle: l10n.punishment,
                       penaltyText: l10n.t('penaltyBlindBoxTitle'),
                     ),

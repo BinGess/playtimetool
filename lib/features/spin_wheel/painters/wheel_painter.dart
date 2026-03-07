@@ -13,6 +13,10 @@ class WheelPainter extends CustomPainter {
     required this.accentColor,
     this.glowIntensity = 1.0,
     this.speed = 0.0,
+    this.activeIndex,
+    this.targetIndex,
+    this.targetLockProgress = 0.0,
+    this.pointerColor,
   });
 
   final List<WheelSegment> segments;
@@ -21,6 +25,10 @@ class WheelPainter extends CustomPainter {
   final Color accentColor;
   final double glowIntensity; // 0.0–1.0
   final double speed; // angular velocity magnitude for blur effect
+  final int? activeIndex;
+  final int? targetIndex;
+  final double targetLockProgress;
+  final Color? pointerColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -49,6 +57,8 @@ class WheelPainter extends CustomPainter {
     for (int i = 0; i < segments.length; i++) {
       final seg = segments[i];
       final sweepAngle = (seg.weight / totalWeight) * 2 * pi;
+      final isActive = activeIndex == i;
+      final isTarget = targetIndex == i;
 
       // Segment fill — no solid pie, just arced path for "open" look
       final segPaint = Paint()
@@ -57,13 +67,54 @@ class WheelPainter extends CustomPainter {
 
       final path = Path()
         ..moveTo(0, 0)
-        ..arcTo(
-            Rect.fromCircle(center: Offset.zero, radius: radius),
-            startAngle,
-            sweepAngle,
-            false)
+        ..arcTo(Rect.fromCircle(center: Offset.zero, radius: radius),
+            startAngle, sweepAngle, false)
         ..close();
       canvas.drawPath(path, segPaint);
+
+      if (isActive) {
+        canvas.drawPath(
+          path,
+          Paint()
+            ..color = Colors.white.withAlpha(28)
+            ..style = PaintingStyle.fill,
+        );
+        canvas.drawArc(
+          Rect.fromCircle(center: Offset.zero, radius: radius - 6),
+          startAngle,
+          sweepAngle,
+          false,
+          Paint()
+            ..color = Colors.white.withAlpha(170)
+            ..strokeWidth = 4
+            ..style = PaintingStyle.stroke
+            ..strokeCap = StrokeCap.round,
+        );
+      }
+
+      if (isTarget && targetLockProgress > 0) {
+        final lockAlpha = (160 * targetLockProgress).round().clamp(0, 200);
+        canvas.drawPath(
+          path,
+          Paint()
+            ..color = seg.color.withAlpha(lockAlpha)
+            ..maskFilter =
+                MaskFilter.blur(BlurStyle.normal, 10 + targetLockProgress * 8)
+            ..style = PaintingStyle.fill,
+        );
+        canvas.drawArc(
+          Rect.fromCircle(center: Offset.zero, radius: radius + 2),
+          startAngle + 0.03,
+          max(0, sweepAngle - 0.06),
+          false,
+          Paint()
+            ..color = Colors.white.withAlpha((220 * targetLockProgress).round())
+            ..strokeWidth = 6
+            ..style = PaintingStyle.stroke
+            ..strokeCap = StrokeCap.round
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+        );
+      }
 
       // Divider line
       canvas.drawLine(
@@ -134,32 +185,45 @@ class WheelPainter extends CustomPainter {
     canvas.save();
     canvas.translate(x, y);
     canvas.rotate(midAngle + pi / 2);
-    painter.paint(
-        canvas, Offset(-painter.width / 2, -painter.height / 2));
+    painter.paint(canvas, Offset(-painter.width / 2, -painter.height / 2));
     canvas.restore();
   }
 
   void _drawPointer(Canvas canvas, Offset center, double radius) {
     const pSize = 14.0;
     final tipY = center.dy - radius - 2;
+    final resolvedPointerColor = pointerColor ?? accentColor;
     final path = Path()
       ..moveTo(center.dx, tipY)
       ..lineTo(center.dx - pSize / 2, tipY - pSize)
       ..lineTo(center.dx + pSize / 2, tipY - pSize)
       ..close();
 
+    if (targetLockProgress > 0.02) {
+      canvas.drawLine(
+        Offset(center.dx, tipY + 2),
+        Offset(center.dx, center.dy - radius * 0.72),
+        Paint()
+          ..color =
+              resolvedPointerColor.withAlpha((170 * targetLockProgress).round())
+          ..strokeWidth = 4 + targetLockProgress * 3
+          ..strokeCap = StrokeCap.round
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
+      );
+    }
+
     // Glow
     canvas.drawPath(
       path,
       Paint()
-        ..color = accentColor.withAlpha(120)
+        ..color = resolvedPointerColor.withAlpha(120)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
     );
 
     // Solid pointer
     canvas.drawPath(
       path,
-      Paint()..color = accentColor,
+      Paint()..color = resolvedPointerColor,
     );
   }
 
@@ -168,5 +232,9 @@ class WheelPainter extends CustomPainter {
       old.angle != angle ||
       old.glowIntensity != glowIntensity ||
       old.speed != speed ||
+      old.activeIndex != activeIndex ||
+      old.targetIndex != targetIndex ||
+      old.targetLockProgress != targetLockProgress ||
+      old.pointerColor != pointerColor ||
       old.segments != segments;
 }

@@ -195,6 +195,7 @@
 			buildPhases = (
 				C3ED526AFD8A7EB9B6CE6B8B /* [CP] Check Pods Manifest.lock */,
 				9740EEB61CF901F6004384FC /* Run Script */,
+				46EDAA025C4EA9AEA0D452D7 /* [CP-User] Fix audio_streamer header */,
 				97C146EA1CF9000F007C117D /* Sources */,
 				97C146EB1CF9000F007C117D /* Frameworks */,
 				97C146EC1CF9000F007C117D /* Resources */,
@@ -305,6 +306,16 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" embed_and_thin";
+		};
+		46EDAA025C4EA9AEA0D452D7 /* [CP-User] Fix audio_streamer header */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			name = "[CP-User] Fix audio_streamer header";
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "sed -i \"\" \"s/SwiftAudioStreamerPlugin\\.h/audio_streamer-Swift.h/g\" \"${SRCROOT}/Runner/GeneratedPluginRegistrant.m\"";
 		};
 		9740EEB61CF901F6004384FC /* Run Script */ = {
 			isa = PBXShellScriptBuildPhase;

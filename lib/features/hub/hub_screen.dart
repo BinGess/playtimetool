@@ -102,14 +102,17 @@ class _HubScreenState extends ConsumerState<HubScreen> {
                           final locked = paywallEnabled &&
                               productId != null &&
                               !purchaseState.isUnlocked(productId);
+                          final priceText = productId == null
+                              ? l10n.t('iapPriceFallback')
+                              : (purchaseState.productById(productId)?.price ??
+                                  l10n.t('iapPriceFallback'));
                           final lockBadgeText = locked
-                              ? (purchaseState.productById(productId)?.price ??
-                                  l10n.t('iapPriceFallback'))
+                              ? l10n.t('iapUnlockBadge', {
+                                  'price': priceText,
+                                })
                               : null;
                           return GameCard(
                             title: g.title,
-                            subtitle: g.subtitle,
-                            description: g.description,
                             accentColor: g.accentColor,
                             route: g.route,
                             icon: g.icon,
@@ -301,6 +304,14 @@ class _HubScreenState extends ConsumerState<HubScreen> {
         icon: Icons.bolt,
       ),
       _HubGameItem(
+        title: l10n.t('gravityBalance'),
+        subtitle: l10n.t('gravityBalanceSub'),
+        description: l10n.t('gravityBalanceDesc'),
+        accentColor: const Color(0xFF7DFF7A),
+        route: '/games/gravity-balance',
+        icon: Icons.timeline,
+      ),
+      _HubGameItem(
         title: l10n.t('passBomb'),
         subtitle: l10n.t('passBombSub'),
         description: l10n.t('passBombDesc'),
@@ -331,14 +342,6 @@ class _HubScreenState extends ConsumerState<HubScreen> {
         accentColor: const Color(0xFF9B6BFF),
         route: '/games/decibel-bomb',
         icon: Icons.graphic_eq,
-      ),
-      _HubGameItem(
-        title: l10n.t('gravityBalance'),
-        subtitle: l10n.t('gravityBalanceSub'),
-        description: l10n.t('gravityBalanceDesc'),
-        accentColor: const Color(0xFF7DFF7A),
-        route: '/games/gravity-balance',
-        icon: Icons.timeline,
       ),
     ];
   }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/haptics/haptic_service.dart';
@@ -9,7 +10,7 @@ class AppSettings {
     this.vibrationEnabled = true,
     this.minimalMode = false,
     this.alcoholPenaltyEnabled = true,
-    this.iapPaywallEnabled = false,
+    this.iapPaywallEnabled = true,
   });
 
   final bool soundEnabled;
@@ -41,17 +42,19 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
   static const _keyVibration = 'vibrationEnabled';
   static const _keyMinimal = 'minimalMode';
   static const _keyAlcoholPenalty = 'alcoholPenaltyEnabled';
-  static const _keyIapPaywallEnabled = 'iapPaywallEnabled';
+  static const _keyIapPaywallEnabled = 'iapPaywallEnabledDebug';
 
   @override
   Future<AppSettings> build() async {
     final prefs = await SharedPreferences.getInstance();
+    final effectiveIapPaywallEnabled =
+        kDebugMode ? (prefs.getBool(_keyIapPaywallEnabled) ?? true) : true;
     final settings = AppSettings(
       soundEnabled: prefs.getBool(_keySound) ?? true,
       vibrationEnabled: prefs.getBool(_keyVibration) ?? true,
       minimalMode: prefs.getBool(_keyMinimal) ?? false,
       alcoholPenaltyEnabled: prefs.getBool(_keyAlcoholPenalty) ?? true,
-      iapPaywallEnabled: prefs.getBool(_keyIapPaywallEnabled) ?? false,
+      iapPaywallEnabled: effectiveIapPaywallEnabled,
     );
     _applySettings(settings);
     return settings;

@@ -27,6 +27,8 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
   final Random _random = Random();
 
   late final AnimationController _scanController;
+  late final AnimationController _heartbeatBeatController;
+  late final AnimationController _heartbeatSweepController;
   late final AnimationController _truthPulseController;
   late final AnimationController _lieBlinkController;
 
@@ -40,6 +42,7 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
   String? _warningKey;
   int _nextPulseMs = 0;
   int _nextWarnMs = 0;
+  int _heartbeatPeriodMs = 1200;
   bool _showHelpButton = false;
   int _round = 1;
   int _totalRounds = 3;
@@ -67,6 +70,14 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
+    _heartbeatBeatController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _heartbeatSweepController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..repeat();
     _truthPulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -83,6 +94,8 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
     _tickTimer?.cancel();
     _warnHideTimer?.cancel();
     _scanController.dispose();
+    _heartbeatBeatController.dispose();
+    _heartbeatSweepController.dispose();
     _truthPulseController.dispose();
     _lieBlinkController.dispose();
     super.dispose();
@@ -126,6 +139,11 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
       _nextPulseMs = 0;
       _nextWarnMs = 650 + _random.nextInt(351);
     });
+    _syncHeartbeatRhythm(
+      force: true,
+      phase: BioDetectorFlowPhase.initializing,
+      elapsedMs: 0,
+    );
 
     HapticService.lightImpact();
     Future<void>.delayed(const Duration(milliseconds: 80), () {
@@ -146,6 +164,7 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
     final now = DateTime.now();
     final elapsed = now.difference(startedAt);
     final phase = flowPhaseForElapsed(elapsed);
+    final elapsedMs = elapsed.inMilliseconds;
 
     if (phase == BioDetectorFlowPhase.result) {
       _tickTimer?.cancel();
@@ -184,12 +203,13 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
             ? _BioDetectorViewState.finalResult
             : _BioDetectorViewState.roundResult;
       });
+      _syncHeartbeatRhythm(force: true, phase: phase, elapsedMs: elapsedMs);
       return;
     }
 
-    final elapsedMs = elapsed.inMilliseconds;
-    _schedulePulseForPhase(phase, elapsedMs);
     _updateTickerAndWarning(phase, elapsedMs, elapsed);
+    _schedulePulseForPhase(phase, elapsedMs);
+    _syncHeartbeatRhythm(phase: phase, elapsedMs: elapsedMs);
 
     setState(() {
       _elapsed = elapsed;
@@ -266,6 +286,7 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
       _roundResults.clear();
       _blindBoxResult = null;
     });
+    _syncHeartbeatRhythm(force: true);
   }
 
   void _startSession() {
@@ -288,6 +309,7 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
       _cheatOverride = BioDetectorCheatOverride.none;
       _blindBoxResult = null;
     });
+    _syncHeartbeatRhythm(force: true);
   }
 
   void _nextRound() {
@@ -309,6 +331,7 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
       _round += 1;
       _blindBoxResult = null;
     });
+    _syncHeartbeatRhythm(force: true);
   }
 
   void _setCheatOverride(BioDetectorCheatOverride value) {
@@ -343,6 +366,221 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
       return 'Initializing Bio-Link...';
     }
     return l10n.t(_samplingMessageKeys[_messageIndex]);
+  }
+
+  int _heartbeatIntervalForState({
+    BioDetectorFlowPhase? phase,
+    int elapsedMs = 0,
+  }) {
+    if (_viewState == _BioDetectorViewState.setup) {
+      return 0;
+    }
+
+    if (_viewState == _BioDetectorViewState.roundResult ||
+        _viewState == _BioDetectorViewState.finalResult) {
+      return _result == BioDetectorResult.lie ? 360 : 900;
+    }
+
+    if (_viewState == _BioDetectorViewState.idle) {
+      return 1180;
+    }
+
+    final activePhase = phase ?? flowPhaseForElapsed(_elapsed);
+    switch (activePhase) {
+      case BioDetectorFlowPhase.initializing:
+        return 1120;
+      case BioDetectorFlowPhase.sampling:
+        return 1000;
+      case BioDetectorFlowPhase.pressure:
+        final pressureElapsed = elapsedMs -
+            kBioDetectorInitializingDuration.inMilliseconds -
+            kBioDetectorSamplingDuration.inMilliseconds;
+        final t =
+            (pressureElapsed / kBioDetectorPressureDuration.inMilliseconds)
+                .clamp(0.0, 1.0);
+        final baseInterval = (980 - (460 * t)).round();
+        if (_warningKey != null) {
+          return max(360, baseInterval - 180);
+        }
+        return baseInterval;
+      case BioDetectorFlowPhase.result:
+        return _result == BioDetectorResult.lie ? 360 : 900;
+    }
+  }
+
+  void _syncHeartbeatRhythm({
+    bool force = false,
+    BioDetectorFlowPhase? phase,
+    int elapsedMs = 0,
+  }) {
+    final rawInterval =
+        _heartbeatIntervalForState(phase: phase, elapsedMs: elapsedMs);
+    if (rawInterval <= 0) {
+      _heartbeatPeriodMs = 0;
+      _heartbeatBeatController.stop();
+      _heartbeatBeatController.value = 0;
+      return;
+    }
+
+    final quantized =
+        (((rawInterval / 40).round() * 40).clamp(320, 1400)).toInt();
+    if (!force &&
+        _heartbeatPeriodMs == quantized &&
+        _heartbeatBeatController.isAnimating) {
+      return;
+    }
+
+    _heartbeatPeriodMs = quantized;
+    _heartbeatBeatController
+      ..stop()
+      ..repeat(period: Duration(milliseconds: quantized));
+  }
+
+  double get _heartbeatBeatStrength {
+    final t = _heartbeatBeatController.value;
+    if (t < 0.12) {
+      return Curves.easeOutCubic.transform(t / 0.12);
+    }
+    if (t < 0.26) {
+      return 1 - (Curves.easeIn.transform((t - 0.12) / 0.14) * 0.55);
+    }
+    if (t < 0.42) {
+      return 0.45 * (1 - Curves.easeOut.transform((t - 0.26) / 0.16));
+    }
+    return 0;
+  }
+
+  bool _heartbeatAlert(BioDetectorFlowPhase phase) {
+    if (_viewState == _BioDetectorViewState.roundResult ||
+        _viewState == _BioDetectorViewState.finalResult) {
+      return _result == BioDetectorResult.lie;
+    }
+    if (_warningKey != null) {
+      return true;
+    }
+    return _viewState == _BioDetectorViewState.running &&
+        phase == BioDetectorFlowPhase.pressure;
+  }
+
+  Widget _buildHeartbeatMonitor(
+    BioDetectorFlowPhase phase, {
+    bool compact = false,
+  }) {
+    final animation = Listenable.merge(
+      <Listenable>[_heartbeatBeatController, _heartbeatSweepController],
+    );
+
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, _) {
+        final beat = _heartbeatBeatStrength;
+        final alert = _heartbeatAlert(phase);
+        final accentColor = _result == BioDetectorResult.truth
+            ? const Color(0xFF5DFFB0)
+            : alert
+                ? const Color(0xFFFF6565)
+                : const Color(0xFFFF9B72);
+        final secondaryColor =
+            alert ? const Color(0xFFFFC1C1) : const Color(0xFFFFD7C4);
+        final iconScale = 1 + (beat * (alert ? 0.22 : 0.16));
+        final bpm =
+            _heartbeatPeriodMs <= 0 ? 0 : (60000 / _heartbeatPeriodMs).round();
+        final statusLabel = alert
+            ? 'ANOMALY SPIKE'
+            : phase == BioDetectorFlowPhase.pressure
+                ? 'SYNC LOCK'
+                : phase == BioDetectorFlowPhase.initializing
+                    ? 'PRIMING'
+                    : _viewState == _BioDetectorViewState.idle
+                        ? 'STANDBY'
+                        : 'TRACKING';
+
+        return Container(
+          key: const Key('bio-detector-heartbeat-monitor'),
+          width: compact ? double.infinity : 290,
+          constraints: BoxConstraints(maxWidth: compact ? 428 : 290),
+          height: compact ? 88 : 94,
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 14 : 16,
+            vertical: compact ? 10 : 12,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: accentColor.withAlpha(alert ? 170 : 110),
+              width: 1.2,
+            ),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFF110A0A),
+                alert ? const Color(0xFF180A0E) : const Color(0xFF120C0C),
+                const Color(0xFF090909),
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: accentColor.withAlpha((36 + (beat * 50)).round()),
+                blurRadius: 24 + (beat * 8),
+                spreadRadius: beat * 1.2,
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Transform.scale(
+                scale: iconScale,
+                child: Icon(
+                  Icons.favorite_rounded,
+                  color: accentColor,
+                  size: compact ? 28 : 30,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: CustomPaint(
+                  painter: _HeartbeatTracePainter(
+                    sweep: _heartbeatSweepController.value,
+                    beat: beat,
+                    alert: alert,
+                    lineColor: accentColor,
+                    glowColor: secondaryColor,
+                  ),
+                  child: const SizedBox.expand(),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    bpm == 0 ? '-- BPM' : '$bpm BPM',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: compact ? 14 : 15,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    statusLabel,
+                    style: TextStyle(
+                      color: secondaryColor,
+                      fontSize: compact ? 10 : 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -927,7 +1165,17 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
       children: [
         Expanded(
           child: Center(
-            child: _buildDetectorZone(phase),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildDetectorZone(phase),
+                  const SizedBox(height: 18),
+                  _buildHeartbeatMonitor(phase),
+                ],
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 14),
@@ -1068,6 +1316,11 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
               height: 1.5,
             ),
           ),
+          SizedBox(height: compact ? 16 : 18),
+          _buildHeartbeatMonitor(
+            BioDetectorFlowPhase.result,
+            compact: true,
+          ),
         ],
       ),
     );
@@ -1075,16 +1328,20 @@ class _BioDetectorScreenState extends State<BioDetectorScreen>
 
   Widget _buildResultActionButton(AppLocalizations l10n) {
     final isFinal = _viewState == _BioDetectorViewState.finalResult;
+    const actionRed = Color(0xFFD94A57);
 
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
         onPressed: isFinal ? _reset : _nextRound,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF1A1A1A),
+          backgroundColor: actionRed,
           foregroundColor: Colors.white,
+          shadowColor: actionRed.withAlpha(110),
+          elevation: 0,
           minimumSize: const Size.fromHeight(GameUiSpacing.buttonHeight),
           shape: RoundedRectangleBorder(
+            side: BorderSide(color: Colors.white.withAlpha(28)),
             borderRadius: BorderRadius.circular(18),
           ),
         ),
@@ -1115,4 +1372,110 @@ class _BioGridPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _HeartbeatTracePainter extends CustomPainter {
+  const _HeartbeatTracePainter({
+    required this.sweep,
+    required this.beat,
+    required this.alert,
+    required this.lineColor,
+    required this.glowColor,
+  });
+
+  final double sweep;
+  final double beat;
+  final bool alert;
+  final Color lineColor;
+  final Color glowColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final gridPaint = Paint()
+      ..color = const Color(0x18FFFFFF)
+      ..strokeWidth = 1;
+    const gridSpacing = 14.0;
+    for (double x = 0; x <= size.width; x += gridSpacing) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
+    }
+    for (double y = 0; y <= size.height; y += gridSpacing) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+
+    final baseline = size.height * 0.58;
+    final amplitude = size.height * (0.18 + (beat * 0.26));
+    final segmentWidth = alert ? 84.0 : 96.0;
+    final startOffset = -(segmentWidth * (1.2 + sweep));
+    final tracePath = Path()..moveTo(0, baseline);
+
+    for (double start = startOffset;
+        start <= size.width + segmentWidth;
+        start += segmentWidth) {
+      tracePath.lineTo(
+        start + (segmentWidth * 0.16),
+        baseline,
+      );
+      tracePath.lineTo(
+        start + (segmentWidth * 0.28),
+        baseline - (amplitude * 0.18),
+      );
+      tracePath.lineTo(
+        start + (segmentWidth * 0.38),
+        baseline + (amplitude * 0.12),
+      );
+      tracePath.lineTo(
+        start + (segmentWidth * 0.48),
+        baseline - amplitude,
+      );
+      tracePath.lineTo(
+        start + (segmentWidth * 0.58),
+        baseline + (amplitude * 0.72),
+      );
+      tracePath.lineTo(
+        start + (segmentWidth * 0.70),
+        baseline,
+      );
+      tracePath.lineTo(start + segmentWidth, baseline);
+    }
+
+    final glowPaint = Paint()
+      ..color = glowColor.withAlpha(alert ? 150 : 110)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = alert ? 4.4 : 3.8
+      ..strokeCap = StrokeCap.round
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+    final linePaint = Paint()
+      ..color = lineColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.1
+      ..strokeCap = StrokeCap.round;
+    canvas.drawPath(tracePath, glowPaint);
+    canvas.drawPath(tracePath, linePaint);
+
+    final sweepX = size.width * (0.16 + (0.68 * sweep));
+    final sweepPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [
+          Colors.transparent,
+          glowColor.withAlpha(0),
+          glowColor.withAlpha(alert ? 95 : 70),
+          Colors.transparent,
+        ],
+      ).createShader(Rect.fromLTWH(sweepX - 26, 0, 52, size.height));
+    canvas.drawRect(
+      Rect.fromLTWH(sweepX - 26, 0, 52, size.height),
+      sweepPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _HeartbeatTracePainter oldDelegate) {
+    return oldDelegate.sweep != sweep ||
+        oldDelegate.beat != beat ||
+        oldDelegate.alert != alert ||
+        oldDelegate.lineColor != lineColor ||
+        oldDelegate.glowColor != glowColor;
+  }
 }

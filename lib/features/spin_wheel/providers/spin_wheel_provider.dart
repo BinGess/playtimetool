@@ -1,38 +1,69 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/wheel_segment.dart';
 
 enum SpinPhase { idle, spinning, result }
 
 class SpinWheelState {
   const SpinWheelState({
-    required this.config,
+    required this.templates,
+    required this.selectedTemplateId,
     this.angle = 0.0,
     this.phase = SpinPhase.idle,
     this.resultIndex,
+    this.naturalResultIndex,
     this.angularVelocity = 0.0,
+    this.liveSegmentIndex = 0,
+    this.prankTargetIndex,
+    this.prankBiasProgress = 0.0,
   });
 
-  final WheelConfig config;
+  final List<WheelConfig> templates;
+  final String selectedTemplateId;
   final double angle; // radians
   final SpinPhase phase;
   final int? resultIndex;
+  final int? naturalResultIndex;
   final double angularVelocity;
+  final int? liveSegmentIndex;
+  final int? prankTargetIndex;
+  final double prankBiasProgress;
+
+  WheelConfig get config {
+    for (final template in templates) {
+      if (template.id == selectedTemplateId) {
+        return template;
+      }
+    }
+    return templates.first;
+  }
 
   SpinWheelState copyWith({
-    WheelConfig? config,
+    List<WheelConfig>? templates,
+    String? selectedTemplateId,
     double? angle,
     SpinPhase? phase,
     int? resultIndex,
+    int? naturalResultIndex,
     double? angularVelocity,
+    int? liveSegmentIndex,
+    int? prankTargetIndex,
+    double? prankBiasProgress,
   }) {
     return SpinWheelState(
-      config: config ?? this.config,
+      templates: templates ?? this.templates,
+      selectedTemplateId: selectedTemplateId ?? this.selectedTemplateId,
       angle: angle ?? this.angle,
       phase: phase ?? this.phase,
       resultIndex: resultIndex ?? this.resultIndex,
+      naturalResultIndex: naturalResultIndex ?? this.naturalResultIndex,
       angularVelocity: angularVelocity ?? this.angularVelocity,
+      liveSegmentIndex: liveSegmentIndex ?? this.liveSegmentIndex,
+      prankTargetIndex: prankTargetIndex ?? this.prankTargetIndex,
+      prankBiasProgress: prankBiasProgress ?? this.prankBiasProgress,
     );
   }
 
@@ -41,13 +72,24 @@ class SpinWheelState {
 }
 
 class SpinWheelNotifier extends StateNotifier<SpinWheelState> {
-  SpinWheelNotifier() : super(SpinWheelState(config: WheelPresets.dinner));
+  SpinWheelNotifier()
+      : super(
+          SpinWheelState(
+            templates: WheelPresets.all,
+            selectedTemplateId: WheelPresets.dinner.id,
+          ),
+        ) {
+    _loadPersistedTemplates();
+  }
 
   final _random = Random();
   Ticker? _ticker;
   Duration _lastTick = Duration.zero;
   int _lastSegmentIndex = -1;
   Function(int)? onSegmentCross; // callback to trigger haptic
+
+  static const _customTemplatesKey = 'spinWheelCustomTemplatesV1';
+  static const _selectedTemplateKey = 'spinWheelSelectedTemplateId';
 
   static const double _friction = 0.985; // per frame at 60fps
   static const double _minVelocity = 0.02; // rad/s to stop
@@ -70,6 +112,17 @@ class SpinWheelNotifier extends StateNotifier<SpinWheelState> {
     var angle = (state.angle + vel * dt) % (2 * pi);
     if (angle < 0) angle += 2 * pi;
 
+    var prankBiasProgress = 0.0;
+    if (state.config.isPrankMode && state.prankTargetIndex != null) {
+      prankBiasProgress = _prankGuideProgress(vel.abs());
+      angle = _applyPrankGuidance(
+        angle,
+        state.prankTargetIndex!,
+        vel.sign == 0 ? 1 : vel.sign,
+        prankBiasProgress,
+      );
+    }
+
     // Detect segment crossing for haptic
     final seg = _angleToSegmentIndex(angle);
     if (seg != _lastSegmentIndex) {
@@ -82,7 +135,12 @@ class SpinWheelNotifier extends StateNotifier<SpinWheelState> {
       _lastTick = Duration.zero;
       _resolveResult(angle);
     } else {
-      state = state.copyWith(angle: angle, angularVelocity: vel);
+      state = state.copyWith(
+        angle: angle,
+        angularVelocity: vel,
+        liveSegmentIndex: seg,
+        prankBiasProgress: prankBiasProgress,
+      );
     }
   }
 
@@ -101,20 +159,30 @@ class SpinWheelNotifier extends StateNotifier<SpinWheelState> {
       angularVelocity: angVel,
       phase: SpinPhase.spinning,
       resultIndex: null,
+      naturalResultIndex: null,
+      liveSegmentIndex: _angleToSegmentIndex(state.angle),
+      prankTargetIndex: state.config.isPrankMode ? _pickPrankTarget() : null,
+      prankBiasProgress: 0,
     );
     _ticker?.stop();
     _ticker?.start();
   }
 
   void _resolveResult(double finalAngle) {
-    final idx = _angleToSegmentIndex(finalAngle);
-    final effectiveIdx = _applyPrankBias(idx);
+    final naturalIdx = _angleToSegmentIndex(finalAngle);
+    final effectiveIdx = _applyPrankBias(naturalIdx);
+    final settledAngle = effectiveIdx == naturalIdx
+        ? finalAngle
+        : _angleForSegmentCenter(effectiveIdx);
 
     state = state.copyWith(
-      angle: finalAngle,
+      angle: settledAngle,
       angularVelocity: 0,
       phase: SpinPhase.result,
       resultIndex: effectiveIdx,
+      naturalResultIndex: naturalIdx,
+      liveSegmentIndex: effectiveIdx,
+      prankBiasProgress: state.config.isPrankMode ? 1 : 0,
     );
   }
 
@@ -134,92 +202,245 @@ class SpinWheelNotifier extends StateNotifier<SpinWheelState> {
     return segments.length - 1;
   }
 
-  /// 恶搞模式：偏向「倒霉」选项，或随机打乱结果
-  int _applyPrankBias(int naturalIdx) {
-    if (!state.config.isPrankMode) return naturalIdx;
+  double _prankGuideProgress(double speed) {
+    final progress = (1 - (speed / 7.5)).clamp(0.0, 1.0);
+    final eased = 1 - pow(1 - progress, 2).toDouble();
+    return eased;
+  }
 
+  double _applyPrankGuidance(
+    double angle,
+    int targetIndex,
+    double directionSign,
+    double progress,
+  ) {
+    if (progress <= 0) return angle;
+    final targetAngle = _angleForSegmentCenter(targetIndex);
+    final delta = _directedAngleDelta(angle, targetAngle, directionSign);
+    final cappedDelta = delta.clamp(-0.45, 0.45).toDouble();
+    final pullFactor = 0.08 + progress * 0.24;
+    final adjustedAngle = angle + cappedDelta * pullFactor;
+    return _normalizeAngle(adjustedAngle);
+  }
+
+  double _directedAngleDelta(double from, double to, double directionSign) {
+    final forward = ((to - from) % (2 * pi) + 2 * pi) % (2 * pi);
+    if (directionSign >= 0) return forward;
+    if (forward == 0) return 0;
+    return forward - 2 * pi;
+  }
+
+  double _angleForSegmentCenter(int index) {
     final segments = state.config.segments;
-    if (segments.isEmpty) return naturalIdx;
+    if (segments.isEmpty) return 0.0;
+
+    final total = state.config.totalWeight;
+    double cumulative = 0;
+    for (int i = 0; i < segments.length; i++) {
+      final sweep = (segments[i].weight / total) * 2 * pi;
+      if (i == index) {
+        final normalizedCenter = cumulative + sweep / 2;
+        return _normalizeAngle(-normalizedCenter);
+      }
+      cumulative += sweep;
+    }
+    return 0.0;
+  }
+
+  double _normalizeAngle(double angle) {
+    final normalized = angle % (2 * pi);
+    return normalized < 0 ? normalized + 2 * pi : normalized;
+  }
+
+  int? _pickPrankTarget() {
+    final segments = state.config.segments;
+    if (segments.isEmpty) return null;
 
     final weights = segments.map((s) => s.weight).toList();
     final minW = weights.reduce(min);
     final maxW = weights.reduce(max);
 
-    // 有权重差异：偏向权重最低的选项（如「谁买单」的老板）
     if (maxW - minW > 0.01) {
       final lowIndices = segments
           .asMap()
           .entries
-          .where((e) => (e.value.weight - minW).abs() < 0.01)
-          .map((e) => e.key)
+          .where((entry) => (entry.value.weight - minW).abs() < 0.01)
+          .map((entry) => entry.key)
           .toList();
-      if (_random.nextDouble() < 0.55) {
-        return lowIndices[_random.nextInt(lowIndices.length)];
-      }
-      return naturalIdx;
+      return lowIndices[_random.nextInt(lowIndices.length)];
     }
 
-    // 权重相同：随机替换为任意选项，制造不可预测感
-    if (_random.nextDouble() < 0.5) {
-      return _random.nextInt(segments.length);
-    }
-    return naturalIdx;
+    final currentLive = state.liveSegmentIndex;
+    final candidates =
+        segments.asMap().keys.where((i) => i != currentLive).toList();
+    if (candidates.isEmpty) return 0;
+    return candidates[_random.nextInt(candidates.length)];
+  }
+
+  /// 恶搞模式：提前锁定一个目标，并在减速阶段把结果拖向该扇区
+  int _applyPrankBias(int naturalIdx) {
+    if (!state.config.isPrankMode) return naturalIdx;
+
+    final segments = state.config.segments;
+    if (segments.isEmpty) return naturalIdx;
+    return state.prankTargetIndex ?? naturalIdx;
   }
 
   void loadConfig(WheelConfig config) {
     _ticker?.stop();
-    state = SpinWheelState(config: config);
+    state = SpinWheelState(
+      templates: state.templates,
+      selectedTemplateId: config.id,
+    );
+    _persistSelectedTemplateId(config.id);
   }
 
   void togglePrankMode() {
     state = state.copyWith(
-      config: state.config.copyWith(isPrankMode: !state.config.isPrankMode),
+      templates: _replaceTemplate(
+        state.config.copyWith(isPrankMode: !state.config.isPrankMode),
+      ),
     );
+    _persistCustomTemplates();
   }
 
   void setPrankMode(bool isPrankMode) {
     if (state.config.isPrankMode == isPrankMode) return;
     state = state.copyWith(
-      config: state.config.copyWith(isPrankMode: isPrankMode),
+      templates: _replaceTemplate(
+        state.config.copyWith(isPrankMode: isPrankMode),
+      ),
     );
+    _persistCustomTemplates();
   }
 
   void dismissResult() {
-    state = state.copyWith(phase: SpinPhase.idle, resultIndex: null);
-  }
-
-  // --- Custom editing ---
-  void addSegment(WheelSegment segment) {
-    final updated = [...state.config.segments, segment];
     state = state.copyWith(
-      config: state.config.copyWith(segments: updated, name: '自定义'),
+      phase: SpinPhase.idle,
+      resultIndex: null,
+      naturalResultIndex: null,
+      prankTargetIndex: null,
+      prankBiasProgress: 0,
+      liveSegmentIndex: _angleToSegmentIndex(state.angle),
     );
   }
 
-  void updateSegment(int index, WheelSegment segment) {
-    final updated = [...state.config.segments];
-    updated[index] = segment;
+  Future<void> saveTemplate(
+    WheelConfig template, {
+    String? originalTemplateId,
+  }) async {
+    final templates = [...state.templates];
+    final existingIndex = originalTemplateId == null
+        ? -1
+        : templates.indexWhere((item) => item.id == originalTemplateId);
+    final templateId = existingIndex >= 0 && !templates[existingIndex].isBuiltIn
+        ? originalTemplateId!
+        : _nextTemplateId();
+
+    final savedTemplate = template.copyWith(id: templateId);
+
+    if (existingIndex >= 0 && !templates[existingIndex].isBuiltIn) {
+      templates[existingIndex] = savedTemplate;
+    } else {
+      templates.add(savedTemplate);
+    }
+
+    _ticker?.stop();
+    state = SpinWheelState(
+      templates: templates,
+      selectedTemplateId: savedTemplate.id,
+    );
+    await _persistCustomTemplates();
+    await _persistSelectedTemplateId(savedTemplate.id);
+  }
+
+  Future<void> deleteTemplate(String templateId) async {
+    final templateIndex =
+        state.templates.indexWhere((template) => template.id == templateId);
+    if (templateIndex < 0) return;
+
+    final templateToDelete = state.templates[templateIndex];
+    if (templateToDelete.isBuiltIn) return;
+
+    final updatedTemplates =
+        state.templates.where((template) => template.id != templateId).toList();
+    final fallbackSelectedTemplateId = state.selectedTemplateId == templateId
+        ? (updatedTemplates
+                .any((template) => template.id == WheelPresets.dinner.id)
+            ? WheelPresets.dinner.id
+            : updatedTemplates.first.id)
+        : state.selectedTemplateId;
+
+    _ticker?.stop();
+    state = SpinWheelState(
+      templates: updatedTemplates,
+      selectedTemplateId: fallbackSelectedTemplateId,
+    );
+    await _persistCustomTemplates();
+    await _persistSelectedTemplateId(fallbackSelectedTemplateId);
+  }
+
+  List<WheelConfig> _replaceTemplate(WheelConfig updatedTemplate) {
+    return state.templates
+        .map((template) =>
+            template.id == updatedTemplate.id ? updatedTemplate : template)
+        .toList();
+  }
+
+  String _nextTemplateId() {
+    return 'custom_${DateTime.now().microsecondsSinceEpoch}_${_random.nextInt(1000)}';
+  }
+
+  Future<void> _loadPersistedTemplates() async {
+    final prefs = await SharedPreferences.getInstance();
+    final storedTemplates = prefs.getString(_customTemplatesKey);
+    final selectedTemplateId = prefs.getString(_selectedTemplateKey);
+
+    List<WheelConfig> customTemplates = const [];
+    if (storedTemplates != null && storedTemplates.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(storedTemplates);
+        if (decoded is List) {
+          customTemplates = decoded
+              .whereType<Map>()
+              .map(
+                (item) => WheelConfig.fromJson(
+                  Map<String, dynamic>.from(item),
+                ),
+              )
+              .where((item) => item.segments.length >= 2)
+              .toList();
+        }
+      } catch (_) {
+        customTemplates = const [];
+      }
+    }
+
+    final templates = [...WheelPresets.all, ...customTemplates];
+    final resolvedSelectedTemplateId = templates.any(
+      (template) => template.id == selectedTemplateId,
+    )
+        ? selectedTemplateId!
+        : state.selectedTemplateId;
+
     state = state.copyWith(
-      config: state.config.copyWith(segments: updated, name: '自定义'),
+      templates: templates,
+      selectedTemplateId: resolvedSelectedTemplateId,
     );
   }
 
-  void removeSegment(int index) {
-    if (state.config.segments.length <= 2) return; // minimum 2 items
-    final updated = [...state.config.segments]..removeAt(index);
-    state = state.copyWith(
-      config: state.config.copyWith(segments: updated, name: '自定义'),
-    );
+  Future<void> _persistCustomTemplates() async {
+    final prefs = await SharedPreferences.getInstance();
+    final customTemplates = state.templates
+        .where((template) => !template.isBuiltIn)
+        .map((template) => template.toJson())
+        .toList();
+    await prefs.setString(_customTemplatesKey, jsonEncode(customTemplates));
   }
 
-  void reorderSegments(int oldIndex, int newIndex) {
-    final updated = [...state.config.segments];
-    if (newIndex > oldIndex) newIndex -= 1;
-    final item = updated.removeAt(oldIndex);
-    updated.insert(newIndex, item);
-    state = state.copyWith(
-      config: state.config.copyWith(segments: updated, name: '自定义'),
-    );
+  Future<void> _persistSelectedTemplateId(String templateId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_selectedTemplateKey, templateId);
   }
 
   @override

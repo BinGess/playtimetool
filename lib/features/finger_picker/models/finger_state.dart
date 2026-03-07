@@ -39,7 +39,8 @@ class FingerData {
 }
 
 /// 最多支持参与人数
-const int kMaxFingerPlayers = 6;
+const int kMaxFingerPlayers = 8;
+const int kIPhoneMaxFingerPlayers = 5;
 
 class FingerPickerState {
   const FingerPickerState({
@@ -47,6 +48,7 @@ class FingerPickerState {
     this.phase = PickerPhase.setup,
     this.countdownValue = 3,
     this.maxWinners = 1,
+    this.maxPlayers = kMaxFingerPlayers,
     this.showEscapeAlert = false,
     this.showOverflowAlert = false,
     this.eliminationOrder = const [],
@@ -57,6 +59,7 @@ class FingerPickerState {
   final PickerPhase phase;
   final int countdownValue;
   final int maxWinners;
+  final int maxPlayers;
   final bool showEscapeAlert;
   final bool showOverflowAlert;
 
@@ -71,6 +74,7 @@ class FingerPickerState {
     PickerPhase? phase,
     int? countdownValue,
     int? maxWinners,
+    int? maxPlayers,
     bool? showEscapeAlert,
     bool? showOverflowAlert,
     List<int>? eliminationOrder,
@@ -81,6 +85,7 @@ class FingerPickerState {
       phase: phase ?? this.phase,
       countdownValue: countdownValue ?? this.countdownValue,
       maxWinners: maxWinners ?? this.maxWinners,
+      maxPlayers: maxPlayers ?? this.maxPlayers,
       showEscapeAlert: showEscapeAlert ?? this.showEscapeAlert,
       showOverflowAlert: showOverflowAlert ?? this.showOverflowAlert,
       eliminationOrder: eliminationOrder ?? this.eliminationOrder,

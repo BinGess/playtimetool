@@ -24,7 +24,7 @@ class App extends ConsumerWidget {
     ));
 
     return MaterialApp.router(
-      title: '指尖聚会',
+      onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       theme: buildDarkTheme(),
       darkTheme: buildDarkTheme(),
       themeMode: ThemeMode.dark,
@@ -34,10 +34,7 @@ class App extends ConsumerWidget {
         localeOverride,
         WidgetsBinding.instance.platformDispatcher.locales,
       ),
-      supportedLocales: const [
-        Locale('zh'),
-        Locale('en'),
-      ],
+      supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: const [
         AppLocalizationsDelegate(),
         GlobalMaterialLocalizations.delegate,

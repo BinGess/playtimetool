@@ -40,7 +40,8 @@ void main() {
     expect(find.byKey(const Key('number-bomb-player-slider')), findsOneWidget);
   });
 
-  testWidgets('explosion state only shows loser result text', (tester) async {
+  testWidgets('explosion state shows loser result and penalty blind box',
+      (tester) async {
     SharedPreferences.setMockInitialValues(const {
       'game_help_seen_number_bomb': true,
     });
@@ -80,6 +81,9 @@ void main() {
     await tester.pump(const Duration(milliseconds: 900));
 
     expect(find.text('本轮输家：玩家3'), findsOneWidget);
+    expect(find.text('结果说明'), findsOneWidget);
+    expect(find.text('命运抉择'), findsWidgets);
+    expect(find.text('玩家3 接受命运抉择'), findsOneWidget);
     expect(find.textContaining('当前玩家'), findsNothing);
     expect(find.textContaining('获胜玩家'), findsNothing);
   });

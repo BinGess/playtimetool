@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:collection';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,6 +25,7 @@ class FingerPickerNotifier extends StateNotifier<FingerPickerState> {
     state = FingerPickerState(
       phase: PickerPhase.waiting,
       maxWinners: state.maxWinners,
+      maxPlayers: state.maxPlayers,
     );
   }
 
@@ -32,6 +34,7 @@ class FingerPickerNotifier extends StateNotifier<FingerPickerState> {
     state = FingerPickerState(
       phase: PickerPhase.setup,
       maxWinners: state.maxWinners,
+      maxPlayers: state.maxPlayers,
     );
   }
 
@@ -48,8 +51,8 @@ class FingerPickerNotifier extends StateNotifier<FingerPickerState> {
       return;
     }
 
-    if (state.fingers.length >= kMaxFingerPlayers) {
-      _overflowAndReset();
+    if (state.fingers.length >= state.maxPlayers) {
+      _showOverflowAlert();
       return;
     }
 
@@ -220,17 +223,13 @@ class FingerPickerNotifier extends StateNotifier<FingerPickerState> {
       phase: PickerPhase.waiting,
       showEscapeAlert: true,
       maxWinners: state.maxWinners,
+      maxPlayers: state.maxPlayers,
     );
     HapticService.errorVibrate();
   }
 
-  void _overflowAndReset() {
-    _cancelAllTimers();
-    state = FingerPickerState(
-      phase: PickerPhase.waiting,
-      showOverflowAlert: true,
-      maxWinners: state.maxWinners,
-    );
+  void _showOverflowAlert() {
+    state = state.copyWith(showOverflowAlert: true);
     HapticService.notificationWarning();
   }
 
@@ -247,11 +246,35 @@ class FingerPickerNotifier extends StateNotifier<FingerPickerState> {
     state = FingerPickerState(
       phase: PickerPhase.waiting,
       maxWinners: state.maxWinners,
+      maxPlayers: state.maxPlayers,
     );
   }
 
   void setMaxWinners(int count) {
-    state = state.copyWith(maxWinners: count.clamp(1, kMaxFingerPlayers));
+    state = state.copyWith(maxWinners: count.clamp(1, state.maxPlayers));
+  }
+
+  void configureMaxPlayers(int count) {
+    final clampedCount = count.clamp(1, kMaxFingerPlayers);
+    if (clampedCount == state.maxPlayers) return;
+
+    var nextFingers = state.fingers;
+    if (nextFingers.length > clampedCount) {
+      nextFingers = LinkedHashMap<int, FingerData>.fromEntries(
+        nextFingers.entries.take(clampedCount),
+      );
+      _cancelAllTimers();
+    }
+
+    state = state.copyWith(
+      fingers: nextFingers,
+      phase: state.phase == PickerPhase.setup
+          ? PickerPhase.setup
+          : PickerPhase.waiting,
+      maxPlayers: clampedCount,
+      maxWinners: min(state.maxWinners, clampedCount),
+      showOverflowAlert: false,
+    );
   }
 
   void _cancelAllTimers() {

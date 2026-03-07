@@ -43,6 +43,7 @@ class _DecibelBombScreenState extends State<DecibelBombScreen>
     with TickerProviderStateMixin {
   static const Duration _sampleInterval = Duration(milliseconds: 100);
   static const Duration _calibrationDuration = Duration(seconds: 2);
+  static const Duration _holdHapticInterval = Duration(milliseconds: 420);
 
   final Random _random = Random();
   final NoiseMeter _noiseMeter = NoiseMeter();
@@ -51,10 +52,12 @@ class _DecibelBombScreenState extends State<DecibelBombScreen>
   DateTime? _lastSampleAt;
   Timer? _calibrationTimer;
   Timer? _flashTimer;
+  Timer? _holdHapticTimer;
   bool _isPermissionRequesting = false;
 
   late final AnimationController _ringController;
   late final AnimationController _explosionController;
+  late final AnimationController _holdPulseController;
 
   _DecibelBombPhase _phase = _DecibelBombPhase.setup;
   bool _showHelpButton = false;
@@ -87,14 +90,20 @@ class _DecibelBombScreenState extends State<DecibelBombScreen>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     );
+    _holdPulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    );
     _initGameHelp();
   }
 
   @override
   void dispose() {
+    _stopHoldFeedback();
     _stopNoiseTracking();
     _ringController.dispose();
     _explosionController.dispose();
+    _holdPulseController.dispose();
     super.dispose();
   }
 
@@ -151,6 +160,7 @@ class _DecibelBombScreenState extends State<DecibelBombScreen>
   void _startCalibration() {
     _calibrationTimer?.cancel();
     _calibrationSamples.clear();
+    _stopHoldFeedback();
     _isHoldingSpeak = false;
     _holderIndex = 0;
 
@@ -231,6 +241,7 @@ class _DecibelBombScreenState extends State<DecibelBombScreen>
     AudioService.play(AppSounds.bombExplosion, volume: 1.0);
     HapticService.tripleHeavyImpact();
 
+    _stopHoldFeedback();
     _isHoldingSpeak = false;
     _awaitingNextPlayer = false;
     _showFlash = true;
@@ -258,12 +269,16 @@ class _DecibelBombScreenState extends State<DecibelBombScreen>
   void _setHoldingSpeak(bool speaking) {
     if (_phase != _DecibelBombPhase.ready) return;
     if (speaking) {
+      if (_isHoldingSpeak) return;
+      HapticService.mediumImpact();
+      _startHoldFeedback();
       setState(() {
         _isHoldingSpeak = true;
       });
       return;
     }
     if (!_isHoldingSpeak) return;
+    _stopHoldFeedback();
     setState(() {
       _isHoldingSpeak = false;
       _awaitingNextPlayer = true;
@@ -272,6 +287,7 @@ class _DecibelBombScreenState extends State<DecibelBombScreen>
 
   void _nextPlayer() {
     if (_phase != _DecibelBombPhase.ready) return;
+    _stopHoldFeedback();
     HapticService.selectionClick();
     setState(() {
       _isHoldingSpeak = false;
@@ -282,11 +298,33 @@ class _DecibelBombScreenState extends State<DecibelBombScreen>
   }
 
   void _stopNoiseTracking() {
+    _stopHoldFeedback();
     _noiseSub?.cancel();
     _noiseSub = null;
     _calibrationTimer?.cancel();
     _flashTimer?.cancel();
     _lastSampleAt = null;
+  }
+
+  void _startHoldFeedback() {
+    _holdPulseController.repeat(reverse: true);
+    _holdHapticTimer?.cancel();
+    _holdHapticTimer = Timer.periodic(_holdHapticInterval, (_) {
+      if (!mounted || !_isHoldingSpeak || _phase != _DecibelBombPhase.ready) {
+        return;
+      }
+      HapticService.lightImpact();
+    });
+  }
+
+  void _stopHoldFeedback() {
+    _holdHapticTimer?.cancel();
+    _holdHapticTimer = null;
+    if (_holdPulseController.isAnimating || _holdPulseController.value != 0) {
+      _holdPulseController
+        ..stop()
+        ..reset();
+    }
   }
 
   String _explosionSummary(AppLocalizations l10n) {
@@ -596,35 +634,13 @@ class _DecibelBombScreenState extends State<DecibelBombScreen>
                       style: GameUiSurface.primaryButton(AppColors.bombRed),
                       child: Text(l10n.t('nextPlayer')),
                     )
-                  : GestureDetector(
+                  : _DecibelHoldButton(
                       key: const Key('decibel-bomb-scream-button'),
-                      onTapDown: (_) => _setHoldingSpeak(true),
-                      onTapUp: (_) => _setHoldingSpeak(false),
-                      onTapCancel: () => _setHoldingSpeak(false),
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          color: _isHoldingSpeak
-                              ? AppColors.fingerCyan
-                              : AppColors.surfaceVariant,
-                          border: Border.all(
-                            color: _isHoldingSpeak
-                                ? AppColors.fingerCyan
-                                : AppColors.textDim,
-                          ),
-                        ),
-                        child: Center(
-                          child: Text(
-                            l10n.t('decibelBombSpeakHold'),
-                            style: TextStyle(
-                              color:
-                                  _isHoldingSpeak ? Colors.black : Colors.white,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                      ),
+                      label: l10n.t('decibelBombSpeakHold'),
+                      isHolding: _isHoldingSpeak,
+                      pulseAnimation: _holdPulseController,
+                      onHoldStart: () => _setHoldingSpeak(true),
+                      onHoldEnd: () => _setHoldingSpeak(false),
                     ),
             ),
           const SizedBox(height: 8),
@@ -776,6 +792,163 @@ class _MetricLine extends StatelessWidget {
             style: GameUiText.bodyStrong,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DecibelHoldButton extends StatelessWidget {
+  const _DecibelHoldButton({
+    super.key,
+    required this.label,
+    required this.isHolding,
+    required this.pulseAnimation,
+    required this.onHoldStart,
+    required this.onHoldEnd,
+  });
+
+  final String label;
+  final bool isHolding;
+  final Animation<double> pulseAnimation;
+  final VoidCallback onHoldStart;
+  final VoidCallback onHoldEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    const baseColor = Color(0xFFFF6D3A);
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => onHoldStart(),
+      onTapUp: (_) => onHoldEnd(),
+      onTapCancel: onHoldEnd,
+      child: AnimatedBuilder(
+        animation: pulseAnimation,
+        builder: (context, _) {
+          final pulse = isHolding ? pulseAnimation.value : 0.0;
+          final glowScale = 1 + pulse * 0.16;
+          final outerOpacity = isHolding ? 0.42 + pulse * 0.28 : 0.18;
+          final innerOpacity = isHolding ? 0.34 + pulse * 0.22 : 0.12;
+          final buttonScale = isHolding ? 0.985 + pulse * 0.025 : 1.0;
+          final borderColor =
+              isHolding ? const Color(0xFFFFF2B8) : const Color(0xFFFFA16B);
+          final labelColor = isHolding ? Colors.black : Colors.white;
+
+          return Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              IgnorePointer(
+                child: Opacity(
+                  opacity: outerOpacity,
+                  child: Transform.scale(
+                    scale: glowScale,
+                    child: Container(
+                      key: const Key('decibel-bomb-scream-glow'),
+                      width: double.infinity,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        gradient: RadialGradient(
+                          colors: [
+                            AppColors.bombRed.withAlpha(185),
+                            baseColor.withAlpha(120),
+                            Colors.transparent,
+                          ],
+                          stops: const [0.15, 0.58, 1],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.bombRed.withAlpha(
+                              isHolding ? 135 : 70,
+                            ),
+                            blurRadius: isHolding ? 28 : 16,
+                            spreadRadius: isHolding ? 6 : 1,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              IgnorePointer(
+                child: Opacity(
+                  opacity: innerOpacity,
+                  child: Container(
+                    key: isHolding
+                        ? const Key('decibel-bomb-scream-active-ring')
+                        : null,
+                    width: double.infinity,
+                    height: 72,
+                    margin: const EdgeInsets.symmetric(horizontal: 6),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: borderColor.withAlpha(isHolding ? 220 : 90),
+                        width: isHolding ? 1.8 : 1,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Transform.scale(
+                scale: buttonScale,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOutCubic,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: isHolding
+                          ? const [
+                              Color(0xFFFFF6C9),
+                              Color(0xFFFFD86B),
+                              Color(0xFFFF9548),
+                            ]
+                          : const [
+                              Color(0xFFFF5B37),
+                              Color(0xFFFF2F54),
+                              Color(0xFF8A1022),
+                            ],
+                    ),
+                    border: Border.all(color: borderColor, width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color:
+                            AppColors.bombRed.withAlpha(isHolding ? 130 : 75),
+                        blurRadius: isHolding ? 22 : 12,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.mic_rounded,
+                          color: labelColor,
+                          size: isHolding ? 22 : 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          label,
+                          style: GameUiText.buttonLabel.copyWith(
+                            color: labelColor,
+                            letterSpacing: isHolding ? 0.7 : 0.45,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

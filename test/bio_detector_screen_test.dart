@@ -42,13 +42,15 @@ void main() {
 
     expect(find.text('开局设置'), findsOneWidget);
     expect(find.text('BIO-SCAN'), findsOneWidget);
-    expect(find.text('准备检测'), findsOneWidget);
+    expect(find.text('开始游戏'), findsOneWidget);
     expect(find.text('惩罚预设'), findsOneWidget);
     expect(find.byKey(const Key('bio-detector-rounds-slider')), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('bio-detector-start-session')));
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('长按开始检测'), findsOneWidget);
+    expect(find.byKey(const Key('bio-detector-heartbeat-monitor')),
+        findsOneWidget);
 
     await tester.longPress(find.byKey(const Key('bio-detector-fingerprint')));
     await tester.pump(const Duration(milliseconds: 50));
@@ -70,6 +72,8 @@ void main() {
 
     expect(find.text('结果可信度'), findsOneWidget);
     expect(find.text('系统判定当前陈述可信，可以继续下一轮。'), findsOneWidget);
+    expect(find.byKey(const Key('bio-detector-heartbeat-monitor')),
+        findsOneWidget);
     expect(find.textContaining('检测完成：'), findsNothing);
     expect(find.text('命运抉择'), findsNothing);
   });
@@ -88,6 +92,27 @@ void main() {
 
     expect(find.text('风险指数'), findsOneWidget);
     expect(find.text('命运抉择'), findsOneWidget);
+    expect(find.byKey(const Key('bio-detector-heartbeat-monitor')),
+        findsOneWidget);
     expect(find.textContaining('检测完成：'), findsNothing);
+  });
+
+  testWidgets('result action button uses brighter red accent',
+      (WidgetTester tester) async {
+    await pumpBioDetector(tester);
+
+    await tester.tap(find.byKey(const Key('bio-detector-start-session')));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(find.byKey(const Key('bio-detector-force-lie')));
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.longPress(find.byKey(const Key('bio-detector-fingerprint')));
+    await tester.pump();
+    await advanceToResult(tester);
+
+    final button = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
+    expect(
+      button.style?.backgroundColor?.resolve(<WidgetState>{}),
+      const Color(0xFFD94A57),
+    );
   });
 }

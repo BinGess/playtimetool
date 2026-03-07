@@ -20,7 +20,9 @@ import 'painters/finger_ring_painter.dart';
 import 'providers/finger_picker_provider.dart';
 
 class FingerPickerScreen extends ConsumerStatefulWidget {
-  const FingerPickerScreen({super.key});
+  const FingerPickerScreen({super.key, this.forcedMaxPlayers});
+
+  final int? forcedMaxPlayers;
 
   @override
   ConsumerState<FingerPickerScreen> createState() => _FingerPickerScreenState();
@@ -42,6 +44,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
   final Random _penaltyRandom = Random();
   PenaltyPreset _penaltyPreset = PenaltyPreset.defaults;
   PenaltyBlindBoxResult? _blindBoxResult;
+  int? _configuredMaxPlayers;
 
   @override
   void initState() {
@@ -77,6 +80,18 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
 
     _repaintAnim = Listenable.merge([_glowAnim, _spinAnim]);
     _initGameHelp();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final maxPlayers = widget.forcedMaxPlayers ?? _deviceMaxPlayers(context);
+    if (_configuredMaxPlayers == maxPlayers) return;
+    _configuredMaxPlayers = maxPlayers;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(fingerPickerProvider.notifier).configureMaxPlayers(maxPlayers);
+    });
   }
 
   @override
@@ -129,7 +144,9 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
       }
       if (next.showOverflowAlert && !(prev?.showOverflowAlert ?? false)) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _showOverflowDialog();
+          if (!mounted) return;
+          _showOverflowSnackBar();
+          ref.read(fingerPickerProvider.notifier).dismissOverflowAlert();
         });
       }
       if (next.phase == PickerPhase.result &&
@@ -159,8 +176,11 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
               child: _FingerPickerPrepView(
                 l10n: l10n,
                 maxWinners: state.maxWinners,
+                maxPlayers: state.maxPlayers,
                 penaltyPreset: _penaltyPreset,
+                showHelpButton: _showHelpButton,
                 onBack: () => context.pop(),
+                onHelpTap: _showGameHelp,
                 onWinnerChanged: notifier.setMaxWinners,
                 onPenaltyPresetChanged: (preset) {
                   setState(() => _penaltyPreset = preset);
@@ -173,12 +193,14 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
               state: state,
               l10n: l10n,
               notifier: notifier,
+              showHelpButton: _showHelpButton,
               glowAnim: _glowAnim,
               spinAnim: _spinAnim,
               lockAnim: _lockAnim,
               arcAnim: _arcAnim,
               repaintAnim: _repaintAnim,
               onBack: () => context.pop(),
+              onHelpTap: _showGameHelp,
             ),
           if (state.phase == PickerPhase.result)
             SafeArea(
@@ -191,7 +213,7 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
                 colorLabelBuilder: (color) => _colorLabel(l10n, color),
               ),
             ),
-          if (_showHelpButton)
+          if (_showHelpButton && state.phase == PickerPhase.result)
             Positioned(
               top: MediaQuery.paddingOf(context).top + 8,
               right: 12,
@@ -218,6 +240,13 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
         ],
       ),
     );
+  }
+
+  int _deviceMaxPlayers(BuildContext context) {
+    final shortestSide = MediaQuery.sizeOf(context).shortestSide;
+    final isIPhone =
+        Theme.of(context).platform == TargetPlatform.iOS && shortestSide < 600;
+    return isIPhone ? kIPhoneMaxFingerPlayers : kMaxFingerPlayers;
   }
 
   List<String> _loserColorLabels(
@@ -330,48 +359,29 @@ class _FingerPickerScreenState extends ConsumerState<FingerPickerScreen>
     );
   }
 
-  void _showOverflowDialog() {
+  void _showOverflowSnackBar() {
     if (!mounted) return;
     final l10n = AppLocalizations.of(context);
-    showDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF080F1A),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: AppColors.fingerCyan.withAlpha(100)),
-        ),
-        title: Text(
-          l10n.overflowTitle,
-          style: GameUiText.sectionTitle.copyWith(
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            l10n.t('overflowHint', {
+              'max': '${ref.read(fingerPickerProvider).maxPlayers}',
+            }),
+            textAlign: TextAlign.center,
           ),
-          textAlign: TextAlign.center,
-        ),
-        content: Text(
-          l10n.overflowHint,
-          style: GameUiText.body,
-          textAlign: TextAlign.center,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ref.read(fingerPickerProvider.notifier).dismissOverflowAlert();
-            },
-            child: Text(
-              l10n.ok,
-              style: GameUiText.bodyStrong.copyWith(
-                color: AppColors.fingerCyan,
-                fontSize: 15,
-              ),
-            ),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+          backgroundColor: const Color(0xFF10202C),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(color: AppColors.fingerCyan.withAlpha(100)),
           ),
-        ],
-      ),
-    );
+        ),
+      );
   }
 }
 
@@ -379,8 +389,11 @@ class _FingerPickerPrepView extends StatelessWidget {
   const _FingerPickerPrepView({
     required this.l10n,
     required this.maxWinners,
+    required this.maxPlayers,
     required this.penaltyPreset,
+    required this.showHelpButton,
     required this.onBack,
+    required this.onHelpTap,
     required this.onWinnerChanged,
     required this.onPenaltyPresetChanged,
     required this.onStart,
@@ -388,8 +401,11 @@ class _FingerPickerPrepView extends StatelessWidget {
 
   final AppLocalizations l10n;
   final int maxWinners;
+  final int maxPlayers;
   final PenaltyPreset penaltyPreset;
+  final bool showHelpButton;
   final VoidCallback onBack;
+  final VoidCallback onHelpTap;
   final ValueChanged<int> onWinnerChanged;
   final ValueChanged<PenaltyPreset> onPenaltyPresetChanged;
   final VoidCallback onStart;
@@ -406,6 +422,23 @@ class _FingerPickerPrepView extends StatelessWidget {
             title: l10n.fingerPicker,
             onBack: onBack,
             accentColor: AppColors.fingerCyan,
+            leadingWidth: 124,
+            trailingWidth: 124,
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildStatusChip(l10n.selectWinnersCount(maxWinners)),
+                if (showHelpButton) ...[
+                  const SizedBox(width: 8),
+                  GameHelpButton(
+                    key: const Key('finger-picker-top-help-button'),
+                    onTap: onHelpTap,
+                    iconColor: AppColors.textSecondary,
+                    borderColor: AppColors.textDim,
+                  ),
+                ],
+              ],
+            ),
           ),
           const SizedBox(height: GameUiSpacing.blockGap),
           Expanded(
@@ -414,13 +447,20 @@ class _FingerPickerPrepView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _buildHeroCard(),
-                  const SizedBox(height: 14),
+                  Text(
+                    l10n.t('fingerPrepHint', {
+                      'count': '$maxWinners',
+                      'max': '$maxPlayers',
+                    }),
+                    textAlign: TextAlign.center,
+                    style: GameUiText.body.copyWith(
+                      color: const Color(0xFFC6D6E4),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   _buildSectionCard(
                     title: l10n.t('fingerPrepWinnersTitle'),
                     subtitle: l10n.t('fingerPrepWinnersHint'),
-                    trailing:
-                        _buildStatusChip(l10n.selectWinnersCount(maxWinners)),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -439,8 +479,8 @@ class _FingerPickerPrepView extends StatelessWidget {
                             key: const Key('finger-picker-winner-slider'),
                             value: maxWinners.toDouble(),
                             min: 1,
-                            max: kMaxFingerPlayers.toDouble(),
-                            divisions: kMaxFingerPlayers - 1,
+                            max: maxPlayers.toDouble(),
+                            divisions: maxPlayers - 1,
                             activeColor: AppColors.fingerCyan,
                             onChanged: (value) =>
                                 onWinnerChanged(value.round()),
@@ -450,7 +490,7 @@ class _FingerPickerPrepView extends StatelessWidget {
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
-                          children: List.generate(kMaxFingerPlayers, (index) {
+                          children: List.generate(maxPlayers, (index) {
                             final count = index + 1;
                             final active = count == maxWinners;
                             return GestureDetector(
@@ -516,53 +556,6 @@ class _FingerPickerPrepView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeroCard() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: GameUiSurface.heroPanel(
-        accentColor: AppColors.fingerCyan,
-        secondaryColor: GameUiSurface.shiftHue(AppColors.fingerCyan, by: 58),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                l10n.fingerPickerSub,
-                style: const TextStyle(
-                  color: Color(0xFF8BE8FF),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.4,
-                ),
-              ),
-              const Spacer(),
-              _buildStatusChip(l10n.selectWinnersCount(maxWinners)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            l10n.t('fingerPrepTitle'),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              height: 1.1,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.t('fingerPrepHint'),
-            style: GameUiText.body.copyWith(
-              color: const Color(0xFFC6D6E4),
-            ),
-          ),
         ],
       ),
     );
@@ -634,23 +627,27 @@ class _FingerPickerPlayLayer extends StatelessWidget {
     required this.state,
     required this.l10n,
     required this.notifier,
+    required this.showHelpButton,
     required this.glowAnim,
     required this.spinAnim,
     required this.lockAnim,
     required this.arcAnim,
     required this.repaintAnim,
     required this.onBack,
+    required this.onHelpTap,
   });
 
   final FingerPickerState state;
   final AppLocalizations l10n;
   final FingerPickerNotifier notifier;
+  final bool showHelpButton;
   final Animation<double> glowAnim;
   final Animation<double> spinAnim;
   final Animation<double> lockAnim;
   final Animation<double> arcAnim;
   final Listenable repaintAnim;
   final VoidCallback onBack;
+  final VoidCallback onHelpTap;
 
   @override
   Widget build(BuildContext context) {
@@ -885,23 +882,43 @@ class _FingerPickerPlayLayer extends StatelessWidget {
                 ),
                 const Spacer(),
                 Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppColors.fingerCyan.withAlpha(22),
-                      borderRadius: BorderRadius.circular(999),
-                      border:
-                          Border.all(color: AppColors.fingerCyan.withAlpha(70)),
-                    ),
-                    child: Text(
-                      l10n.selectWinnersCount(state.maxWinners),
-                      style: GameUiText.caption.copyWith(
-                        color: AppColors.fingerCyan,
-                        letterSpacing: 0.8,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.fingerCyan.withAlpha(22),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: AppColors.fingerCyan.withAlpha(70),
+                          ),
+                        ),
+                        child: Text(
+                          l10n.selectWinnersCount(state.maxWinners),
+                          style: GameUiText.caption.copyWith(
+                            color: AppColors.fingerCyan,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
                       ),
-                    ),
+                      if (showHelpButton) ...[
+                        const SizedBox(width: 8),
+                        GameHelpButton(
+                          key: const Key('finger-picker-play-help-button'),
+                          onTap: onHelpTap,
+                          iconColor: AppColors.textSecondary,
+                          borderColor: AppColors.textDim,
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ],

@@ -9,7 +9,8 @@ import 'package:playtimetool/l10n/app_localizations.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
 void main() {
-  testWidgets('Hub shows top-right settings icon and cover on each game card',
+  testWidgets(
+      'Hub shows top-right settings icon and locks only gravity balance',
       (WidgetTester tester) async {
     await tester.binding.setSurfaceSize(const Size(1200, 2200));
     final testGyro = Stream<GyroscopeEvent>.value(
@@ -28,10 +29,7 @@ void main() {
 
     expect(find.byKey(const Key('hub-settings-button')), findsOneWidget);
     final visibleCards = find.byType(GameCard).evaluate().length;
-    final visibleCovers =
-        find.byKey(const Key('game-card-cover')).evaluate().length;
     expect(visibleCards, greaterThan(0));
-    expect(visibleCovers, visibleCards);
 
     final settingsRect =
         tester.getRect(find.byKey(const Key('hub-settings-button')));
@@ -39,6 +37,11 @@ void main() {
 
     expect(find.text('Word Bomb'), findsNothing);
     expect(find.text('Challenge Auction'), findsNothing);
+    expect(find.text('FINGER PICKER'), findsNothing);
+    expect(find.text('Touch of fate'), findsNothing);
+    expect(find.text('Gravity Balance'), findsOneWidget);
+    expect(find.text('Unlock ¥1'), findsOneWidget);
+
     await tester.scrollUntilVisible(
       find.text('Decibel Bomb'),
       300,
@@ -47,6 +50,18 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Decibel Bomb'), findsOneWidget);
     expect(find.text('Bio-Detector'), findsOneWidget);
+
+    final numberBombOffset = tester.getTopLeft(find.text('Number Bomb'));
+    final gravityBalanceOffset =
+        tester.getTopLeft(find.text('Gravity Balance'));
+    final passBombOffset = tester.getTopLeft(find.text('Pass Bomb'));
+
+    expect(
+      gravityBalanceOffset.dy,
+      moreOrLessEquals(numberBombOffset.dy, epsilon: 1),
+    );
+    expect(gravityBalanceOffset.dx, greaterThan(numberBombOffset.dx));
+    expect(gravityBalanceOffset.dy, lessThan(passBombOffset.dy));
     await tester.binding.setSurfaceSize(null);
   });
 }

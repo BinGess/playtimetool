@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
+import 'app_localizations_ja.dart';
 
 /// 应用多语言文案
 class AppLocalizations {
   AppLocalizations(this.locale);
 
   final Locale locale;
+
+  static const supportedLocales = [
+    Locale('zh'),
+    Locale('en'),
+    Locale('ja'),
+  ];
 
   static AppLocalizations of(BuildContext context) {
     return Localizations.of<AppLocalizations>(context, AppLocalizations)!;
@@ -14,9 +21,10 @@ class AppLocalizations {
     'zh': {
       // App
       'appTitle': '指尖聚会',
+      'appSlogan': '让聚会更加欢乐',
       'settings': '设置',
       'settingsTitle': 'SETTINGS',
-      'appVersion': '指尖聚会 v1.0',
+      'appVersion': '指尖聚会 v1.1',
       'resultSummary': '结果说明',
       'penaltyGuideDefault': '按当前规则执行惩罚玩法',
       'penaltyGuideParty': '未命中玩家执行约定惩罚',
@@ -75,7 +83,7 @@ class AppLocalizations {
       'fingerPickerSub': 'FINGER PICKER',
       'fingerPickerDesc': '命运的触碰',
       'fingerPrepTitle': '准备开转',
-      'fingerPrepHint': '先确认规则与惩罚设置，再让大家同时按住屏幕等待命运揭晓。',
+      'fingerPrepHint': '把手指放在屏幕上，系统随机选出 {count} 人，其余人淘汰。当前设备最多支持 {max} 人同时参与。',
       'fingerPrepIntroTitle': '游戏基础介绍',
       'fingerPrepIntroHint': '一局流程',
       'fingerPrepIntroBody': '所有玩家同时按住屏幕，系统在倒计时后随机保留指定人数，剩余玩家出局并触发惩罚抽卡。',
@@ -138,8 +146,13 @@ class AppLocalizations {
       'gravityBalanceSub': 'GRAVITY BALANCE',
       'gravityBalanceDesc': '倾斜控球，顶住摆动与震荡',
       'iapPriceFallback': '¥1',
+      'iapUnlockBadge': '{price} 解锁',
       'iapPurchaseTitle': '解锁游戏',
       'iapPurchaseBody': '{game} 需要购买后才能游玩，价格 {price}，购买后可长期使用。',
+      'iapLockedHeroTitle': '1 元永久解锁',
+      'iapPermanentPriceTag': '{price} 永久解锁',
+      'iapBenefitPermanentUnlock': '一次购买，永久可玩',
+      'iapBenefitRestoreSupport': '支持恢复购买',
       'iapBuyNow': '立即购买',
       'iapRestore': '恢复购买',
       'iapStoreUnavailable': '商店当前不可用，请稍后重试',
@@ -168,6 +181,7 @@ class AppLocalizations {
       'langFollowSystem': '跟随系统',
       'langChinese': '中文',
       'langEnglish': 'English',
+      'langJapanese': '日本語',
 
       // Finger Picker
       'placeFingers': '请放上手指',
@@ -185,9 +199,15 @@ class AppLocalizations {
       'victors': '胜利者 × {count}',
       'again': '再来一次',
       'add': '＋ 添加',
+      'addWheel': '添加转盘',
       'editWheel': '编辑转盘',
+      'createWheel': '创建转盘',
+      'saveWheel': '保存转盘',
       'addOption': '添加选项',
       'editOption': '编辑选项',
+      'wheelName': '转盘名称',
+      'wheelNameHint': '给这个转盘起个名字',
+      'wheelOptionsTitle': '转盘选项',
       'optionName': '选项名称',
       'color': '颜色',
       'cancel': '取消',
@@ -197,20 +217,26 @@ class AppLocalizations {
       'reveal': '揭晓胜者...',
       'touchToContinue': '轻触任意位置继续',
       'overflowTitle': '人数超限',
-      'overflowHint': '最多支持 6 人参与\n请移开多余手指后重新开始',
+      'overflowHint': '本局游戏最多支持{max}人',
       'ok': '好的',
       'fair': '公平',
       'prank': '作弊',
       'prankActive': '作弊中',
       'edit': '编辑',
       'slideToSpin': '滑动旋转',
+      'spinWheelLiveLanding': '真实落点',
+      'spinWheelCheatLock': '作弊锁定',
+      'spinWheelFairHint': '减速后停哪就算哪，结果不会被改写。',
+      'spinWheelPrankWaitHint': '先正常转，减速后开始干预目标扇区。',
+      'spinWheelPrankPullHint': '作弊牵引中，结果正在被拽向锁定选项。',
+      'spinWheelPrankResultShifted': '真实落点是 {natural}，最终被拖向 {target}。',
       'spinWheelPrepTitle': '开转前先准备好',
       'spinWheelPrepHint': '把模板、模式和惩罚规则先设好，再开始这一轮命运转盘。',
       'spinWheelTemplateTitle': '转盘模板',
       'spinWheelModeTitle': '模式与选项',
       'spinWheelModeHelpTitle': '公平和作弊有什么区别？',
       'spinWheelModeHelpBody':
-          '公平模式会按转盘当前的真实停留结果结算。作弊模式会在结果揭晓前做一次偏置，更容易把结果改到你想恶作剧的方向，适合整蛊局使用。',
+          '公平模式会按转盘当前的真实停留结果结算。作弊模式会提前锁定一个目标，并在减速阶段明显把结果往目标扇区牵引，更适合整蛊局使用。',
       'spinWheelResultHeadline': '{template}结果',
       'spinWheelResultTypeLabel': '转盘类型',
       'spinWheelPlayerHintTitle': '默认最多 6 人',
@@ -222,6 +248,30 @@ class AppLocalizations {
       'presetWhoPays': '谁买单',
       'presetTruthDare': '真心话大冒险',
       'presetGames': '玩什么游戏',
+      'wheelPresetDinnerHotPot': '火锅',
+      'wheelPresetDinnerBbq': '烧烤',
+      'wheelPresetDinnerSushi': '寿司',
+      'wheelPresetDinnerSpicyHotPot': '麻辣烫',
+      'wheelPresetDinnerPizza': '披萨',
+      'wheelPresetDinnerTakeout': '外卖',
+      'wheelPresetWhoPaysPlayerA': '玩家A',
+      'wheelPresetWhoPaysPlayerB': '玩家B',
+      'wheelPresetWhoPaysPlayerC': '玩家C',
+      'wheelPresetWhoPaysPlayerD': '玩家D',
+      'wheelPresetWhoPaysBoss': '老板',
+      'wheelPresetTruthDareTruth': '真心话',
+      'wheelPresetTruthDareDare': '大冒险',
+      'wheelPresetTruthDareDoublePenalty': '双倍惩罚',
+      'wheelPresetGamesWerewolf': '狼人杀',
+      'wheelPresetGamesMurderMystery': '剧本杀',
+      'wheelPresetGamesEscapeRoom': '密室',
+      'wheelPresetGamesBoardGame': '桌游',
+      'wheelPresetGamesKaraoke': '唱K',
+      'wheelPresetGamesArcade': '电玩',
+      'wheelDefaultOption1': '选项 1',
+      'wheelDefaultOption2': '选项 2',
+      'wheelDefaultOption3': '选项 3',
+      'wheelDefaultOption4': '选项 4',
       'custom': '自定义',
 
       // Number Bomb
@@ -541,9 +591,10 @@ class AppLocalizations {
     },
     'en': {
       'appTitle': 'Finger Party',
+      'appSlogan': 'Make every party more fun',
       'settings': 'Settings',
       'settingsTitle': 'SETTINGS',
-      'appVersion': 'Finger Party v1.0',
+      'appVersion': 'Finger Party v1.1',
       'resultSummary': 'Result Summary',
       'penaltyGuideDefault': 'Apply the penalty based on current rules.',
       'penaltyGuideParty': 'Non-winning players perform the agreed penalty.',
@@ -630,7 +681,7 @@ class AppLocalizations {
       'fingerPickerDesc': 'Touch of fate',
       'fingerPrepTitle': 'Prepare round',
       'fingerPrepHint':
-          'Lock your rules and penalty settings first, then let everyone hold the screen for the draw.',
+          'Place fingers on the screen. The system randomly keeps {count} players and eliminates the rest. This device supports up to {max} players at once.',
       'fingerPrepIntroTitle': 'Game basics',
       'fingerPrepIntroHint': 'Round flow',
       'fingerPrepIntroBody':
@@ -698,10 +749,15 @@ class AppLocalizations {
       'gravityBalance': 'Gravity Balance',
       'gravityBalanceSub': 'GRAVITY BALANCE',
       'gravityBalanceDesc': 'Tilt to steer through sway and quakes',
-      'iapPriceFallback': '\$1',
+      'iapPriceFallback': '¥1',
+      'iapUnlockBadge': 'Unlock {price}',
       'iapPurchaseTitle': 'Unlock game',
       'iapPurchaseBody':
           '{game} requires purchase to play. Price: {price}. Once bought, it stays unlocked.',
+      'iapLockedHeroTitle': 'Permanent unlock for ¥1',
+      'iapPermanentPriceTag': '{price} permanent unlock',
+      'iapBenefitPermanentUnlock': 'One-time purchase',
+      'iapBenefitRestoreSupport': 'Restore on this device',
       'iapBuyNow': 'Buy now',
       'iapRestore': 'Restore purchases',
       'iapStoreUnavailable': 'Store is unavailable. Please try again later.',
@@ -729,6 +785,7 @@ class AppLocalizations {
       'langFollowSystem': 'System',
       'langChinese': '中文',
       'langEnglish': 'English',
+      'langJapanese': '日本語',
 
       'placeFingers': 'Place fingers',
       'placeFingersEn': 'PLACE FINGERS TO BEGIN',
@@ -745,9 +802,15 @@ class AppLocalizations {
       'victors': 'Winners × {count}',
       'again': 'Again',
       'add': '+ Add',
+      'addWheel': 'Add Wheel',
       'editWheel': 'Edit Wheel',
+      'createWheel': 'Create Wheel',
+      'saveWheel': 'Save Wheel',
       'addOption': 'Add Option',
       'editOption': 'Edit Option',
+      'wheelName': 'Wheel name',
+      'wheelNameHint': 'Name this wheel',
+      'wheelOptionsTitle': 'Wheel options',
       'optionName': 'Option name',
       'color': 'Color',
       'cancel': 'Cancel',
@@ -757,13 +820,22 @@ class AppLocalizations {
       'reveal': 'Revealing...',
       'touchToContinue': 'Tap to continue',
       'overflowTitle': 'Too many',
-      'overflowHint': 'Max 6 players\nRemove fingers to restart',
+      'overflowHint': 'This round supports up to {max} players',
       'ok': 'OK',
       'fair': 'Fair',
       'prank': 'Cheat',
       'prankActive': 'Cheat active',
       'edit': 'Edit',
       'slideToSpin': 'Slide to spin',
+      'spinWheelLiveLanding': 'True landing',
+      'spinWheelCheatLock': 'Cheat lock',
+      'spinWheelFairHint': 'Where it naturally slows down is the final result.',
+      'spinWheelPrankWaitHint':
+          'It spins normally first, then starts forcing the locked segment during slowdown.',
+      'spinWheelPrankPullHint':
+          'Cheat pull engaged. The result is being dragged toward the locked segment.',
+      'spinWheelPrankResultShifted':
+          'The true landing was {natural}, but it was dragged to {target}.',
       'spinWheelPrepTitle': 'Get ready before spinning',
       'spinWheelPrepHint':
           'Set the template, mode and penalties first, then kick off the wheel.',
@@ -771,7 +843,7 @@ class AppLocalizations {
       'spinWheelModeTitle': 'Mode and options',
       'spinWheelModeHelpTitle': 'What is the difference?',
       'spinWheelModeHelpBody':
-          'Fair mode settles on the wheel\'s true stopping result. Cheat mode applies a bias right before reveal, making it easier to push the outcome toward a more mischievous pick.',
+          'Fair mode settles on the wheel\'s true stopping result. Cheat mode locks a target early and visibly pulls the wheel toward that segment during slowdown.',
       'spinWheelResultHeadline': '{template} Result',
       'spinWheelResultTypeLabel': 'Wheel type',
       'spinWheelPlayerHintTitle': 'Best with up to 6 players',
@@ -784,6 +856,30 @@ class AppLocalizations {
       'presetWhoPays': 'Who Pays',
       'presetTruthDare': 'Truth or Dare',
       'presetGames': 'Games',
+      'wheelPresetDinnerHotPot': 'Hot Pot',
+      'wheelPresetDinnerBbq': 'BBQ',
+      'wheelPresetDinnerSushi': 'Sushi',
+      'wheelPresetDinnerSpicyHotPot': 'Spicy Hot Pot',
+      'wheelPresetDinnerPizza': 'Pizza',
+      'wheelPresetDinnerTakeout': 'Takeout',
+      'wheelPresetWhoPaysPlayerA': 'Player A',
+      'wheelPresetWhoPaysPlayerB': 'Player B',
+      'wheelPresetWhoPaysPlayerC': 'Player C',
+      'wheelPresetWhoPaysPlayerD': 'Player D',
+      'wheelPresetWhoPaysBoss': 'Boss',
+      'wheelPresetTruthDareTruth': 'Truth',
+      'wheelPresetTruthDareDare': 'Dare',
+      'wheelPresetTruthDareDoublePenalty': 'Double Penalty',
+      'wheelPresetGamesWerewolf': 'Werewolf',
+      'wheelPresetGamesMurderMystery': 'Murder Mystery',
+      'wheelPresetGamesEscapeRoom': 'Escape Room',
+      'wheelPresetGamesBoardGame': 'Board Game',
+      'wheelPresetGamesKaraoke': 'Karaoke',
+      'wheelPresetGamesArcade': 'Arcade',
+      'wheelDefaultOption1': 'Option 1',
+      'wheelDefaultOption2': 'Option 2',
+      'wheelDefaultOption3': 'Option 3',
+      'wheelDefaultOption4': 'Option 4',
       'custom': 'Custom',
 
       'numberBombTitle': 'Number Bomb',
@@ -1137,6 +1233,7 @@ class AppLocalizations {
       'helpGravityBalanceBody':
           'Tilt your phone to move the liquid ball with gravity.\nStay inside the Bezier lane or a 0.3s red warning buffer starts.\nAfter 50% progress, the path sways left-right at 0.5Hz.\nRandom heavy quake shocks require strong counter-tilt to survive.',
     },
+    'ja': jaLocalizations,
   };
 
   String _t(String key) =>
@@ -1156,6 +1253,7 @@ class AppLocalizations {
 
   // Getters for type-safe access
   String get appTitle => _t('appTitle');
+  String get appSlogan => _t('appSlogan');
   String get settings => _t('settings');
   String get settingsTitle => _t('settingsTitle');
   String get appVersion => _t('appVersion');
@@ -1186,6 +1284,7 @@ class AppLocalizations {
   String get langFollowSystem => _t('langFollowSystem');
   String get langChinese => _t('langChinese');
   String get langEnglish => _t('langEnglish');
+  String get langJapanese => _t('langJapanese');
   String get placeFingers => _t('placeFingers');
   String get placeFingersEn => _t('placeFingersEn');
   String get waitingMore => _t('waitingMore');
@@ -1199,9 +1298,15 @@ class AppLocalizations {
   String get victor => _t('victor');
   String get again => _t('again');
   String get add => _t('add');
+  String get addWheel => _t('addWheel');
   String get editWheel => _t('editWheel');
+  String get createWheel => _t('createWheel');
+  String get saveWheel => _t('saveWheel');
   String get addOption => _t('addOption');
   String get editOption => _t('editOption');
+  String get wheelName => _t('wheelName');
+  String get wheelNameHint => _t('wheelNameHint');
+  String get wheelOptionsTitle => _t('wheelOptionsTitle');
   String get optionName => _t('optionName');
   String get color => _t('color');
   String get cancel => _t('cancel');
@@ -1246,12 +1351,16 @@ class AppLocalizations {
 
   String presetDisplayName(String name) {
     switch (name) {
+      case 'preset_dinner':
       case '今晚吃啥':
         return _t('presetDinner');
+      case 'preset_who_pays':
       case '谁买单':
         return _t('presetWhoPays');
+      case 'preset_truth_dare':
       case '真心话大冒险':
         return _t('presetTruthDare');
+      case 'preset_games':
       case '玩什么游戏':
         return _t('presetGames');
       case '自定义':
@@ -1289,7 +1398,8 @@ class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const AppLocalizationsDelegate();
 
   @override
-  bool isSupported(Locale locale) => ['zh', 'en'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => AppLocalizations.supportedLocales
+      .any((item) => item.languageCode == locale.languageCode);
 
   @override
   Future<AppLocalizations> load(Locale locale) async =>

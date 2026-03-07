@@ -48,14 +48,43 @@ void main() {
       expect(state.fingers[1]?.neonColor != state.fingers[2]?.neonColor, true);
     });
 
-    test('adding more than max players triggers overflow reset', () {
+    test('sixth finger can join without resetting the round', () {
+      notifier.startGame();
+      for (int i = 1; i <= 6; i++) {
+        notifier.addFinger(i, Offset(i * 20.0, 100));
+      }
+
+      final state = container.read(fingerPickerProvider);
+      expect(state.fingers.length, 6);
+      expect(state.fingers.containsKey(6), isTrue);
+      expect(state.phase, PickerPhase.waiting);
+      expect(state.showOverflowAlert, isFalse);
+    });
+
+    test('iphone limit keeps only five fingers and shows overflow notice', () {
+      notifier.configureMaxPlayers(kIPhoneMaxFingerPlayers);
+      notifier.startGame();
+      for (int i = 1; i <= 6; i++) {
+        notifier.addFinger(i, Offset(i * 20.0, 100));
+      }
+
+      final state = container.read(fingerPickerProvider);
+      expect(state.maxPlayers, kIPhoneMaxFingerPlayers);
+      expect(state.fingers.length, kIPhoneMaxFingerPlayers);
+      expect(state.fingers.containsKey(6), isFalse);
+      expect(state.showOverflowAlert, isTrue);
+    });
+
+    test('adding more than max players ignores extra finger and shows notice',
+        () {
       notifier.startGame();
       for (int i = 1; i <= kMaxFingerPlayers + 1; i++) {
         notifier.addFinger(i, Offset(i * 20.0, 100));
       }
       final state = container.read(fingerPickerProvider);
       expect(state.showOverflowAlert, true);
-      expect(state.fingers, isEmpty);
+      expect(state.fingers.length, kMaxFingerPlayers);
+      expect(state.fingers.containsKey(kMaxFingerPlayers + 1), false);
     });
 
     test('removeFinger in waiting phase removes it cleanly', () {
@@ -121,6 +150,39 @@ void main() {
           localContainer.read(fingerPickerProvider).phase,
           PickerPhase.countdown,
         );
+
+        subscription.close();
+        localContainer.dispose();
+      });
+    });
+
+    test('overflow does not interrupt locked game state', () {
+      fakeAsync((async) {
+        final localContainer = ProviderContainer();
+        final subscription = localContainer.listen<FingerPickerState>(
+          fingerPickerProvider,
+          (_, __) {},
+        );
+        final localNotifier =
+            localContainer.read(fingerPickerProvider.notifier);
+
+        localNotifier.startGame();
+        for (int i = 1; i <= kMaxFingerPlayers; i++) {
+          localNotifier.addFinger(i, Offset(i * 30.0, 120));
+        }
+
+        async.elapse(const Duration(milliseconds: 1500));
+        expect(
+          localContainer.read(fingerPickerProvider).phase,
+          PickerPhase.locked,
+        );
+
+        localNotifier.addFinger(99, const Offset(400, 400));
+        final state = localContainer.read(fingerPickerProvider);
+        expect(state.phase, PickerPhase.locked);
+        expect(state.fingers.length, kMaxFingerPlayers);
+        expect(state.fingers.containsKey(99), false);
+        expect(state.showOverflowAlert, true);
 
         subscription.close();
         localContainer.dispose();

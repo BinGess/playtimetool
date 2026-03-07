@@ -9,15 +9,15 @@ class GameResultTemplateCard extends StatelessWidget {
     required this.accentColor,
     required this.resultTitle,
     required this.resultText,
-    required this.penaltyTitle,
-    required this.penaltyText,
+    this.penaltyTitle,
+    this.penaltyText,
   });
 
   final Color accentColor;
   final String resultTitle;
   final String resultText;
-  final String penaltyTitle;
-  final String penaltyText;
+  final String? penaltyTitle;
+  final String? penaltyText;
 
   @override
   Widget build(BuildContext context) {
@@ -53,21 +53,23 @@ class GameResultTemplateCard extends StatelessWidget {
               height: 1.35,
             ),
           ),
-          const SizedBox(height: 16),
-          Divider(color: AppColors.glassBorder.withAlpha(180), height: 1),
-          const SizedBox(height: 12),
-          Text(
-            penaltyTitle,
-            style: GameUiText.eyebrow.copyWith(fontSize: 11),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            penaltyText,
-            style: GameUiText.body.copyWith(
-              color: AppColors.textPrimary,
-              fontSize: 15,
+          if (penaltyTitle != null && penaltyText != null) ...[
+            const SizedBox(height: 16),
+            Divider(color: AppColors.glassBorder.withAlpha(180), height: 1),
+            const SizedBox(height: 12),
+            Text(
+              penaltyTitle!,
+              style: GameUiText.eyebrow.copyWith(fontSize: 11),
             ),
-          ),
+            const SizedBox(height: 8),
+            Text(
+              penaltyText!,
+              style: GameUiText.body.copyWith(
+                color: AppColors.textPrimary,
+                fontSize: 15,
+              ),
+            ),
+          ],
         ],
       ),
     );

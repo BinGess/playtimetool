@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:playtimetool/core/haptics/haptic_service.dart';
 import 'package:playtimetool/features/decibel_bomb/decibel_bomb_screen.dart';
 import 'package:playtimetool/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,9 +19,11 @@ void main() {
     SharedPreferences.setMockInitialValues(const {
       'game_help_seen_decibel_bomb': true,
     });
+    HapticService.setEnabled(false);
   });
 
   tearDown(() {
+    HapticService.setEnabled(true);
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(permissionChannel, null);
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -98,11 +101,21 @@ void main() {
 
     expect(find.byKey(const Key('decibel-bomb-scream-button')), findsOneWidget);
     expect(find.byKey(const Key('decibel-bomb-next-button')), findsNothing);
+    expect(
+      find.byKey(const Key('decibel-bomb-scream-active-ring')),
+      findsNothing,
+    );
 
     final gesture = await tester.startGesture(
       tester.getCenter(find.byKey(const Key('decibel-bomb-scream-button'))),
     );
     await tester.pump(const Duration(milliseconds: 100));
+
+    expect(
+      find.byKey(const Key('decibel-bomb-scream-active-ring')),
+      findsOneWidget,
+    );
+
     await gesture.up();
     await tester.pump();
 

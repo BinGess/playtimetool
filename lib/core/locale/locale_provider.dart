@@ -8,6 +8,7 @@ const _keyLocale = 'locale';
 /// - null: 跟随系统
 /// - Locale('zh'): 中文
 /// - Locale('en'): 英文
+/// - Locale('ja'): 日语
 class LocaleNotifier extends StateNotifier<Locale?> {
   LocaleNotifier() : super(null) {
     _load();
@@ -36,6 +37,7 @@ class LocaleNotifier extends StateNotifier<Locale?> {
   void followSystem() => setLocale(null);
   void setChinese() => setLocale(const Locale('zh'));
   void setEnglish() => setLocale(const Locale('en'));
+  void setJapanese() => setLocale(const Locale('ja'));
 }
 
 final localeProvider = StateNotifierProvider<LocaleNotifier, Locale?>(
@@ -48,6 +50,7 @@ Locale localeResolver(Locale? override, List<Locale> systemLocales) {
   for (final l in systemLocales) {
     if (l.languageCode == 'zh') return const Locale('zh');
     if (l.languageCode == 'en') return const Locale('en');
+    if (l.languageCode == 'ja') return const Locale('ja');
   }
   return const Locale('en');
 }

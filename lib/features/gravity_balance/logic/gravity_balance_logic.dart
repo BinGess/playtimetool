@@ -315,7 +315,7 @@ bool isBallCapturedByHole({
   required double ballRadius,
   required double holeRadius,
   required double centerDistance,
-  double requiredBallOverlapRatio = 0.5,
+  double requiredBallOverlapRatio = 0.35,
 }) {
   return ballHoleOverlapRatio(
         ballRadius: ballRadius,

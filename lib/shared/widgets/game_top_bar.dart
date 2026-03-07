@@ -9,25 +9,35 @@ class GameTopBar extends StatelessWidget {
     this.onBack,
     this.trailing,
     this.accentColor = Colors.white,
+    this.leadingWidth = 44,
+    this.trailingWidth = 44,
   });
 
   final String title;
   final VoidCallback? onBack;
   final Widget? trailing;
   final Color accentColor;
+  final double leadingWidth;
+  final double trailingWidth;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        if (onBack != null)
-          GameIconButton(
-            icon: Icons.arrow_back_ios_new_rounded,
-            onPressed: onBack!,
-            accentColor: accentColor,
-          )
-        else
-          const SizedBox(width: 44, height: 44),
+        SizedBox(
+          width: leadingWidth,
+          height: 44,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: onBack != null
+                ? GameIconButton(
+                    icon: Icons.arrow_back_ios_new_rounded,
+                    onPressed: onBack!,
+                    accentColor: accentColor,
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ),
         Expanded(
           child: Text(
             title,
@@ -36,9 +46,12 @@ class GameTopBar extends StatelessWidget {
           ),
         ),
         SizedBox(
-          width: 44,
+          width: trailingWidth,
           height: 44,
-          child: trailing ?? const SizedBox.shrink(),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: trailing ?? const SizedBox.shrink(),
+          ),
         ),
       ],
     );

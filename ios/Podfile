@@ -1,5 +1,5 @@
 # Uncomment this line to define a global platform for your project
-# platform :ios, '13.0'
+platform :ios, '13.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -31,6 +31,16 @@ target 'Runner' do
   use_frameworks!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+
+  # Fix audio_streamer: Flutter regenerates GeneratedPluginRegistrant.m during
+  # every Xcode build with the wrong header name (SwiftAudioStreamerPlugin.h).
+  # This script phase runs before compilation to patch it to the correct
+  # Swift-generated header (audio_streamer-Swift.h), fixing the
+  # "Module 'audio_streamer' not found" error in Xcode Archive builds.
+  script_phase :name => 'Fix audio_streamer header',
+               :script => 'sed -i "" "s/SwiftAudioStreamerPlugin\\.h/audio_streamer-Swift.h/g" "${SRCROOT}/Runner/GeneratedPluginRegistrant.m"',
+               :execution_position => :before_compile
+
   target 'RunnerTests' do
     inherit! :search_paths
   end
@@ -40,15 +50,55 @@ post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
 
-    next unless target.name == 'permission_handler_apple'
-
     target.build_configurations.each do |config|
+      if target.name == 'audio_streamer'
+        # audio_streamer still pins simulator builds to Intel-only x86_64.
+        # Removing it allows Apple Silicon simulators to build the pod module.
+        config.build_settings.delete('VALID_ARCHS')
+      end
+
+      next unless target.name == 'permission_handler_apple'
+
       definitions = config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] || [
         '$(inherited)',
       ]
       definitions = [definitions] unless definitions.is_a?(Array)
       definitions << 'PERMISSION_MICROPHONE=1' unless definitions.include?('PERMISSION_MICROPHONE=1')
       config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] = definitions
+    end
+  end
+
+  Dir.glob(File.join(__dir__, 'Pods', 'Target Support Files', 'audio_streamer', 'audio_streamer.*.xcconfig')).each do |file|
+    content = File.read(file)
+    next unless content.include?('VALID_ARCHS[sdk=iphonesimulator*] = x86_64')
+
+    File.write(
+      file,
+      content.gsub("VALID_ARCHS[sdk=iphonesimulator*] = x86_64\n", ''),
+    )
+  end
+
+  # Fix audio_streamer: Flutter generates wrong header path (SwiftAudioStreamerPlugin.h).
+  # Swift pods use ModuleName-Swift.h. Patch so @import fallback is avoided.
+  registrant = File.join(__dir__, 'Runner', 'GeneratedPluginRegistrant.m')
+  if File.exist?(registrant)
+    content = File.read(registrant)
+    old_block = <<~OBJ
+      #if __has_include(<audio_streamer/SwiftAudioStreamerPlugin.h>)
+      #import <audio_streamer/SwiftAudioStreamerPlugin.h>
+      #else
+      @import audio_streamer;
+      #endif
+    OBJ
+    new_block = <<~OBJ
+      #if __has_include(<audio_streamer/audio_streamer-Swift.h>)
+      #import <audio_streamer/audio_streamer-Swift.h>
+      #else
+      @import audio_streamer;
+      #endif
+    OBJ
+    if content.include?(old_block.strip)
+      File.write(registrant, content.sub(old_block.strip, new_block.strip))
     end
   end
 end

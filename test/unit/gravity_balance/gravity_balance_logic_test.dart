@@ -244,20 +244,32 @@ void main() {
     );
   });
 
-  test('ball is not captured when overlap stays below half of ball area', () {
-    expect(
-      ballHoleOverlapRatio(
-        ballRadius: 18,
-        holeRadius: 23,
-        centerDistance: 20.6,
-      ),
-      lessThan(0.5),
+  test('default hole capture accepts partial overlap before half coverage', () {
+    final ratio = ballHoleOverlapRatio(
+      ballRadius: 18,
+      holeRadius: 23,
+      centerDistance: 20.6,
     );
+
+    expect(ratio, lessThan(0.5));
+    expect(ratio, greaterThan(0.35));
     expect(
       isBallCapturedByHole(
         ballRadius: 18,
         holeRadius: 23,
         centerDistance: 20.6,
+      ),
+      isTrue,
+    );
+  });
+
+  test('hole capture still fails when overlap is too shallow', () {
+    expect(
+      isBallCapturedByHole(
+        ballRadius: 18,
+        holeRadius: 23,
+        centerDistance: 41.1,
+        requiredBallOverlapRatio: 0.35,
       ),
       isFalse,
     );

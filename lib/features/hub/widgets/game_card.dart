@@ -1,7 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/constants/app_colors.dart';
 import '../../../core/haptics/haptic_service.dart';
 import '../../../shared/styles/game_ui_style.dart';
 
@@ -9,8 +8,6 @@ class GameCard extends StatefulWidget {
   const GameCard({
     super.key,
     required this.title,
-    required this.subtitle,
-    required this.description,
     required this.accentColor,
     required this.route,
     required this.icon,
@@ -20,8 +17,6 @@ class GameCard extends StatefulWidget {
   });
 
   final String title;
-  final String subtitle;
-  final String description;
   final Color accentColor;
   final String route;
   final IconData icon;
@@ -163,27 +158,6 @@ class _GameCardState extends State<GameCard>
                           ),
                         ),
                         const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 5,
-                          ),
-                          decoration: GameUiSurface.chip(
-                            accentColor: widget.accentColor,
-                          ),
-                          child: Text(
-                            widget.subtitle,
-                            style: TextStyle(
-                              color: widget.accentColor,
-                              fontSize: 9,
-                              letterSpacing: 1.4,
-                              fontWeight: FontWeight.w700,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
                         Text(
                           widget.title,
                           style: TextStyle(
@@ -198,38 +172,13 @@ class _GameCardState extends State<GameCard>
                               ),
                             ],
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          widget.description,
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 11.5,
-                            height: 1.4,
-                          ),
-                          maxLines: 3,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const Spacer(),
                         Row(
                           children: [
-                            Expanded(
-                              child: Text(
-                                widget.locked
-                                    ? (widget.lockBadgeText ?? widget.subtitle)
-                                    : widget.subtitle,
-                                style: TextStyle(
-                                  color: Colors.white.withAlpha(150),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 1.2,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
+                            const Spacer(),
                             Container(
                               width: 34,
                               height: 34,

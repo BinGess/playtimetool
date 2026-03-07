@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'dart:math';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +22,43 @@ class SpinWheelScreen extends ConsumerStatefulWidget {
 
   @override
   ConsumerState<SpinWheelScreen> createState() => _SpinWheelScreenState();
+}
+
+String _localizedWheelName(AppLocalizations l10n, WheelConfig config) {
+  final key = config.nameLocalizationKey;
+  if (key != null && key.isNotEmpty) {
+    return l10n.t(key);
+  }
+  return l10n.presetDisplayName(config.name);
+}
+
+String _localizedWheelSegmentLabel(
+    AppLocalizations l10n, WheelSegment segment) {
+  final key = segment.labelLocalizationKey;
+  if (key != null && key.isNotEmpty) {
+    return l10n.t(key);
+  }
+  return segment.label;
+}
+
+WheelConfig _editableWheelConfig(AppLocalizations l10n, WheelConfig config) {
+  if (!config.isBuiltIn) {
+    return config;
+  }
+  return WheelConfig(
+    id: config.id,
+    name: _localizedWheelName(l10n, config),
+    isPrankMode: config.isPrankMode,
+    segments: config.segments
+        .map(
+          (segment) => WheelSegment(
+            label: _localizedWheelSegmentLabel(l10n, segment),
+            color: segment.color,
+            weight: segment.weight,
+          ),
+        )
+        .toList(growable: false),
+  );
 }
 
 class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
@@ -151,6 +189,8 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
                         l10n: l10n,
                         state: state,
                         notifier: notifier,
+                        onAddWheel: () =>
+                            _showCreateSheet(context, state, notifier),
                         onEditWheel: () =>
                             _showEditorSheet(context, state, notifier),
                       ),
@@ -207,8 +247,15 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
           if (state.phase == SpinPhase.result && state.resultSegment != null)
             _ResultOverlay(
               l10n: l10n,
-              wheelTitle: l10n.presetDisplayName(state.config.name),
+              wheelTitle: _localizedWheelName(l10n, state.config),
               segment: state.resultSegment!,
+              naturalOptionLabel: state.naturalResultIndex == null
+                  ? null
+                  : _localizedWheelSegmentLabel(
+                      l10n,
+                      state.config.segments[state.naturalResultIndex!],
+                    ),
+              isPrankMode: state.config.isPrankMode,
               animation: _resultAnim,
               onDismiss: () => _dismissResult(notifier),
             ),
@@ -274,8 +321,28 @@ class _SpinWheelScreenState extends ConsumerState<SpinWheelScreen>
       backgroundColor: Colors.transparent,
       builder: (_) => _WheelEditorSheet(
         l10n: l10n,
-        config: state.config,
-        notifier: notifier,
+        initialConfig: _editableWheelConfig(l10n, state.config),
+        mode: _WheelEditorMode.edit,
+        onSave: (template) => notifier.saveTemplate(
+          template,
+          originalTemplateId: state.config.id,
+        ),
+      ),
+    );
+  }
+
+  void _showCreateSheet(
+      BuildContext ctx, SpinWheelState state, SpinWheelNotifier notifier) {
+    final l10n = AppLocalizations.of(ctx);
+    showModalBottomSheet<void>(
+      context: ctx,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _WheelEditorSheet(
+        l10n: l10n,
+        initialConfig: _buildDraftWheelConfig(l10n, state.config.isPrankMode),
+        mode: _WheelEditorMode.create,
+        onSave: (template) => notifier.saveTemplate(template),
       ),
     );
   }
@@ -329,12 +396,14 @@ class _SpinWheelPrepView extends StatelessWidget {
     required this.l10n,
     required this.state,
     required this.notifier,
+    required this.onAddWheel,
     required this.onEditWheel,
   });
 
   final AppLocalizations l10n;
   final SpinWheelState state;
   final SpinWheelNotifier notifier;
+  final VoidCallback onAddWheel;
   final VoidCallback onEditWheel;
 
   @override
@@ -354,21 +423,48 @@ class _SpinWheelPrepView extends StatelessWidget {
                   notifier: notifier,
                 ),
                 const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: onEditWheel,
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.textDim),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: onAddWheel,
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(
+                            color: AppColors.wheelOrange.withAlpha(120),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          foregroundColor: AppColors.wheelOrange,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                        ),
+                        icon: const Icon(Icons.add_circle_outline, size: 18),
+                        label: Text(l10n.addWheel),
+                      ),
                     ),
-                    foregroundColor: AppColors.textSecondary,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: onEditWheel,
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.textDim),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          foregroundColor: AppColors.textSecondary,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                        ),
+                        icon: const Icon(Icons.edit_outlined, size: 18),
+                        label: Text(l10n.editWheel),
+                      ),
                     ),
-                  ),
-                  icon: const Icon(Icons.edit_outlined, size: 18),
-                  label: Text(l10n.editWheel),
+                  ],
                 ),
               ],
             ),
@@ -419,6 +515,35 @@ class _SpinWheelPlayView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localizedSegments = state.config.segments
+        .map(
+          (segment) => segment.copyWith(
+            label: _localizedWheelSegmentLabel(l10n, segment),
+          ),
+        )
+        .toList(growable: false);
+    final wheelName = _localizedWheelName(l10n, state.config);
+    final liveSegment = state.liveSegmentIndex == null
+        ? null
+        : localizedSegments[state.liveSegmentIndex!];
+    final prankTargetSegment = !state.config.isPrankMode
+        ? null
+        : (state.prankTargetIndex == null
+            ? liveSegment
+            : localizedSegments[state.prankTargetIndex!]);
+    final targetLockProgress = state.config.isPrankMode &&
+            prankTargetSegment != null &&
+            state.phase != SpinPhase.idle
+        ? 0.18 + state.prankBiasProgress * 0.82
+        : 0.0;
+    final pointerColor = state.config.isPrankMode && prankTargetSegment != null
+        ? Color.lerp(
+            AppColors.wheelOrange,
+            prankTargetSegment.color,
+            0.2 + state.prankBiasProgress * 0.8,
+          )
+        : AppColors.wheelOrange;
+
     return Column(
       children: [
         SizedBox(
@@ -432,12 +557,18 @@ class _SpinWheelPlayView extends StatelessWidget {
               builder: (_, __) => Center(
                 child: CustomPaint(
                   painter: WheelPainter(
-                    segments: state.config.segments,
+                    segments: localizedSegments,
                     totalWeight: state.config.totalWeight,
                     angle: state.angle,
                     accentColor: AppColors.wheelOrange,
                     glowIntensity: glowAnimation.value,
                     speed: state.angularVelocity.abs(),
+                    activeIndex: state.liveSegmentIndex,
+                    targetIndex: state.config.isPrankMode
+                        ? state.prankTargetIndex
+                        : null,
+                    targetLockProgress: targetLockProgress,
+                    pointerColor: pointerColor,
                   ),
                   size: Size(wheelSize, wheelSize),
                 ),
@@ -448,8 +579,8 @@ class _SpinWheelPlayView extends StatelessWidget {
         const SizedBox(height: 10),
         Text(
           state.config.isPrankMode
-              ? '${l10n.slideToSpin}  •  ${l10n.presetDisplayName(state.config.name)}  •  ${l10n.prankActive}'
-              : '${l10n.slideToSpin}  •  ${l10n.presetDisplayName(state.config.name)}',
+              ? '${l10n.slideToSpin}  •  $wheelName  •  ${l10n.prankActive}'
+              : '${l10n.slideToSpin}  •  $wheelName',
           textAlign: TextAlign.center,
           style: TextStyle(
             color: state.config.isPrankMode
@@ -457,6 +588,155 @@ class _SpinWheelPlayView extends StatelessWidget {
                 : AppColors.textDim,
             fontSize: 11,
             letterSpacing: 1,
+          ),
+        ),
+        const SizedBox(height: 12),
+        _SpinModeTelemetryCard(
+          l10n: l10n,
+          phase: state.phase,
+          isPrankMode: state.config.isPrankMode,
+          liveSegment: liveSegment,
+          prankTargetSegment: prankTargetSegment,
+          biasProgress: state.prankBiasProgress,
+        ),
+      ],
+    );
+  }
+}
+
+class _SpinModeTelemetryCard extends StatelessWidget {
+  const _SpinModeTelemetryCard({
+    required this.l10n,
+    required this.phase,
+    required this.isPrankMode,
+    required this.liveSegment,
+    required this.prankTargetSegment,
+    required this.biasProgress,
+  });
+
+  final AppLocalizations l10n;
+  final SpinPhase phase;
+  final bool isPrankMode;
+  final WheelSegment? liveSegment;
+  final WheelSegment? prankTargetSegment;
+  final double biasProgress;
+
+  @override
+  Widget build(BuildContext context) {
+    final isPulling = phase == SpinPhase.spinning && biasProgress > 0.18;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.black.withAlpha(72),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color:
+              isPrankMode ? AppColors.bombRed.withAlpha(120) : Colors.white24,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _ModeSignalRow(
+            title: l10n.t('spinWheelLiveLanding'),
+            segment: liveSegment,
+            accentColor: Colors.white,
+            emphasized: !isPrankMode,
+          ),
+          if (isPrankMode) ...[
+            const SizedBox(height: 10),
+            _ModeSignalRow(
+              title: l10n.t('spinWheelCheatLock'),
+              segment: prankTargetSegment,
+              accentColor: AppColors.bombRed,
+              emphasized: isPulling,
+            ),
+          ],
+          const SizedBox(height: 10),
+          Text(
+            isPrankMode
+                ? (isPulling
+                    ? l10n.t('spinWheelPrankPullHint')
+                    : l10n.t('spinWheelPrankWaitHint'))
+                : l10n.t('spinWheelFairHint'),
+            style: TextStyle(
+              color: isPrankMode
+                  ? AppColors.bombRed.withAlpha(isPulling ? 220 : 170)
+                  : AppColors.textSecondary,
+              fontSize: 12,
+              height: 1.35,
+              letterSpacing: 0.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ModeSignalRow extends StatelessWidget {
+  const _ModeSignalRow({
+    required this.title,
+    required this.segment,
+    required this.accentColor,
+    required this.emphasized,
+  });
+
+  final String title;
+  final WheelSegment? segment;
+  final Color accentColor;
+  final bool emphasized;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 74,
+          child: Text(
+            title,
+            style: TextStyle(
+              color: accentColor.withAlpha(emphasized ? 220 : 170),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.6,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              color: (segment?.color ?? Colors.white).withAlpha(24),
+              border: Border.all(
+                color: (segment?.color ?? Colors.white).withAlpha(
+                  emphasized ? 180 : 120,
+                ),
+              ),
+              boxShadow: [
+                if (emphasized && segment != null)
+                  BoxShadow(
+                    color: segment!.color.withAlpha(70),
+                    blurRadius: 12,
+                    spreadRadius: 1,
+                  ),
+              ],
+            ),
+            child: Text(
+              segment?.label ?? '--',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GameUiText.bodyStrong.copyWith(
+                color: Colors.white,
+                fontSize: 15,
+              ),
+            ),
           ),
         ),
       ],
@@ -560,45 +840,26 @@ class _PresetSelectorBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 52,
+      height: 64,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: WheelPresets.all.length,
+        itemCount: state.templates.length,
         itemBuilder: (_, i) {
-          final preset = WheelPresets.all[i];
-          final active = state.config.name == preset.name;
-          return GestureDetector(
+          final preset = state.templates[i];
+          final active = state.selectedTemplateId == preset.id;
+          return _TemplateChip(
+            key: ValueKey('template-chip-${preset.id}'),
+            label: _localizedWheelName(l10n, preset),
+            active: active,
+            canDelete: !preset.isBuiltIn,
             onTap: () {
               notifier.loadConfig(preset);
               HapticService.lightImpact();
             },
-            child: Container(
-              margin: const EdgeInsets.only(right: 10),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: active ? AppColors.wheelOrange : AppColors.textDim,
-                  width: active ? 1.5 : 1,
-                ),
-                color: active
-                    ? AppColors.wheelOrange.withAlpha(20)
-                    : Colors.transparent,
-              ),
-              child: Center(
-                child: Text(
-                  l10n.presetDisplayName(preset.name),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: active
-                        ? AppColors.wheelOrange
-                        : AppColors.textSecondary,
-                    fontSize: 14,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
-            ),
+            onDelete: () async {
+              await notifier.deleteTemplate(preset.id);
+              HapticService.mediumImpact();
+            },
           );
         },
       ),
@@ -606,49 +867,219 @@ class _PresetSelectorBar extends StatelessWidget {
   }
 }
 
+class _TemplateChip extends StatefulWidget {
+  const _TemplateChip({
+    super.key,
+    required this.label,
+    required this.active,
+    required this.canDelete,
+    required this.onTap,
+    required this.onDelete,
+  });
+
+  final String label;
+  final bool active;
+  final bool canDelete;
+  final VoidCallback onTap;
+  final Future<void> Function() onDelete;
+
+  @override
+  State<_TemplateChip> createState() => _TemplateChipState();
+}
+
+class _TemplateChipState extends State<_TemplateChip> {
+  bool _showDeleteButton = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return RawGestureDetector(
+      behavior: HitTestBehavior.opaque,
+      gestures: {
+        if (widget.canDelete)
+          LongPressGestureRecognizer:
+              GestureRecognizerFactoryWithHandlers<LongPressGestureRecognizer>(
+            () => LongPressGestureRecognizer(
+              duration: const Duration(seconds: 2),
+            ),
+            (instance) {
+              instance.onLongPress = () {
+                if (!mounted) return;
+                setState(() => _showDeleteButton = true);
+                HapticService.mediumImpact();
+              };
+            },
+          ),
+      },
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          if (_showDeleteButton) {
+            setState(() => _showDeleteButton = false);
+            return;
+          }
+          widget.onTap();
+        },
+        child: Padding(
+          padding: const EdgeInsets.only(right: 10, top: 6),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 6, right: 6),
+                child: Container(
+                  key: Key('template-chip-surface-${widget.label}'),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: widget.active
+                          ? AppColors.wheelOrange
+                          : AppColors.textDim,
+                      width: widget.active ? 1.5 : 1,
+                    ),
+                    color: widget.active
+                        ? AppColors.wheelOrange.withAlpha(20)
+                        : Colors.transparent,
+                  ),
+                  child: Center(
+                    child: Text(
+                      widget.label,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: widget.active
+                            ? AppColors.wheelOrange
+                            : AppColors.textSecondary,
+                        fontSize: 14,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              if (_showDeleteButton && widget.canDelete)
+                Positioned(
+                  key: Key('delete-template-${widget.label}'),
+                  top: 0,
+                  right: 0,
+                  child: GestureDetector(
+                    onTap: () async {
+                      await widget.onDelete();
+                    },
+                    child: Container(
+                      width: 24,
+                      height: 24,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFE5484D),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.remove,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ─────────────────────────── Editor bottom sheet ───────────────────────────
 
-class _WheelEditorSheet extends ConsumerStatefulWidget {
+enum _WheelEditorMode { create, edit }
+
+WheelConfig _buildDraftWheelConfig(
+  AppLocalizations l10n,
+  bool isPrankMode,
+) {
+  return WheelConfig(
+    id: 'draft_wheel',
+    name: '',
+    isPrankMode: isPrankMode,
+    segments: [
+      WheelSegment(
+          label: l10n.t('wheelDefaultOption1'), color: const Color(0xFFF43F5E)),
+      WheelSegment(
+          label: l10n.t('wheelDefaultOption2'), color: const Color(0xFF00D4FF)),
+      WheelSegment(
+          label: l10n.t('wheelDefaultOption3'), color: const Color(0xFFFF8C00)),
+      WheelSegment(
+          label: l10n.t('wheelDefaultOption4'), color: const Color(0xFF00FF88)),
+    ],
+  );
+}
+
+class _WheelEditorSheet extends StatefulWidget {
   const _WheelEditorSheet({
     required this.l10n,
-    required this.config,
-    required this.notifier,
+    required this.initialConfig,
+    required this.mode,
+    required this.onSave,
   });
 
   final AppLocalizations l10n;
-  final WheelConfig config;
-  final SpinWheelNotifier notifier;
+  final WheelConfig initialConfig;
+  final _WheelEditorMode mode;
+  final Future<void> Function(WheelConfig template) onSave;
 
   @override
-  ConsumerState<_WheelEditorSheet> createState() => _WheelEditorSheetState();
+  State<_WheelEditorSheet> createState() => _WheelEditorSheetState();
 }
 
-class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
-  // Gaming palette: vibrant, distinct, good contrast for white text
-  // Based on ui-ux-pro-max design system (Retro-Futurism, neon glow)
+class _WheelEditorSheetState extends State<_WheelEditorSheet> {
   static const _paletteColors = [
-    Color(0xFFF43F5E), // Rose (gaming CTA)
-    Color(0xFF7C3AED), // Purple (gaming primary)
-    Color(0xFF00D4FF), // Cyan
-    Color(0xFF00FF88), // Lime
-    Color(0xFFFFE135), // Bright yellow
-    Color(0xFFFF8C00), // Amber
-    Color(0xFFFF6B35), // Orange
-    Color(0xFF9B00FF), // Violet
-    Color(0xFFFF44B8), // Pink
-    Color(0xFF00A8FF), // Azure
-    Color(0xFFFFFFFF), // White
+    Color(0xFFF43F5E),
+    Color(0xFF7C3AED),
+    Color(0xFF00D4FF),
+    Color(0xFF00FF88),
+    Color(0xFFFFE135),
+    Color(0xFFFF8C00),
+    Color(0xFFFF6B35),
+    Color(0xFF9B00FF),
+    Color(0xFFFF44B8),
+    Color(0xFF00A8FF),
+    Color(0xFFFFFFFF),
   ];
+
+  late final TextEditingController _templateNameController;
+  late List<WheelSegment> _segments;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _templateNameController =
+        TextEditingController(text: widget.initialConfig.name)
+          ..addListener(() => setState(() {}));
+    _segments = widget.initialConfig.segments
+        .map((segment) => segment.copyWith())
+        .toList();
+  }
+
+  @override
+  void dispose() {
+    _templateNameController.dispose();
+    super.dispose();
+  }
+
+  bool get _canSubmit {
+    return _templateNameController.text.trim().isNotEmpty &&
+        _segments.length >= 2 &&
+        _segments.every((segment) => segment.label.trim().isNotEmpty);
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = widget.l10n;
-    // Watch live state for real-time segment list updates
-    final liveSegments = ref.watch(spinWheelProvider).config.segments;
 
     return DraggableScrollableSheet(
-      initialChildSize: 0.65,
-      minChildSize: 0.4,
+      initialChildSize: 0.78,
+      minChildSize: 0.45,
       maxChildSize: 0.92,
       builder: (_, scrollCtrl) => Container(
         decoration: BoxDecoration(
@@ -660,7 +1091,6 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
         ),
         child: Column(
           children: [
-            // Handle
             Container(
               margin: const EdgeInsets.only(top: 12, bottom: 8),
               width: 40,
@@ -670,35 +1100,27 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            // Title row
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
               child: Row(
                 children: [
                   Text(
-                    l10n.editWheel,
+                    widget.mode == _WheelEditorMode.create
+                        ? l10n.addWheel
+                        : l10n.editWheel,
                     style: GameUiText.navTitle,
                   ),
                   const Spacer(),
-                  GestureDetector(
-                    onTap: () {
-                      _addSegmentDialog(context);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        color: AppColors.wheelOrange.withAlpha(30),
-                        border: Border.all(
-                          color: AppColors.wheelOrange.withAlpha(150),
-                        ),
-                      ),
-                      child: Text(
-                        l10n.add,
-                        style: GameUiText.body.copyWith(
-                          color: AppColors.wheelOrange,
-                        ),
+                  TextButton(
+                    onPressed: _canSubmit && !_isSaving ? _submit : null,
+                    child: Text(
+                      widget.mode == _WheelEditorMode.create
+                          ? l10n.createWheel
+                          : l10n.saveWheel,
+                      style: TextStyle(
+                        color: _canSubmit
+                            ? AppColors.wheelOrange
+                            : AppColors.textDim,
                       ),
                     ),
                   ),
@@ -706,22 +1128,95 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
               ),
             ),
             const Divider(color: Color(0xFF222222), height: 1),
-            // Segment list (reorderable)
             Expanded(
               child: ReorderableListView.builder(
                 scrollController: scrollCtrl,
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                itemCount: liveSegments.length,
-                onReorder: widget.notifier.reorderSegments,
+                padding: const EdgeInsets.only(top: 8, bottom: 20),
+                header: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.wheelName,
+                        style: GameUiText.body.copyWith(
+                          color: AppColors.textSecondary,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        key: const Key('wheelTemplateNameField'),
+                        controller: _templateNameController,
+                        maxLength: 16,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          height: 1.4,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: l10n.wheelNameHint,
+                          hintStyle: const TextStyle(color: AppColors.textDim),
+                          counterStyle:
+                              const TextStyle(color: AppColors.textDim),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: const BorderSide(
+                              color: Color(0x33FFFFFF),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(
+                              color: AppColors.wheelOrange.withAlpha(160),
+                            ),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white.withAlpha(10),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              l10n.wheelOptionsTitle,
+                              style: GameUiText.bodyStrong.copyWith(
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                          TextButton.icon(
+                            onPressed: () => _addSegmentDialog(context),
+                            icon: const Icon(
+                              Icons.add_circle_outline,
+                              size: 18,
+                              color: AppColors.wheelOrange,
+                            ),
+                            label: Text(
+                              l10n.addOption,
+                              style: const TextStyle(
+                                color: AppColors.wheelOrange,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                itemCount: _segments.length,
+                onReorder: _reorderSegments,
                 itemBuilder: (_, i) {
-                  final seg = liveSegments[i];
+                  final seg = _segments[i];
                   return _SegmentTile(
                     key: ValueKey('$i-${seg.label}'),
                     segment: seg,
                     index: i,
-                    canDelete: liveSegments.length > 2,
+                    canDelete: _segments.length > 2,
                     onEdit: () => _editSegmentDialog(context, i, seg),
-                    onDelete: () => widget.notifier.removeSegment(i),
+                    onDelete: () => _removeSegment(i),
                   );
                 },
               ),
@@ -745,7 +1240,12 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
       initialColor: _paletteColors[0],
       onConfirm: (label, color) {
         if (label.isNotEmpty) {
-          widget.notifier.addSegment(WheelSegment(label: label, color: color));
+          setState(() {
+            _segments = [
+              ..._segments,
+              WheelSegment(label: label, color: color),
+            ];
+          });
           HapticService.lightImpact();
         }
       },
@@ -765,12 +1265,44 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
       initialColor: seg.color,
       onConfirm: (label, color) {
         if (label.isNotEmpty) {
-          widget.notifier
-              .updateSegment(index, WheelSegment(label: label, color: color));
+          setState(() {
+            _segments[index] = WheelSegment(label: label, color: color);
+          });
           HapticService.lightImpact();
         }
       },
     );
+  }
+
+  void _removeSegment(int index) {
+    if (_segments.length <= 2) return;
+    setState(() {
+      _segments = [..._segments]..removeAt(index);
+    });
+  }
+
+  void _reorderSegments(int oldIndex, int newIndex) {
+    setState(() {
+      final updated = [..._segments];
+      if (newIndex > oldIndex) newIndex -= 1;
+      final item = updated.removeAt(oldIndex);
+      updated.insert(newIndex, item);
+      _segments = updated;
+    });
+  }
+
+  Future<void> _submit() async {
+    if (!_canSubmit || _isSaving) return;
+
+    setState(() => _isSaving = true);
+    final template = widget.initialConfig.copyWith(
+      name: _templateNameController.text.trim(),
+      segments: List<WheelSegment>.unmodifiable(_segments),
+    );
+    await widget.onSave(template);
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   void _showSegmentDialog(
@@ -798,11 +1330,13 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
               color: AppColors.wheelOrange.withAlpha(80),
             ),
           ),
-          title: Text(title,
-              style: GameUiText.bodyStrong.copyWith(
-                fontSize: 18,
-                letterSpacing: 0.5,
-              )),
+          title: Text(
+            title,
+            style: GameUiText.bodyStrong.copyWith(
+              fontSize: 18,
+              letterSpacing: 0.5,
+            ),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -810,10 +1344,11 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
               TextField(
                 controller: textCtrl,
                 style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    letterSpacing: 0.5,
-                    height: 1.5),
+                  color: Colors.white,
+                  fontSize: 16,
+                  letterSpacing: 0.5,
+                  height: 1.5,
+                ),
                 autofocus: true,
                 maxLength: 8,
                 decoration: InputDecoration(
@@ -831,11 +1366,13 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
                 ),
               ),
               const SizedBox(height: 20),
-              Text(colorLabel,
-                  style: GameUiText.body.copyWith(
-                    color: AppColors.textDim,
-                    letterSpacing: 0.5,
-                  )),
+              Text(
+                colorLabel,
+                style: GameUiText.body.copyWith(
+                  color: AppColors.textDim,
+                  letterSpacing: 0.5,
+                ),
+              ),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 12,
@@ -872,16 +1409,20 @@ class _WheelEditorSheetState extends ConsumerState<_WheelEditorSheet> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dCtx),
-              child: Text(cancelLabel,
-                  style: const TextStyle(color: AppColors.textSecondary)),
+              child: Text(
+                cancelLabel,
+                style: const TextStyle(color: AppColors.textSecondary),
+              ),
             ),
             TextButton(
               onPressed: () {
                 Navigator.pop(dCtx);
                 onConfirm(textCtrl.text.trim(), picked);
               },
-              child: Text(confirmLabel,
-                  style: const TextStyle(color: AppColors.wheelOrange)),
+              child: Text(
+                confirmLabel,
+                style: const TextStyle(color: AppColors.wheelOrange),
+              ),
             ),
           ],
         ),
@@ -1060,13 +1601,17 @@ class _ResultOverlay extends StatelessWidget {
     required this.l10n,
     required this.wheelTitle,
     required this.segment,
+    required this.isPrankMode,
     required this.animation,
     required this.onDismiss,
+    this.naturalOptionLabel,
   });
 
   final AppLocalizations l10n;
   final String wheelTitle;
   final WheelSegment segment;
+  final bool isPrankMode;
+  final String? naturalOptionLabel;
   final Animation<double> animation;
   final VoidCallback onDismiss;
 
@@ -1095,8 +1640,10 @@ class _ResultOverlay extends StatelessWidget {
                     children: [
                       SpinWheelResultDetails(
                         wheelTitle: wheelTitle,
-                        optionLabel: segment.label,
+                        optionLabel: _localizedWheelSegmentLabel(l10n, segment),
                         accentColor: segment.color,
+                        isPrankMode: isPrankMode,
+                        naturalOptionLabel: naturalOptionLabel,
                       ),
                       const SizedBox(height: 14),
                       GameResultActionBar(
@@ -1122,11 +1669,15 @@ class SpinWheelResultDetails extends StatelessWidget {
     required this.wheelTitle,
     required this.optionLabel,
     required this.accentColor,
+    this.isPrankMode = false,
+    this.naturalOptionLabel,
   });
 
   final String wheelTitle;
   final String optionLabel;
   final Color accentColor;
+  final bool isPrankMode;
+  final String? naturalOptionLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -1181,6 +1732,24 @@ class SpinWheelResultDetails extends StatelessWidget {
               ),
             ),
           ),
+          if (isPrankMode &&
+              naturalOptionLabel != null &&
+              naturalOptionLabel != optionLabel) ...[
+            const SizedBox(height: 12),
+            Text(
+              l10n.t(
+                'spinWheelPrankResultShifted',
+                {
+                  'natural': naturalOptionLabel!,
+                  'target': optionLabel,
+                },
+              ),
+              style: GameUiText.body.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.45,
+              ),
+            ),
+          ],
         ],
       ),
     );

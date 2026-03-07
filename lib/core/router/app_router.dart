@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/hub/hub_screen.dart';
+import '../../features/splash/splash_screen.dart';
 import '../../features/finger_picker/finger_picker_screen.dart';
 import '../../features/spin_wheel/spin_wheel_screen.dart';
 import '../../features/number_bomb/number_bomb_screen.dart';
@@ -12,6 +13,7 @@ import '../../features/party_plus/bio_detector_screen.dart';
 import '../../features/gravity_balance/gravity_balance_screen.dart';
 import '../../features/gravity_balance/gravity_balance_prep_screen.dart';
 import '../../features/gravity_balance/logic/gravity_balance_logic.dart';
+import '../../features/purchase/widgets/purchase_gate.dart';
 import '../../shared/services/penalty_service.dart';
 import '../../features/decibel_bomb/decibel_bomb_screen.dart';
 
@@ -20,6 +22,10 @@ final appRouter = GoRouter(
   routes: [
     GoRoute(
       path: '/',
+      builder: (_, __) => const SplashScreen(),
+    ),
+    GoRoute(
+      path: '/home',
       builder: (_, __) => const HubScreen(),
     ),
     GoRoute(
@@ -74,7 +80,12 @@ final appRouter = GoRouter(
       path: '/games/gravity-balance',
       pageBuilder: (_, state) => CustomTransitionPage(
         key: state.pageKey,
-        child: const GravityBalancePrepScreen(),
+        child: const PurchaseGate(
+          route: '/games/gravity-balance',
+          gameTitleKey: 'gravityBalance',
+          accentColor: Color(0xFF4DFFD8),
+          child: GravityBalancePrepScreen(),
+        ),
         transitionsBuilder: _fadeSlideTransition,
       ),
     ),
@@ -93,10 +104,15 @@ final appRouter = GoRouter(
         );
         return CustomTransitionPage(
           key: state.pageKey,
-          child: GravityBalanceScreen(
-            difficulty: difficulty,
-            participantCount: participantCount,
-            penaltyPreset: penaltyPreset,
+          child: PurchaseGate(
+            route: '/games/gravity-balance/play',
+            gameTitleKey: 'gravityBalance',
+            accentColor: const Color(0xFF4DFFD8),
+            child: GravityBalanceScreen(
+              difficulty: difficulty,
+              participantCount: participantCount,
+              penaltyPreset: penaltyPreset,
+            ),
           ),
           transitionsBuilder: _fadeSlideTransition,
         );
